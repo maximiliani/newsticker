@@ -14,6 +14,9 @@ export default async function ProtectedPage() {
     return redirect("/sign-in");
   }
 
+  // Get the full name from user metadata
+  const fullName = user.user_metadata?.full_name || "User";
+
   return (
     <div className="flex-1 w-full flex flex-col gap-12">
       <div className="w-full">
@@ -24,7 +27,8 @@ export default async function ProtectedPage() {
         </div>
       </div>
       <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-2xl mb-4">Your user details</h2>
+        <h2 className="font-bold text-2xl mb-4">Welcome, {fullName}!</h2>
+        <h3 className="font-medium text-lg mb-2">Your user details</h3>
         <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
           {JSON.stringify(user, null, 2)}
         </pre>
