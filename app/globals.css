@@ -67,3 +67,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Screen size scaling for larger screens */
+@media screen and (min-width: 1920px) {
+  html {
+    font-size: 125%;
+  }
+}
+
+@media screen and (min-width: 2560px) {
+  html {
+    font-size: 150%;
+  }
+}
+
+@media screen and (min-width: 3840px) {
+  html {
+    font-size: 200%;
+  }
+}

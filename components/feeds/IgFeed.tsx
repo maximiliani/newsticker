@@ -260,16 +260,16 @@ export default function IgFeed() {
                 </ToggleGroup>
             </div>
 
-            {/* Feed */}
+            {/* Posts Container */}
             <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4"> 
+                <div className="grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-4 p-2 place-items-center">
                     {activePosts.map((post) => (
-                        <div className="w-full isolate" key={post.id}>
-                            <IGPost post={post}/>
+                        <div className="w-64" key={post.id}>
+                            <IGPost post={post} />
                         </div>
                     ))}
                 </div>
             </div>
         </div>
-    )
+    );
 }

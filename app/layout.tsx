@@ -7,10 +7,6 @@ import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import "./globals.css";
-import { CopyrightIcon } from "lucide-react";
-import { ResizableHandle } from "@/components/ui/resizable";
-import { ResizablePanel } from "@/components/ui/resizable";
-import { ResizablePanelGroup } from "@/components/ui/resizable";
 import { Clock } from "@/components/Clock";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -42,7 +38,6 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
-          // disableTransitionOnChange
         >
           <main className="min-h-screen flex flex-col items-center">
             <div className="flex-1 w-full flex flex-col gap-2 items-center">

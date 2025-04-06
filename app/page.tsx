@@ -7,11 +7,11 @@ import { ResizablePanelGroup } from "@/components/ui/resizable";
 import { useEffect, useState } from "react";
 
 export default function Home() {
-  const [size, setSize] = useState<number[]>(typeof window !== 'undefined' && window.innerWidth >= 1280 ? [50, 50] : [30, 70]);
+  const [size, setSize] = useState<number>(typeof window !== 'undefined' && window.innerWidth >= 1280 ? 40 : 30);
 
   useEffect(() => {
     const handleResize = () => {
-      setSize(window.innerWidth >= 1280 ? [50, 50] : [25, 75]);
+      setSize(window.innerWidth >= 1280 ? 40 : 30)
     };
 
     window.addEventListener('resize', handleResize);
@@ -21,11 +21,23 @@ export default function Home() {
   return (
     <main className="w-full h-[calc(100vh-10rem)] overflow-hidden">
       <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel className="p-4" defaultSize={size[0]}>
+        <ResizablePanel 
+          className="p-4" 
+          // defaultSize={size}
+          defaultSize={30}
+          minSize={20}
+          maxSize={80}
+        >
           <ArticleFeed />
         </ResizablePanel>
         <ResizableHandle />
-        <ResizablePanel className="p-4" defaultSize={size[1]}>
+        <ResizablePanel 
+          className="p-4" 
+          // defaultSize={100-size}
+          defaultSize={70}
+          minSize={20}
+          maxSize={80}
+        >
           <IgFeed />
         </ResizablePanel>
       </ResizablePanelGroup>
