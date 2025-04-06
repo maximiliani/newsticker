@@ -1,7 +1,7 @@
 "use client";
 import { IGPost, IGPostData } from "@/components/ig-post";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { data } from "autoprefixer";
 
@@ -143,79 +143,150 @@ const mockInstagramFeed: IGPostData[] = [
       userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
       location: 'Tech Review Studio',
       postedAt: new Date(Date.now() - 8 * 60 * 60 * 1000), 
+    },
+    {
+      id: '8',
+      media: [
+        {
+            type: 'image',
+            url: 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2',
+        }
+      ],
+      caption: 'Latest tech setup complete! 💻 Productivity level: maximum #techie #workspace #setup',
+      username: 'techreviewer',
+      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+      location: 'Tech Review Studio',
+      postedAt: new Date(Date.now() - 8 * 60 * 60 * 1000), 
+    },
+    {
+      id: '9',
+      media: [
+        {
+            type: 'image',
+            url: 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2',
+        },
+        {
+          type: 'image',
+          url: 'https://picsum.photos/bild10/500/700',
+        },
+      ],
+      caption: 'Latest tech setup complete! 💻 Productivity level: maximum #techie #workspace #setup',
+      username: 'techreviewer',
+      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+      location: 'Tech Review Studio',
+      postedAt: new Date(Date.now() - 8 * 60 * 60 * 1000), 
+    },
+    {
+      id: '10',
+      media:[
+        {
+          type: 'image',
+          url: 'https://picsum.photos/bild11/500/700',
+        },
+        {
+          type: 'image',
+          url: 'https://picsum.photos/bild12/500/700',
+        },
+      ],
+      caption: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+      username: 'techreviewer',
+      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
+      location: 'Tech Review Studio',
+      postedAt: new Date(Date.now() - 345678765 * 60 * 60 * 1000), 
     }
   ];
 
-export default function IGFeed() {
-    const [activeUsers, setActiveUsers] = useState<string[]>(mockInstagramFeed.map((post) => post.username));
+export default function IgFeed() {
+    const [availableUsers, setAvailableUsers] = useState<string[]>(Array.from(new Set(mockInstagramFeed.flatMap((post) => post.username))));
+    const [activeUsers, setActiveUsers] = useState<string[]>(availableUsers);
     const [activePosts, setActivePosts] = useState<IGPostData[]>(mockInstagramFeed);
-    const [availableUsers, setAvailableUsers] = useState<string[]>(mockInstagramFeed.flatMap((post) => post.username));
+    const [columns, setColumns] = useState(3);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const updateColumns = () => {
+            if (containerRef.current) {
+                const width = containerRef.current.offsetWidth;
+                const newColumns = Math.max(1, Math.floor(width / 300)); // 300px minimum width per column
+                setColumns(newColumns);
+            }
+        };
+
+        const observer = new ResizeObserver(updateColumns);
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         setActiveUsers(mockInstagramFeed.map((post) => post.username));
+        setActivePosts(mockInstagramFeed.filter((post) => activeUsers.includes(post.username)));
     }, [mockInstagramFeed]);
+
+    useEffect(() => {
+        setActivePosts(mockInstagramFeed.filter((post) => activeUsers.includes(post.username)));
+    }, [activeUsers]);
 
     const areAllUsersSelected = activeUsers.length === availableUsers.length;
 
     return (
-        <div>
+        <div className="h-full flex flex-col">
             <h1 className="text-2xl font-bold">Instagram Feed</h1>
 
             {/* User Selector */}
             <div className="justify-center items-center my-4">
-            <ToggleGroup 
-              variant="outline" 
-              type="multiple"
-              orientation="horizontal"
-              value={activeUsers}
-              onValueChange={(value) => {
-                if (value.includes("all")) {
-                  // If "all" is clicked
-                  if (areAllUsersSelected) {
-                    // If all users were selected, deselect all
-                    setActiveUsers([]);
-                  } else {
-                    // If not all users were selected, select all
-                    setActiveUsers([...availableUsers]);
-                  }
-                } else {
-                  // Handle individual user selection
-                  setActiveUsers(value);
-                }
-              }}
-              className="flex flex-wrap gap-2"
-            >
-              <ToggleGroupItem 
-                key="all" 
-                value="all" 
-                aria-label="All"
-                className="hover:bg-primary hover:text-primary-foreground"
-                data-state={areAllUsersSelected ? "on" : "off"}
-              >
-                All
-              </ToggleGroupItem>
-              {availableUsers.map((username) => (
-                <ToggleGroupItem
-                  key={username}
-                  value={username}
-                  aria-label={username}
-                  className="hover:bg-primary hover:text-primary-foreground"
-                  data-state={activeUsers.includes(username) ? "on" : "off"}
+                <ToggleGroup 
+                    variant="outline" 
+                    type="multiple"
+                    orientation="horizontal"
+                    value={activeUsers}
+                    onValueChange={(value) => {
+                        if (value.includes("all")) {
+                            if (areAllUsersSelected) {
+                                setActiveUsers([]);
+                            } else {
+                                setActiveUsers([...availableUsers]);
+                            }
+                        } else {
+                            setActiveUsers(value);
+                        }
+                    }}
+                    className="flex flex-wrap gap-2"
                 >
-                  {username}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-                
+                    <ToggleGroupItem 
+                        key="all" 
+                        value="all" 
+                        aria-label="All"
+                        className="hover:bg-primary hover:text-primary-foreground"
+                        data-state={areAllUsersSelected ? "on" : "off"}
+                    >
+                        All
+                    </ToggleGroupItem>
+                    {availableUsers.map((username) => (
+                        <ToggleGroupItem
+                            key={username}
+                            value={username}
+                            aria-label={username}
+                            className="hover:bg-primary hover:text-primary-foreground"
+                            data-state={activeUsers.includes(username) ? "on" : "off"}
+                        >
+                            {username}
+                        </ToggleGroupItem>
+                    ))}
+                </ToggleGroup>
             </div>
 
             {/* Feed */}
-            <div className="flex gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> 
-                {mockInstagramFeed.filter((post) => activeUsers.includes(post.username)).map((post) => (
-                    <div className="w-full isolate" key={post.id}>
-                      <IGPost post={post}/>
-                    </div>
-                ))}
+            <div className="flex-1 overflow-y-auto">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4"> 
+                    {activePosts.map((post) => (
+                        <div className="w-full isolate" key={post.id}>
+                            <IGPost post={post}/>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     )

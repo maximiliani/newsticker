@@ -1,3 +1,5 @@
+import { formatDate } from "@/utils/utils";
+
 interface NewsPreviewData {
   id: string;
   title: string;
@@ -12,7 +14,7 @@ interface NewsPreviewData {
 
 export function NewsPreview({ news }: { news: NewsPreviewData }) {
   return (
-    <article className="bg-card rounded-lg p-4 shadow-sm space-y-4">
+    <article className="bg-card rounded-lg p-4 shadow-sm space-y-4 hover:bg-accent transition-colors duration-200 border hover:border-border hover:shadow-md mb-4">
       {/* Title */}
       <h2 className="text-xl font-semibold line-clamp-2">{news.title}</h2>
 
@@ -38,11 +40,11 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
         
         <div className="space-x-2">
           <time dateTime={news.createdAt.toISOString()}>
-            Created: {news.createdAt.toLocaleDateString()}
+            {formatDate(news.createdAt)}
           </time>
           {news.modifiedAt && (
             <time dateTime={news.modifiedAt.toISOString()}>
-              · Modified: {news.modifiedAt.toLocaleDateString()}
+              {formatDate(news.modifiedAt)}
             </time>
           )}
         </div>
