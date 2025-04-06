@@ -19,10 +19,10 @@ import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/app/actions";
 import { User } from "@supabase/supabase-js";
 import { Settings, LogOut, Moon, Sun, Eye, Laptop } from "lucide-react";
-import { ProfileSettingsDialog } from "@/components/profile-settings-dialog";
-import { ProfileViewDialog } from "@/components/profile-view-dialog";
+import { ProfileSettingsDialog } from "@/components/user/profile-settings-dialog";
+import { ProfileViewDialog } from "@/components/user/profile-view-dialog";
 import { useTheme } from "next-themes";
-import { CurrentUserAvatar } from "@/components/current-user-avatar";
+import { CurrentUserAvatar } from "@/components/user/current-user-avatar";
 
 interface ProfileDropdownProps {
   user: User;
