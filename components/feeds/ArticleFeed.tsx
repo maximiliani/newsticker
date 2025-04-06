@@ -98,7 +98,7 @@ export function ArticleFeed() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Latest News</h1>
+        <h2 className="text-xl font-bold">Latest News</h2>
         <Button size="sm" className="flex items-center gap-2" variant="outline">
           <PlusIcon className="h-4 w-4" />
           Create news article

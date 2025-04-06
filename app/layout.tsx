@@ -11,6 +11,7 @@ import { CopyrightIcon } from "lucide-react";
 import { ResizableHandle } from "@/components/ui/resizable";
 import { ResizablePanel } from "@/components/ui/resizable";
 import { ResizablePanelGroup } from "@/components/ui/resizable";
+import { Clock } from "@/components/Clock";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -46,10 +47,11 @@ export default function RootLayout({
           <main className="min-h-screen flex flex-col items-center">
             <div className="flex-1 w-full flex flex-col gap-2 items-center">
               <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-                <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-                  <h1 className="flex gap-5 items-center font-semibold text-2xl">
+                <div className="w-full flex justify-between items-center p-3 text-sm">
+                  <h1 className="font-bold text-4xl">
                     <Link href={"/"}>Newsticker</Link>
                   </h1>
+                  <Clock />
                   <div className="flex items-center gap-4">
                     {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}
                   </div>

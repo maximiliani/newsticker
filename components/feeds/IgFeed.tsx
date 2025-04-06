@@ -214,7 +214,7 @@ export default function IgFeed() {
 
     return (
         <div className="h-full flex flex-col">
-            <h1 className="text-2xl font-bold">Instagram Feed</h1>
+            <h2 className="text-xl font-bold">Instagram Feed</h2>
 
             {/* User Selector */}
             <div className="justify-center items-center my-4">

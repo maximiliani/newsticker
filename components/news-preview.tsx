@@ -38,10 +38,11 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
           <span>{news.author.name}</span>
         </div>
         
-        <div className="space-x-2">
+        <div className="space-y-1">
           <time dateTime={news.createdAt.toISOString()}>
             Created: {formatDate(news.createdAt)}
           </time>
+          <br />
           {news.modifiedAt && (
             <time dateTime={news.modifiedAt.toISOString()}>
               Modified: {formatDate(news.modifiedAt)}
