@@ -198,27 +198,8 @@ const mockInstagramFeed: IGPostData[] = [
 
 export default function IgFeed() {
     const [availableUsers, setAvailableUsers] = useState<string[]>(Array.from(new Set(mockInstagramFeed.flatMap((post) => post.username))));
-    const [activeUsers, setActiveUsers] = useState<string[]>(availableUsers);
+    const [activeUsers, setActiveUsers] = useState<string[]>(["all", ...availableUsers]);
     const [activePosts, setActivePosts] = useState<IGPostData[]>(mockInstagramFeed);
-    const [columns, setColumns] = useState(3);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const updateColumns = () => {
-            if (containerRef.current) {
-                const width = containerRef.current.offsetWidth;
-                const newColumns = Math.max(1, Math.floor(width / 300)); // 300px minimum width per column
-                setColumns(newColumns);
-            }
-        };
-
-        const observer = new ResizeObserver(updateColumns);
-        if (containerRef.current) {
-            observer.observe(containerRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, []);
 
     useEffect(() => {
         setActiveUsers(mockInstagramFeed.map((post) => post.username));
@@ -259,6 +240,7 @@ export default function IgFeed() {
                         key="all" 
                         value="all" 
                         aria-label="All"
+                        defaultChecked
                         className="hover:bg-primary hover:text-primary-foreground"
                         data-state={areAllUsersSelected ? "on" : "off"}
                     >

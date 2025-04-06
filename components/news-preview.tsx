@@ -40,11 +40,11 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
         
         <div className="space-x-2">
           <time dateTime={news.createdAt.toISOString()}>
-            {formatDate(news.createdAt)}
+            Created: {formatDate(news.createdAt)}
           </time>
           {news.modifiedAt && (
             <time dateTime={news.modifiedAt.toISOString()}>
-              {formatDate(news.modifiedAt)}
+              Modified: {formatDate(news.modifiedAt)}
             </time>
           )}
         </div>
