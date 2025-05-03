@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { createClient } from "jsr:@supabase/supabase-js@2"
 
 Deno.serve(async (req: Request) => {
     try {

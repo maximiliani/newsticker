@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import {createClient, SupabaseClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { createClient } from "jsr:@supabase/supabase-js@2"
 
 interface InstagramAccount {
     user_id: string;
