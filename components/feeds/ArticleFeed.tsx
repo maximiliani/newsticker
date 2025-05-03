@@ -1,87 +1,154 @@
 import { NewsPreview } from "@/components/news-preview";
 import { Button } from "../ui/button";
 import { PlusIcon } from "@radix-ui/react-icons";
+import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
-const mockNews = [
+// Define the NewsPreviewData type
+type NewsPreviewData = {
+  id: string;
+  metadata: {
+    title: string; // Ensure title is a required string
+    createdAt: Date;
+    modifiedAt: Date;
+    author: {
+      name: string;
+      avatar: string;
+    };
+    visibility: {
+      from: Date;
+      to: Date;
+    };
+  };
+  content: string; // Include content if needed
+};
+
+const mockNews: NewsPreviewData[] = [
   {
     id: "1",
-    title: "Breakthrough in Quantum Computing: Scientists Achieve New Milestone",
-    description: "In a groundbreaking development, researchers at the Quantum Technology Institute have successfully demonstrated a new method for maintaining quantum coherence at room temperature...",
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    modifiedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
-    author: {
-      name: "Dr. James Wilson",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+    metadata: {
+      title: "Breakthrough in Quantum Computing: Scientists Achieve New Milestone",
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      modifiedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
+      author: {
+        name: "Dr. James Wilson",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+      },
+      visibility: {
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        to: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
     },
+    content: "Full article text goes here...",
   },
   {
     id: "2",
-    title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-    description: "A groundbreaking AI model has been developed that can understand and generate text in multiple languages, opening up new possibilities for global communication and collaboration...",
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    modifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    author: {
-      name: "Dr. Sarah Chen",
-      avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
+    metadata: {
+      title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
+      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+      modifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      author: {
+        name: "Dr. Sarah Chen",
+        avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
+      },
+      visibility: {
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        to: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
     },
+    content: "Full article text goes here...",
   },
   {
     id: "3",
-    title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-    description: "A groundbreaking AI model has been developed that can understand and generate text in multiple languages, opening up new possibilities for global communication and collaboration...",
-    createdAt: new Date(Date.now() - 1231123 * 60 * 60 * 1000),
-    modifiedAt: new Date(Date.now() - 1212332 * 60 * 60 * 1000),
-    author: {
-      name: "Dr. Sarah Chen",
-      avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
+    metadata: {
+      title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
+      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+      modifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      author: {
+        name: "Dr. Sarah Chen",
+        avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
+      },
+      visibility: {
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        to: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
     },
+    content: "Full article text goes here...",
   },
   {
     id: "4",
-    title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-    description: "A groundbreaking AI model has been developed that can understand and generate text in multiple languages, opening up new possibilities for global communication and collaboration...",
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    modifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    author: {
-      name: "Dr. Sarah Chen",
-      avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
+    metadata: {
+      title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
+      createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+      modifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      author: {
+        name: "Dr. Sarah Chen",
+        avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
+      },
+      visibility: {
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        to: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
     },
+    content: "Full article text goes here...",
   },
   {
     id: "5",
-    title: "Test",
-    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
-    modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
-    author: {
-      name: "Test Author",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+    metadata: {
+      title: "Test",
+      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
+      modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
+      author: {
+        name: "Test Author",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+      },
+      visibility: {
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        to: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
     },
+    content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
   },
   {
     id: "6",
-    title: "Test",
-    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
-    modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
-    author: {
-      name: "Test Author",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+    metadata: {
+      title: "Test",
+      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
+      modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
+      author: {
+        name: "Test Author 2",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+      },
+      visibility: {
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        to: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
     },
+    content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
   },
   {
     id: "7",
-    title: "Test",
-    description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
-    modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
-    author: {
-      name: "Test Author",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+    metadata: {
+      title: "Test",
+      description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
+      modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
+      author: {
+        name: "Test Author 2",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+      },
+      visibility: {
+        from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        to: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
     },
+    content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
   },
   {
     id: "8",
+    metadata: {
     title: "Test",
     description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
     createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
@@ -90,6 +157,12 @@ const mockNews = [
       name: "Test Author",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
     },
+    visibility: {
+      from: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      to: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+    },
+  content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
   }
   // ... add more mock news as needed
 ];
@@ -105,10 +178,64 @@ export function ArticleFeed() {
         </Button>
       </div>
       <div className="my-4">
-      {mockNews.map((news) => (
-        <NewsPreview key={news.id} news={news} />
-      ))}
+        {mockNews.map((news) => (
+          <NewsPreview key={news.id} news={news.metadata} />
+        ))}
       </div>
     </div>
   );
-} 
+}
+
+export function ArticleCreation() {
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [authorName, setAuthorName] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const { data, error } = await createClient()
+      .from('articles') // Assuming you have an 'articles' table
+      .insert([
+        {
+          title,
+          content,
+          author: { name: authorName },
+          createdAt: new Date(),
+          modifiedAt: new Date(),
+        },
+      ]);
+
+    if (error) {
+      console.error('Error creating article:', error);
+    } else {
+      console.log('Article created:', data);
+      // Optionally redirect or reset form
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        placeholder="Title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        required
+      />
+      <textarea
+        placeholder="Content"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        required
+      />
+      <input
+        type="text"
+        placeholder="Author Name"
+        value={authorName}
+        onChange={(e) => setAuthorName(e.target.value)}
+        required
+      />
+      <button type="submit">Create Article</button>
+    </form>
+  );
+}

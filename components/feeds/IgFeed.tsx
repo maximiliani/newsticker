@@ -1,216 +1,111 @@
 "use client";
 import { IGPost, IGPostData } from "@/components/ig-post";
-import { Button } from "@/components/ui/button";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { data } from "autoprefixer";
+import {createClient} from "@/lib/supabase/client";
+// import { createClient } from "@supabase/supabase-js";
 
-const mockInstagramFeed: IGPostData[] = [
-    {
-      id: '1',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba',
-        },
-        {
-            type: 'video',
-            url: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-        }
-      ],
-      caption: 'Beautiful sunset at the beach 🌅 Perfect end to a perfect day! #sunset #beach #nature #photography',
-      username: 'travelphotographer',
-      userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330',
-      location: 'Maldives Beach Resort',
-      postedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), 
-    },
-    {
-      id: '2',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1682687221038-404670f09471',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild1/500/700',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild2/500/700',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild3/500/700',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild4/500/700',
-        }
-      ],
-      caption: 'City lights never sleep 🌃 The urban jungle comes alive at night #cityscape #nightphotography #urban',
-      username: 'urbanexplorer',
-      userAvatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12',
-      location: 'Downtown Manhattan',
-      postedAt: new Date(Date.now() - 5 * 60 * 60 * 1000), 
-    },
-    {
-      id: '3',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1682687220198-88e9bdea9931',
-        }
-      ],
-      caption: 'Peak adventures 🏔️ Nothing beats the feeling of reaching the summit #mountains #hiking #adventure',
-      username: 'adventureseeker',
-      userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d',
-      location: 'Swiss Alps',
-      postedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), 
-    },
-    {
-      id: '4',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38',
-        }
-      ],
-      caption: 'Homemade pizza night! 🍕 Nothing beats the smell of fresh basil and melted mozzarella #foodie #homecooking',
-      username: 'foodiechef',
-      userAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80',
-      location: 'Home Kitchen Studio',
-      postedAt: new Date(Date.now() - 3 * 60 * 60 * 1000), 
-    },
-    {
-      id: '5',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild5/500/700',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild6/500/700',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild7/500/700',
-        }
-      ],
-      caption: 'Perfecting the art of plating 🍽️ #finedining #chefsofinstagram #foodart',
-      username: 'masterchef',
-      userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
-      location: 'Gourmet Restaurant',
-      postedAt: new Date(Date.now() - 6 * 60 * 60 * 1000), 
-    },
-    {
-      id: '6',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b',
-        }
-      ],
-      caption: 'Latest tech setup complete! 💻 Productivity level: maximum #techie #workspace #setup',
-      username: 'techgeek',
-      userAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e',
-      location: 'Tech Hub',
-      postedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), 
-    },
-    {
-      id: '7',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild8/500/700',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild9/500/700',
-        },
-      ],
-      caption: 'Unboxing the latest gadget! 📱 First impressions coming soon #tech #unboxing #newrelease',
-      username: 'techreviewer',
-      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-      location: 'Tech Review Studio',
-      postedAt: new Date(Date.now() - 8 * 60 * 60 * 1000), 
-    },
-    {
-      id: '8',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2',
-        }
-      ],
-      caption: 'Latest tech setup complete! 💻 Productivity level: maximum #techie #workspace #setup',
-      username: 'techreviewer',
-      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-      location: 'Tech Review Studio',
-      postedAt: new Date(Date.now() - 8 * 60 * 60 * 1000), 
-    },
-    {
-      id: '9',
-      media: [
-        {
-            type: 'image',
-            url: 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild10/500/700',
-        },
-      ],
-      caption: 'Latest tech setup complete! 💻 Productivity level: maximum #techie #workspace #setup',
-      username: 'techreviewer',
-      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-      location: 'Tech Review Studio',
-      postedAt: new Date(Date.now() - 8 * 60 * 60 * 1000), 
-    },
-    {
-      id: '10',
-      media:[
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild11/500/700',
-        },
-        {
-          type: 'image',
-          url: 'https://picsum.photos/bild12/500/700',
-        },
-      ],
-      caption: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      username: 'techreviewer',
-      userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-      location: 'Tech Review Studio',
-      postedAt: new Date(Date.now() - 345678765 * 60 * 60 * 1000), 
-    }
-  ];
+// // Create Supabase client (replace your env variables accordingly)
+// const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+// const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default function IgFeed() {
-    const [availableUsers, setAvailableUsers] = useState<string[]>(Array.from(new Set(mockInstagramFeed.flatMap((post) => post.username))));
-    const [activeUsers, setActiveUsers] = useState<string[]>(["all", ...availableUsers]);
-    const [activePosts, setActivePosts] = useState<IGPostData[]>(mockInstagramFeed);
+    const supabase = createClient()
+    const [availableUsers, setAvailableUsers] = useState<string[]>([]);
+    const [activeUsers, setActiveUsers] = useState<string[]>(["all"]);
+    const [activePosts, setActivePosts] = useState<IGPostData[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch posts from Supabase
+    useEffect(() => {
+        async function fetchPosts() {
+            setLoading(true);
+            setError(null);
+
+            const { data, error } = await supabase
+                .from("instagram_posts")
+                .select(`
+                    id,
+                    instagram_post_id,
+                    caption,
+                    media_type,
+                    media_url,
+                    timestamp,
+                    instagram_accounts:instagram_user_id (
+                        username,
+                        profile_image_url
+                    ),
+                    instagram_post_media:instagram_post_id (
+                        media_type,
+                        media_url,
+                        thumbnail_url
+                    )
+                `)
+                .order("timestamp", { ascending: false });
+
+            if (error) {
+                setError(error.message);
+                setLoading(false);
+                return;
+            }
+
+            if (!data) {
+                setActivePosts([]);
+                setLoading(false);
+                return;
+            }
+
+            // Map the data to IGPostData format
+            const mappedPosts: IGPostData[] = data.map((post: any) => {
+                const mainMedia = {
+                    type: post.media_type === "VIDEO" ? "video" : "image",
+                    url: post.media_url,
+                };
+
+                const childrenMedia = (post.instagram_post_media || []).map((m: any) => ({
+                    type: m.media_type === "VIDEO" ? "video" : "image",
+                    url: m.media_url,
+                }));
+
+                const media = mainMedia ? [mainMedia, ...childrenMedia] : childrenMedia;
+
+                return {
+                    id: post.instagram_post_id,
+                    username: post.instagram_accounts?.username || "Unknown",
+                    userAvatar: post.instagram_accounts?.profile_image_url || "",
+                    caption: post.caption || undefined,
+                    location: undefined, // Omitted as location isn't stored
+                    postedAt: new Date(post.timestamp),
+                    media,
+                };
+            });
+
+            setActivePosts(mappedPosts);
+            setAvailableUsers(Array.from(new Set(mappedPosts.map(post => post.username))));
+            setLoading(false);
+        }
+
+        fetchPosts();
+    }, []);
 
     useEffect(() => {
-        setActiveUsers(mockInstagramFeed.map((post) => post.username));
-        setActivePosts(mockInstagramFeed.filter((post) => activeUsers.includes(post.username)));
-    }, [mockInstagramFeed]);
+        setActiveUsers(["all", ...availableUsers]);
+    }, [availableUsers]);
 
     useEffect(() => {
-        setActivePosts(mockInstagramFeed.filter((post) => activeUsers.includes(post.username)));
+        setActivePosts(activePosts.filter((post) => activeUsers.includes(post.username)));
     }, [activeUsers]);
 
     const areAllUsersSelected = activeUsers.length === availableUsers.length;
+
+    if (loading) {
+        return <p>Loading posts...</p>;
+    }
+    if (error) {
+        return <p>Error loading posts: {error}</p>;
+    }
 
     return (
         <div className="h-full flex flex-col">
@@ -270,6 +165,8 @@ export default function IgFeed() {
                     ))}
                 </div>
             </div>
+            
         </div>
-    );
+    )
 }
+
