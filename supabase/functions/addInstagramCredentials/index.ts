@@ -1,8 +1,7 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
     try {
         if (req.method !== "POST") {
             return new Response("Method not allowed", { status: 405 });

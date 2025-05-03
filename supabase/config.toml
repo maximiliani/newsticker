@@ -6,7 +6,6 @@ import_map = "./functions/addInstagramCredentials/deno.json"
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/addInstagramCredentials/index.ts"
 
-
 [functions.deleteInstagramCredentials]
 enabled = true
 verify_jwt = true
@@ -22,3 +21,14 @@ import_map = "./functions/fetchInstagramPostsAndStore/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/fetchInstagramPostsAndStore/index.ts"
+
+[functions.test]
+enabled = true
+verify_jwt = true
+import_map = "./functions/test/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/test/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/test/*.html" ]
