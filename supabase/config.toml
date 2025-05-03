@@ -1,0 +1,24 @@
+[functions.addInstagramCredentials]
+enabled = true
+verify_jwt = true
+import_map = "./functions/addInstagramCredentials/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/addInstagramCredentials/index.ts"
+
+
+[functions.deleteInstagramCredentials]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deleteInstagramCredentials/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/deleteInstagramCredentials/index.ts"
+
+[functions.fetchInstagramPostsAndStore]
+enabled = true
+verify_jwt = true
+import_map = "./functions/fetchInstagramPostsAndStore/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/fetchInstagramPostsAndStore/index.ts"
