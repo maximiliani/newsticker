@@ -1,102 +1,97 @@
 "use client";
-import { IGPost, IGPostData } from "@/components/ig-post";
-import { useEffect, useState } from "react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {IGPost, IGPostData} from "@/components/ig-post";
+import {useEffect, useMemo, useState} from "react";
 import {createClient} from "@/lib/supabase/client";
-// import { createClient } from "@supabase/supabase-js";
-
-// // Create Supabase client (replace your env variables accordingly)
-// const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-// const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-// const supabase = createClient(supabaseUrl, supabaseKey);
+import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group";
 
 export default function IgFeed() {
-    const supabase = createClient()
+    const supabase = createClient();
     const [availableUsers, setAvailableUsers] = useState<string[]>([]);
     const [activeUsers, setActiveUsers] = useState<string[]>(["all"]);
-    const [activePosts, setActivePosts] = useState<IGPostData[]>([]);
+    const [posts, setPosts] = useState<IGPostData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch posts from Supabase
+    // Memoize filtered posts
+    const activePosts = useMemo(() => {
+        if (activeUsers.includes("all")) return posts;
+        return posts.filter((post) => activeUsers.includes(post.username));
+    }, [posts, activeUsers]);
+
     useEffect(() => {
+        let isMounted = true;
+
+        function mapPostData(post: any): IGPostData {
+            // const mainMedia = {
+            //     type: post.media_type === "VIDEO" ? "video" : "image",
+            //     url: post.media_url,
+            // };
+            //
+            // const childrenMedia = (post.instagram_post_media || []).map((m: any) => ({
+            //     type: m.media_type === "VIDEO" ? "video" : "image",
+            //     url: m.media_url,
+            // }));
+            //
+            // const media = mainMedia ? [mainMedia, ...childrenMedia] : childrenMedia;
+
+            return {
+                id: post.id,
+                username: post.instagram_accounts?.username || "Unknown",
+                userAvatar: post.instagram_accounts?.profile_image_url || "",
+                caption: "", // Omitted as caption isn't stored
+                location: "", // Omitted as location isn't stored
+                postedAt: new Date(post.timestamp),
+                media: [], // Omitted as media isn't stored
+            }
+        }
+
         async function fetchPosts() {
             setLoading(true);
             setError(null);
 
-            const { data, error } = await supabase
-                .from("instagram_posts")
-                .select(`
+            try {
+                const {data, error} = await supabase
+                    .from("instagram_posts")
+                    .select(`
                     id,
-                    instagram_post_id,
-                    caption,
-                    media_type,
-                    media_url,
                     timestamp,
                     instagram_accounts:instagram_user_id (
                         username,
                         profile_image_url
-                    ),
-                    instagram_post_media:instagram_post_id (
-                        media_type,
-                        media_url,
-                        thumbnail_url
                     )
-                `)
-                .order("timestamp", { ascending: false });
+                    `)
+                    .order("timestamp", {ascending: false});
 
-            if (error) {
-                setError(error.message);
-                setLoading(false);
-                return;
+                if (!isMounted) return;
+
+                if (error) throw error;
+                if (!data) {
+                    setPosts([]);
+                    return;
+                }
+
+                const mappedPosts = data.map(mapPostData);
+                setPosts(mappedPosts);
+
+                const uniqueUsers = Array.from(new Set(mappedPosts.map(post => post.username)));
+                setAvailableUsers(uniqueUsers);
+            } catch (err) {
+                if (isMounted) {
+                    setError(err instanceof Error ? err.message : 'An unknown error occurred');
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
-
-            if (!data) {
-                setActivePosts([]);
-                setLoading(false);
-                return;
-            }
-
-            // Map the data to IGPostData format
-            const mappedPosts: IGPostData[] = data.map((post: any) => {
-                const mainMedia = {
-                    type: post.media_type === "VIDEO" ? "video" : "image",
-                    url: post.media_url,
-                };
-
-                const childrenMedia = (post.instagram_post_media || []).map((m: any) => ({
-                    type: m.media_type === "VIDEO" ? "video" : "image",
-                    url: m.media_url,
-                }));
-
-                const media = mainMedia ? [mainMedia, ...childrenMedia] : childrenMedia;
-
-                return {
-                    id: post.instagram_post_id,
-                    username: post.instagram_accounts?.username || "Unknown",
-                    userAvatar: post.instagram_accounts?.profile_image_url || "",
-                    caption: post.caption || undefined,
-                    location: undefined, // Omitted as location isn't stored
-                    postedAt: new Date(post.timestamp),
-                    media,
-                };
-            });
-
-            setActivePosts(mappedPosts);
-            setAvailableUsers(Array.from(new Set(mappedPosts.map(post => post.username))));
-            setLoading(false);
         }
 
         fetchPosts();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
-
-    useEffect(() => {
-        setActiveUsers(["all", ...availableUsers]);
-    }, [availableUsers]);
-
-    useEffect(() => {
-        setActivePosts(activePosts.filter((post) => activeUsers.includes(post.username)));
-    }, [activeUsers]);
 
     const areAllUsersSelected = activeUsers.length === availableUsers.length;
 
@@ -113,8 +108,8 @@ export default function IgFeed() {
 
             {/* User Selector */}
             <div className="justify-center items-center my-4">
-                <ToggleGroup 
-                    variant="outline" 
+                <ToggleGroup
+                    variant="outline"
                     type="multiple"
                     orientation="horizontal"
                     value={activeUsers}
@@ -131,9 +126,9 @@ export default function IgFeed() {
                     }}
                     className="flex flex-wrap gap-2"
                 >
-                    <ToggleGroupItem 
-                        key="all" 
-                        value="all" 
+                    <ToggleGroupItem
+                        key="all"
+                        value="all"
                         aria-label="All"
                         defaultChecked
                         className="hover:bg-primary hover:text-primary-foreground"
@@ -157,15 +152,16 @@ export default function IgFeed() {
 
             {/* Posts Container */}
             <div className="flex-1 overflow-y-auto">
-                <div className="grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-4 p-2 place-items-center">
+                <div
+                    className="grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-4 p-2 place-items-center">
                     {activePosts.map((post) => (
                         <div className="w-64" key={post.id}>
-                            <IGPost post={post} />
+                            <IGPost postId={post.id}/>
                         </div>
                     ))}
                 </div>
             </div>
-            
+
         </div>
     )
 }
