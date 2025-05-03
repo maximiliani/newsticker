@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import {createClient} from "@/lib/supabase/server.ts";
+import {createClient} from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 
 serve(async (req: Request) => {
@@ -8,7 +8,9 @@ serve(async (req: Request) => {
             return new Response("Method not allowed", { status: 405 });
         }
 
-        const supabase = createClient();
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
         const body = await req.json();
 
