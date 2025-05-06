@@ -102,6 +102,14 @@ export default function IgFeed() {
         return <p>Error loading posts: {error}</p>;
     }
 
+    if (posts.length === 0) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <h2 className="text-xl font-bold">No instagram posts available.</h2>
+            </div>
+        )
+    }
+
     return (
         <div className="h-full flex flex-col">
             <h2 className="text-xl font-bold">Instagram Feed</h2>

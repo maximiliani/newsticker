@@ -59,18 +59,16 @@ export async function GET(request: NextRequest) {
         const username = profileData.username;
         const profileImageUrl = profileData.profile_picture_url ?? null;
 
-        // Upsert credentials into Supabase
-        const {error: supabaseError} = await supabase
-            .from("instagram_accounts")
-            .upsert(
-                {
-                    user_id: userId.toString(),
-                    username,
-                    profile_image_url: profileImageUrl,
-                    access_token: accessToken,
-                },
-                {onConflict: "user_id"}
-            );
+        // Replace the direct upsert with a call to the insert_instagram_account function
+        const { data, error: supabaseError } = await supabase
+            .rpc('insert_instagram_account', {
+                p_id: userId,
+                p_user_id: (await supabase.auth.getUser()).data.user?.id,
+                p_username: username,
+                p_profile_image_url: profileImageUrl,
+                p_access_token: accessToken,
+                p_timestamp: Date.now()
+            });
 
         if (supabaseError) {
             return NextResponse.json({
@@ -86,4 +84,3 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({error: "Unexpected server error"}, {status: 500});
     }
 }
-

@@ -1,326 +1,288 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import {createClient} from "jsr:@supabase/supabase-js@2"
+/// <reference lib="deno.ns" />
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import {createClient, SupabaseClient} from "jsr:@supabase/supabase-js@2";
+import {z} from "npm:zod";
 
-interface InstagramAccount {
-    user_id: string;
-    username: string;
-    access_token: string;
-}
+export const IGUserSchema = z.object({
+  id: z.number().gte(0),
+  username: z.string(),
+  profile_picture_url: z.string().optional(),
+  access_token: z.string().url(),
+  created_at: z.date(),
+  updated_at: z.date().optional(),
+  timestamp: z.number(),
+});
 
-interface InstagramMedia {
-    id: string;
-    caption?: string;
-    media_type: string;
-    media_url: string;
-    thumbnail_url?: string;
-    timestamp: string;
-    children?: {
-        data: InstagramMedia[];
-    };
-}
+export const IGMediaSchema = z.object({
+  post_id: z.number().gte(0),
+  index: z.number().gte(0),
+  media_type: z.enum(["image", "video"]),
+  media_url: z.string().url(),
+  thumbnail_url: z.string().url().optional(),
+  timestamp: z.number(),
+});
 
-interface DownloadAndUploadResult {
-    publicUrl: string;
-    contentType: string;
-    size: number;
-}
+export const IGPostSchema = z.object({
+  id: z.number().gte(0),
+  user_id: z.number().gte(0),
+  caption: z.string().optional(),
+  postedAt: z.date(),
+  media: z.array(IGMediaSchema).nonempty(),
+  timestamp: z.number(),
+});
 
-const ALLOWED_CONTENT_TYPES = [
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'video/mp4',
-    'video/quicktime'
-];
+// TypeScript types can be inferred from the schemas
+export type IGUser = z.infer<typeof IGUserSchema>;
+export type IGPost = z.infer<typeof IGPostSchema>;
+export type IGMedia = z.infer<typeof IGMediaSchema>;
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const CHUNK_SIZE = 1024 * 1024; // 1MB chunks for streaming
-const MAX_RETRIES = 3;
-const TIMEOUT = 30000; // 30 seconds
+const InstagramAPIMediaSchema = z.object({
+  id: z.string(),
+  media_type: z.string(),
+  media_url: z.string().url(),
+  permalink: z.string().url(),
+  thumbnail_url: z.string().url().optional(),
+  timestamp: z.string(),
+  caption: z.string().optional(),
+});
 
-async function downloadAndUploadMedia(
-    supabase: SupabaseClient,
-    url: string,
-    storageBucket: string,
-    storagePath: string,
-): Promise<DownloadAndUploadResult> {
-    // Validate URL
-    try {
-        new URL(url);
-    } catch {
-        throw new Error('Invalid URL provided');
+const InstagramAPIResponseSchema = z.object({
+  data: z.array(InstagramAPIMediaSchema),
+  paging: z.object({
+    next: z.string().url().optional(),
+  }).optional(),
+});
+
+type InstagramAPIMedia = z.infer<typeof InstagramAPIMediaSchema>;
+type InstagramAPIResponse = z.infer<typeof InstagramAPIResponseSchema>;
+
+// Fix handleSingleElement function
+async function handleSingleElement(
+  preparedPost: IGPost,
+  ig_media: InstagramAPIMedia,
+  user_id: string,
+  supabase: SupabaseClient,
+  index: number = 0,
+): Promise<IGMedia> {
+  if (!ig_media || !preparedPost) {
+    throw new Error("Invalid media or post data");
+  }
+
+  const media_type = ig_media.media_type.toLowerCase();
+  if (!["image", "video"].includes(media_type)) {
+    throw new Error(`Unsupported media type: ${media_type}`);
+  }
+
+  const { data, error } = await supabase.functions.invoke(
+    "cloneRemoteFile",
+    {
+      body: {
+        url: ig_media.media_url,
+        storageBucket: "instagram-media",
+        storagePath: `posts/${user_id}/${preparedPost.id}/${index}`,
+      },
+    },
+  );
+  if (!data || error) {
+    throw new Error("Failed to download media");
+  }
+
+  // Fix thumbnail handling
+  let thumbnail_url: string | undefined;
+  if (ig_media.thumbnail_url) {
+    const thumbnailResult = await supabase.functions.invoke(
+      "cloneRemoteFile",
+      {
+        body: {
+          url: ig_media.thumbnail_url,
+          storageBucket: "instagram-media",
+          storagePath: `posts/${user_id}/${preparedPost.id}/thumbnail_${index}`,
+        },
+      },
+    );
+    if (thumbnailResult.data) {
+      thumbnail_url = thumbnailResult.data.publicUrl;
     }
+  }
 
-    let attempt = 0;
-    while (attempt < MAX_RETRIES) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), TIMEOUT);
+  const image_media: IGMedia = IGMediaSchema.parse({
+    post_id: preparedPost.id,
+    index,
+    media_type: media_type as "image" | "video",
+    media_url: data.publicUrl,
+    thumbnail_url,
+    timestamp: new Date(ig_media.timestamp).getTime(),
+  });
 
-        try {
-            // Download with streaming
-            const response = await fetch(url, {
-                signal: controller.signal,
-            });
-            clearTimeout(timeout);
+  // Add await to database operation
+  await supabase.from("instagram_post_media").upsert(image_media);
+  return image_media;
+}
 
-            if (!response.ok) {
-                throw new Error(`Failed to download media: ${url}, status: ${response.status}`);
-            }
+// Fix createIGMedia function signature and return type
+async function createIGMedia(
+  supabase: SupabaseClient,
+  media_id: string,
+  user_id: string,
+  access_token: string,
+): Promise<IGMedia | IGMedia[]> {
+  if (!media_id || !access_token) {
+    throw new Error("media_id and access_token are required");
+  }
 
-            // Validate content type
-            const contentType = response.headers.get('content-type') || 'application/octet-stream';
-            if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
-                throw new Error(`Unsupported content type: ${contentType}`);
-            }
+  // Fix response parsing
+  const response = await fetch(
+    `https://graph.instagram.com/${media_id}?fields=id,media_type,media_url,permalink,thumbnail_url,timestamp,caption&access_token=${access_token}`
+  );
+  if (!response.ok) {
+    throw new Error(`Instagram API error: ${await response.text()}`);
+  }
+  const ig_media = InstagramAPIMediaSchema.parse(await response.json());
 
-            // Validate file size
-            const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
-            if (contentLength > MAX_FILE_SIZE) {
-                throw new Error(`File too large: ${contentLength} bytes`);
-            }
+  // Fix ID type conversion and add required fields
+  const preparedPost: IGPost = IGPostSchema.parse({
+    id: parseInt(ig_media.id),
+    user_id: parseInt(user_id),
+    caption: ig_media.caption,
+    postedAt: new Date(ig_media.timestamp),
+    timestamp: new Date(ig_media.timestamp).getTime(),
+    media: [], // Will be populated later
+  });
 
-            // Stream the download to memory in chunks
-            const chunks: Uint8Array[] = [];
-            let size = 0;
-            const reader = response.body?.getReader();
-            
-            if (!reader) {
-                throw new Error('Failed to initialize stream reader');
-            }
+  // Add await to database operation
+  await supabase.from("instagram_posts").upsert(preparedPost);
 
-            while (true) {
-                const {done, value} = await reader.read();
-                if (done) break;
-                
-                chunks.push(value);
-                size += value.length;
-                
-                if (size > MAX_FILE_SIZE) {
-                    reader.cancel();
-                    throw new Error(`File too large: ${size} bytes`);
-                }
-            }
-
-            // Combine chunks
-            const buffer = new Uint8Array(size);
-            let offset = 0;
-            for (const chunk of chunks) {
-                buffer.set(chunk, offset);
-                offset += chunk.length;
-            }
-
-            // Upload to Supabase
-            const {error: uploadError, data: uploadData} = await supabase.storage
-                .from(storageBucket)
-                .upload(storagePath, buffer, {
-                    upsert: true,
-                    contentType,
-                });
-
-            if (uploadError) {
-                throw new Error(`Failed to upload media to storage: ${uploadError.message}`);
-            }
-
-            // Get public URL
-            const {data: urlData} = supabase.storage
-                .from(storageBucket)
-                .getPublicUrl(storagePath);
-
-            if (!urlData?.publicUrl) {
-                throw new Error('Failed to get public URL for uploaded media');
-            }
-
-            // Validate generated URL
-            try {
-                new URL(urlData.publicUrl);
-            } catch {
-                throw new Error('Generated invalid public URL');
-            }
-
-            return {
-                publicUrl: urlData.publicUrl,
-                contentType,
-                size
-            };
-
-        } catch (error) {
-            clearTimeout(timeout);
-
-            if (error instanceof Error) {
-                // Don't retry on validation errors
-                if (error.message.includes('Invalid URL') ||
-                    error.message.includes('Unsupported content type') ||
-                    error.message.includes('File too large')) {
-                    throw error;
-                }
-
-                if (error.name === 'AbortError') {
-                    error.message = `Download timeout for media: ${url}`;
-                }
-            }
-
-            attempt++;
-            if (attempt === MAX_RETRIES) {
-                throw error;
-            }
-
-            // Exponential backoff before retry
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-        }
+  switch (ig_media.media_type.toUpperCase()) {
+    case "IMAGE":
+    case "VIDEO": {
+      const media = await handleSingleElement(
+        preparedPost,
+        ig_media,
+        user_id,
+        supabase,
+      );
+      preparedPost.media = [media];
+      await supabase.from("instagram_posts").upsert(preparedPost);
+      return media;
     }
+    case "CAROUSEL_ALBUM": {
+      const carouselResponse = await fetch(
+        `https://graph.instagram.com/${ig_media.id}/children?fields=id,media_type,media_url,thumbnail_url,timestamp&access_token=${access_token}`
+      );
+      if (!carouselResponse.ok) {
+        throw new Error(`Instagram API error: ${await carouselResponse.text()}`);
+      }
+      const carouselChildrenData = InstagramAPIResponseSchema.parse(
+        await carouselResponse.json()
+      );
 
-    throw new Error('Maximum retry attempts reached');
+      const createdElements: IGMedia[] = [];
+      for (let i = 0; i < carouselChildrenData.data.length; i++) {
+        const childMedia = carouselChildrenData.data[i];
+        createdElements.push(await handleSingleElement( // Fix .add() to .push()
+          preparedPost,
+          childMedia,
+          user_id,
+          supabase,
+          i,
+        ));
+      }
+      preparedPost.media = createdElements;
+      await supabase.from("instagram_posts").upsert(preparedPost);
+      return createdElements;
+    }
+    default:
+      throw new Error(`Unsupported media type: ${ig_media.media_type}`);
+  }
 }
 
 Deno.serve(async (req: Request) => {
-    if (req.method !== "POST") {
-        return new Response("Method not allowed", {status: 405});
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  try {
+    // Start transaction
+    const { data: igAccounts, error: accountsError } = await supabase
+      .from("instagram_accounts")
+      .select<
+        "*",
+        { user_id: string; username: string; access_token: string }
+      >();
+
+    if (accountsError) {
+      throw new Error(
+        `Failed to fetch Instagram accounts: ${accountsError.message}`,
+      );
+    }
+    if (!igAccounts?.length) {
+      return new Response(
+        JSON.stringify({ message: "No Instagram accounts found" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Process accounts in parallel with rate limiting
+    const results = await Promise.allSettled(
+      igAccounts.map(async (account) => {
+        let nextUrl =
+          `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp&access_token=${account.access_token}`;
 
-    const storageBucket = Deno.env.get("SUPABASE_STORAGE_BUCKET") || "instagram-media";
+        while (nextUrl) {
+          const response = await fetch(nextUrl);
+          if (!response.ok) {
+            throw new Error(`Instagram API error: ${await response.text()}`);
+          }
 
-    try {
-        // Fetch all Instagram accounts to update posts for
-        const {data: igAccounts, error: accountsError} = await supabase
-            .from<InstagramAccount>("instagram_accounts")
-            .select("user_id, username, access_token");
+          const json = await response.json();
+          const validated = InstagramAPIResponseSchema.parse(json);
 
-        if (accountsError) {
-            console.error("Error fetching instagram_accounts:", accountsError);
-            return new Response(
-                JSON.stringify({error: "Failed to fetch Instagram accounts"}),
-                {status: 500, headers: {"Content-Type": "application/json"}},
-            );
+          for (const ig_media of validated.data) {
+            const media_id = ig_media.id;
+            const user_id = account.user_id;
+            const access_token = account.access_token;
+
+            await createIGMedia(supabase, media_id, user_id, access_token);
+          }
+
+          nextUrl = validated.paging?.next || "";
         }
+      }),
+    );
 
-        if (!igAccounts || igAccounts.length === 0) {
-            return new Response(
-                JSON.stringify({message: "No Instagram accounts found"}),
-                {status: 200, headers: {"Content-Type": "application/json"}},
-            );
-        }
+    // Process results
+    const errors = results
+      .filter((result): result is PromiseRejectedResult =>
+        result.status === "rejected"
+      )
+      .map((result) => result.reason);
 
-        // For each account, fetch posts using Instagram Graph API and store them + media
-        for (const account of igAccounts) {
-            const {user_id, username, access_token} = account;
-
-            // Fetch media from Instagram Graph API (pagination can be handled in extended implementation)
-            let nextUrl = `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp,children{media_type,media_url,thumbnail_url}&access_token=${access_token}`;
-
-            while (nextUrl) {
-                const response = await fetch(nextUrl);
-                if (!response.ok) {
-                    console.error(`Failed to fetch media for ${username}:`, await response.text());
-                    break;
-                }
-
-                const json = await response.json();
-
-                if (!json.data) {
-                    console.error(`No media data for ${username}`);
-                    break;
-                }
-
-                for (const post of json.data as InstagramMedia[]) {
-                    // Check if post exists in DB by instagram_post_id
-                    const {data: existingPosts} = await supabase
-                        .from("instagram_posts")
-                        .select("id")
-                        .eq("instagram_post_id", post.id)
-                        .maybeSingle();
-
-                    if (existingPosts) {
-                        // Post already exists, skip or optionally update
-                        continue;
-                    }
-
-                    // Download and upload main media
-                    let mainMediaPublicUrl = "";
-                    try {
-                        const result = await downloadAndUploadMedia(
-                            supabase,
-                            post.media_url,
-                            storageBucket,
-                            `posts/${user_id}/${post.id}/${encodeURIComponent(post.media_url.split("/").pop() || "media")}`,
-                        );
-                        mainMediaPublicUrl = result.publicUrl;
-                    } catch (err) {
-                        console.error("Failed to upload main media:", err);
-                        // Continue even if media upload fails
-                    }
-
-                    // Insert post record
-                    const {data: insertedPost, error: postInsertError} = await supabase
-                        .from("instagram_posts")
-                        .insert({
-                            instagram_user_id: user_id,
-                            instagram_post_id: post.id,
-                            caption: post.caption || null,
-                            media_type: post.media_type,
-                            media_url: mainMediaPublicUrl,
-                            timestamp: post.timestamp,
-                        })
-                        .select()
-                        .single();
-
-                    if (postInsertError || !insertedPost) {
-                        console.error("Failed to insert post record:", postInsertError);
-                        continue;
-                    }
-
-                    const postId = insertedPost.id;
-
-                    // Insert child media if exists (e.g. carousel)
-                    if (post.children && post.children.data.length > 0) {
-                        for (let i = 0; i < post.children.data.length; i++) {
-                            const child = post.children.data[i];
-                            let childMediaPublicUrl = "";
-                            try {
-                                const result = await downloadAndUploadMedia(
-                                    supabase,
-                                    child.media_url,
-                                    storageBucket,
-                                    `posts/${user_id}/${post.id}/children/${i}_${encodeURIComponent(child.media_url.split("/").pop() || "media")}`,
-                                );
-                                childMediaPublicUrl = result.publicUrl;
-                            } catch (err) {
-                                console.error("Failed to upload child media:", err);
-                                continue;
-                            }
-
-                            const {error: mediaInsertError} = await supabase.from("instagram_post_media").insert({
-                                instagram_post_id: postId,
-                                media_type: child.media_type,
-                                media_url: childMediaPublicUrl,
-                                thumbnail_url: child.thumbnail_url || null,
-                                order_index: i,
-                            });
-
-                            if (mediaInsertError) {
-                                console.error("Failed to insert child media record:", mediaInsertError);
-                            }
-                        }
-                    }
-                }
-
-                // Check for pagination next page
-                nextUrl = json.paging?.next || null;
-            }
-        }
-
-        return new Response(
-            JSON.stringify({message: "Instagram posts fetched and stored successfully"}),
-            {status: 200, headers: {"Content-Type": "application/json"}},
-        );
-    } catch (error) {
-        console.error("Unexpected error:", error);
-        return new Response(
-            JSON.stringify({error: "Internal server error"}),
-            {status: 500, headers: {"Content-Type": "application/json"}},
-        );
+    if (errors.length) {
+      console.error("Errors during processing:", errors);
     }
+
+    return new Response(
+      JSON.stringify({
+        message: "Instagram posts processed",
+        errors: errors.length ? errors.map((e) => e.message) : undefined,
+      }),
+      {
+        status: errors.length ? 207 : 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  } catch (error) {
+    console.error("Critical error:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : undefined,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
 });
