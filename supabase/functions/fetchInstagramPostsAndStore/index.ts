@@ -1,13 +1,14 @@
 /// <reference lib="deno.ns" />
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import {createClient, SupabaseClient} from "jsr:@supabase/supabase-js@2";
-import {z} from "npm:zod";
+import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { z } from "npm:zod";
 
+// Validation schemas and types
 export const IGUserSchema = z.object({
   id: z.number().gte(0),
   username: z.string(),
   profile_picture_url: z.string().optional(),
-  access_token: z.string().url(),
+  access_token: z.string().min(50),
   created_at: z.date(),
   updated_at: z.date().optional(),
   timestamp: z.number(),
@@ -31,11 +32,6 @@ export const IGPostSchema = z.object({
   timestamp: z.number(),
 });
 
-// TypeScript types can be inferred from the schemas
-export type IGUser = z.infer<typeof IGUserSchema>;
-export type IGPost = z.infer<typeof IGPostSchema>;
-export type IGMedia = z.infer<typeof IGMediaSchema>;
-
 const InstagramAPIMediaSchema = z.object({
   id: z.string(),
   media_type: z.string(),
@@ -53,16 +49,44 @@ const InstagramAPIResponseSchema = z.object({
   }).optional(),
 });
 
-type InstagramAPIMedia = z.infer<typeof InstagramAPIMediaSchema>;
-type InstagramAPIResponse = z.infer<typeof InstagramAPIResponseSchema>;
+const RefreshTokenResponseSchema = z.object({
+  access_token: z.string(),
+  expires_in: z.number(),
+});
 
-// Fix handleSingleElement function
+export type IGUser = z.infer<typeof IGUserSchema>;
+export type IGPost = z.infer<typeof IGPostSchema>;
+export type IGMedia = z.infer<typeof IGMediaSchema>;
+type InstagramAPIMedia = z.infer<typeof InstagramAPIMediaSchema>;
+
+// Utility functions
+const fetchWithTimeout = async (
+  url: string,
+  options: RequestInit & { timeout?: number } = {}
+) => {
+  const { timeout = 30000, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+};
+
 async function handleSingleElement(
   preparedPost: IGPost,
   ig_media: InstagramAPIMedia,
   user_id: string,
   supabase: SupabaseClient,
-  index: number = 0,
+  index = 0
 ): Promise<IGMedia> {
   if (!ig_media || !preparedPost) {
     throw new Error("Invalid media or post data");
@@ -73,251 +97,216 @@ async function handleSingleElement(
     throw new Error(`Unsupported media type: ${media_type}`);
   }
 
-  const { data, error } = await supabase.functions.invoke(
-    "cloneRemoteFile",
-    {
-      body: {
-        url: ig_media.media_url,
-        storageBucket: "instagram-media",
-        storagePath: `posts/${user_id}/${preparedPost.id}/${index}`,
-      },
-    },
-  );
-  if (!data || error) {
-    throw new Error("Failed to download media");
-  }
-
-  // Fix thumbnail handling
-  let thumbnail_url: string | undefined;
-  if (ig_media.thumbnail_url) {
-    const thumbnailResult = await supabase.functions.invoke(
-      "cloneRemoteFile",
-      {
-        body: {
-          url: ig_media.thumbnail_url,
-          storageBucket: "instagram-media",
-          storagePath: `posts/${user_id}/${preparedPost.id}/thumbnail_${index}`,
-        },
-      },
-    );
-    if (thumbnailResult.data) {
-      thumbnail_url = thumbnailResult.data.publicUrl;
-    }
-  }
-
-  const image_media: IGMedia = IGMediaSchema.parse({
+  // Use transaction for atomic operations
+  const { data, error } = await supabase.rpc('handle_media_element', {
+    media_url: ig_media.media_url,
+    thumbnail_url: ig_media.thumbnail_url,
+    user_id,
     post_id: preparedPost.id,
     index,
-    media_type: media_type as "image" | "video",
-    media_url: data.publicUrl,
-    thumbnail_url,
-    timestamp: new Date(ig_media.timestamp).getTime(),
+    media_type,
+    timestamp: new Date(ig_media.timestamp).getTime()
   });
 
-  // Add await to database operation
-  await supabase.from("instagram_post_media").upsert(image_media);
-  return image_media;
+  if (error || !data) {
+    throw new Error(`Failed to process media: ${error?.message || 'Unknown error'}`);
+  }
+
+  return IGMediaSchema.parse(data);
 }
 
-// Fix createIGMedia function signature and return type
 async function createIGMedia(
   supabase: SupabaseClient,
   media_id: string,
   user_id: string,
-  access_token: string,
+  access_token: string
 ): Promise<IGMedia | IGMedia[]> {
   if (!media_id || !access_token) {
     throw new Error("media_id and access_token are required");
   }
 
-  // First, check if the token is valid by making a test request
-  const testResponse = await fetch(
+  // Token validation and refresh
+  const testResponse = await fetchWithTimeout(
     `https://graph.instagram.com/me?access_token=${access_token}`
   );
-  console.debug("Test response:", testResponse);
-  
+
   if (!testResponse.ok) {
-    console.error("Access token is invalid or expired. Trying to refresh:", await testResponse.text());
-    // Try to refresh the token
-    try {
-      const refreshResponse = await fetch(
-        `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${access_token}`
-      );
-      if (!refreshResponse.ok) {
-        throw new Error(`Failed to refresh token: ${await refreshResponse.text()}`);
-      }
-      const refreshData = await refreshResponse.json();
-      
-      // Update the token in the database
-      await supabase
-        .from('instagram_accounts')
-        .update({
-          access_token: refreshData.access_token,
-          token_expires_at: new Date(Date.now() + refreshData.expires_in * 1000).toISOString()
-        })
-        .eq('user_id', user_id);
-      
-      // Use the new token
-      access_token = refreshData.access_token;
-    } catch (error) {
-      throw new Error(`Invalid access token and failed to refresh: ${error.message}`);
+    const refreshResponse = await fetchWithTimeout(
+      `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${access_token}`
+    );
+
+    if (!refreshResponse.ok) {
+      throw new Error("Failed to refresh token");
     }
+
+    const refreshData = RefreshTokenResponseSchema.parse(await refreshResponse.json());
+    
+    // Update token in transaction
+    const { error: updateError } = await supabase
+      .from("instagram_accounts")
+      .update({
+        access_token: refreshData.access_token,
+        token_expires_at: new Date(Date.now() + refreshData.expires_in * 1000).toISOString(),
+      })
+      .eq("user_id", user_id);
+
+    if (updateError) {
+      throw new Error(`Failed to update token: ${updateError.message}`);
+    }
+
+    access_token = refreshData.access_token;
   }
 
-  // Continue with the existing code using the potentially refreshed token
-  const response = await fetch(
+  // Fetch media details
+  const response = await fetchWithTimeout(
     `https://graph.instagram.com/${media_id}?fields=id,media_type,media_url,thumbnail_url,timestamp,caption&access_token=${access_token}`
   );
+
   if (!response.ok) {
-    throw new Error(`Instagram API error: ${await response.text()}`);
+    throw new Error("Failed to fetch media details");
   }
+
   const ig_media = InstagramAPIMediaSchema.parse(await response.json());
 
-  // Fix ID type conversion and add required fields
-  const preparedPost: IGPost = IGPostSchema.parse({
-    id: parseInt(ig_media.id),
+  // Process media based on type
+  const { data: postData, error: postError } = await supabase.rpc('create_instagram_post', {
+    post_id: parseInt(ig_media.id),
     user_id: parseInt(user_id),
     caption: ig_media.caption,
-    postedAt: new Date(ig_media.timestamp),
-    timestamp: new Date(ig_media.timestamp).getTime(),
-    media: [], // Will be populated later
+    posted_at: new Date(ig_media.timestamp).toISOString(),
+    timestamp: new Date(ig_media.timestamp).getTime()
   });
 
-  // Add await to database operation
-  await supabase.from("instagram_posts").upsert(preparedPost);
+  if (postError || !postData) {
+    throw new Error(`Failed to create post: ${postError?.message || 'Unknown error'}`);
+  }
+
+  const preparedPost = IGPostSchema.parse(postData);
 
   switch (ig_media.media_type.toUpperCase()) {
     case "IMAGE":
     case "VIDEO": {
-      const media = await handleSingleElement(
-        preparedPost,
-        ig_media,
-        user_id,
-        supabase,
-      );
-      preparedPost.media = [media];
-      await supabase.from("instagram_posts").upsert(preparedPost);
+      const media = await handleSingleElement(preparedPost, ig_media, user_id, supabase);
       return media;
     }
     case "CAROUSEL_ALBUM": {
-      const carouselResponse = await fetch(
+      const carouselResponse = await fetchWithTimeout(
         `https://graph.instagram.com/${ig_media.id}/children?fields=id,media_type,media_url,thumbnail_url,timestamp&access_token=${access_token}`
       );
-      if (!carouselResponse.ok) {
-        throw new Error(`Instagram API error: ${await carouselResponse.text()}`);
-      }
-      const carouselChildrenData = InstagramAPIResponseSchema.parse(
-        await carouselResponse.json()
-      );
 
-      const createdElements: IGMedia[] = [];
-      for (let i = 0; i < carouselChildrenData.data.length; i++) {
-        const childMedia = carouselChildrenData.data[i];
-        createdElements.push(await handleSingleElement( // Fix .add() to .push()
-          preparedPost,
-          childMedia,
-          user_id,
-          supabase,
-          i,
-        ));
+      if (!carouselResponse.ok) {
+        throw new Error("Failed to fetch carousel data");
       }
-      preparedPost.media = createdElements;
-      await supabase.from("instagram_posts").upsert(preparedPost);
-      return createdElements;
+
+      const carouselData = InstagramAPIResponseSchema.parse(await carouselResponse.json());
+      
+      return await Promise.all(
+        carouselData.data.map((childMedia, index) =>
+          handleSingleElement(preparedPost, childMedia, user_id, supabase, index)
+        )
+      );
     }
     default:
       throw new Error(`Unsupported media type: ${ig_media.media_type}`);
   }
 }
 
+// Main request handler
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const startTime = Date.now();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseKey) {
+    return new Response(
+      JSON.stringify({ error: "Missing environment variables" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
     const { data: igAccounts, error: accountsError } = await supabase
       .from("instagram_accounts")
-      .select<
-        "*",
-        { user_id: string; username: string; access_token: string }
-      >();
+      .select<"*", { user_id: string; username: string; access_token: string }>();
 
     if (accountsError) {
-      throw new Error(
-        `Failed to fetch Instagram accounts: ${accountsError.message}`,
-      );
+      throw new Error(`Failed to fetch Instagram accounts: ${accountsError.message}`);
     }
 
     if (!igAccounts?.length) {
       return new Response(
         JSON.stringify({ message: "No Instagram accounts found" }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
+        { status: 200, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Process accounts sequentially to better handle rate limits and token issues
-    const results = [];
-    for (const account of igAccounts) {
-      try {
-        let nextUrl =
-          `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp&access_token=${account.access_token}`;
+    const results = await Promise.all(
+      igAccounts.map(async (account) => {
+        try {
+          let nextUrl = `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp&access_token=${account.access_token}`;
+          const processedMedia = [];
 
-        while (nextUrl) {
-          const response = await fetch(nextUrl);
-          if (!response.ok) {
-            throw new Error(`Instagram API error: ${await response.text()}`);
+          while (nextUrl) {
+            const response = await fetchWithTimeout(nextUrl);
+            if (!response.ok) throw new Error("Failed to fetch media");
+
+            const validated = InstagramAPIResponseSchema.parse(await response.json());
+            
+            for (const ig_media of validated.data) {
+              const result = await createIGMedia(
+                supabase,
+                ig_media.id,
+                account.user_id,
+                account.access_token
+              );
+              processedMedia.push(result);
+            }
+
+            nextUrl = validated.paging?.next || "";
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limiting
           }
 
-          const json = await response.json();
-          const validated = InstagramAPIResponseSchema.parse(json);
-
-          for (const ig_media of validated.data) {
-            await createIGMedia(supabase, ig_media.id, account.user_id, account.access_token);
-          }
-
-          nextUrl = validated.paging?.next || "";
-          
-          // Add a small delay to respect rate limits
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          return { status: "fulfilled", account: account.username, processed: processedMedia.length };
+        } catch (error) {
+          return { status: "rejected", account: account.username, error };
         }
-        results.push({ status: "fulfilled", account: account.username });
-      } catch (error) {
-        results.push({ status: "rejected", account: account.username, error });
-      }
-    }
+      })
+    );
 
-    const errors = results
-      .filter(result => result.status === "rejected")
-      .map(result => result.error);
-
+    const errors = results.filter((r) => r.status === "rejected");
     if (errors.length) {
-      console.error("Errors during processing:", errors);
+      console.error("Processing errors:", errors);
     }
 
     return new Response(
       JSON.stringify({
-        message: "Instagram posts processed",
-        results,
-        errors: errors.length ? errors.map((e) => e.message) : undefined,
+        success: true,
+        stats: {
+          accountsProcessed: results.length,
+          successfulAccounts: results.filter(r => r.status === "fulfilled").length,
+          failedAccounts: errors.length,
+          processingTime: Date.now() - startTime
+        }
       }),
       {
-        status: errors.length ? 207 : 200,
-        headers: { "Content-Type": "application/json" },
-      },
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
     );
   } catch (error) {
     console.error("Critical error:", error);
     return new Response(
       JSON.stringify({
         error: "Internal server error",
-        details: error instanceof Error ? error.message : undefined,
+        details: error instanceof Error ? error.message : "Unknown error"
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 });

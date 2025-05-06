@@ -18,13 +18,29 @@ function isValidAccessToken(token: string): boolean {
     return true;
 }
 
+interface TokenResponse {
+    access_token: string;
+    user_id: string;
+}
+
+interface ProfileResponse {
+    id: string;
+    username: string;
+}
+
+interface LongLivedTokenResponse {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+}
+
 export async function GET(request: NextRequest) {
     const supabase = await createClient();
-
     try {
         const {searchParams} = new URL(request.url);
         const error = searchParams.get("error");
         const errorDescription = searchParams.get("error_description");
+        
         if (error) {
             return NextResponse.json({error, errorDescription}, {status: 400});
         }
@@ -45,78 +61,101 @@ export async function GET(request: NextRequest) {
                 redirect_uri: redirectUri,
                 code,
             }),
+            signal: AbortSignal.timeout(10000), // 10 second timeout
         });
+
         if (!tokenResponse.ok) {
             const text = await tokenResponse.text();
-            return NextResponse.json({error: "Failed to fetch access token", details: text}, {status: 500});
-        }
-        const tokenData = await tokenResponse.json();
-
-        const accessToken = tokenData.access_token;
-        const userId = tokenData.user_id;
-
-        if (!accessToken || !userId) {
-            return NextResponse.json({error: "Invalid token response"}, {status: 500});
+            return NextResponse.json({
+                error: "Failed to fetch access token", 
+                status: tokenResponse.status,
+                details: text
+            }, {status: 500});
         }
 
-        // Before using the token, ensure it's not URL-encoded
-        const decodedToken = decodeURIComponent(accessToken);
-
-        // Fetch user profile info
-        const profileResponse = await fetch(
-            `https://graph.instagram.com/${userId}?fields=id,username,profile_picture_url&access_token=${accessToken}`
-        );
-        if (!profileResponse.ok) {
-            const text = await profileResponse.text();
-            return NextResponse.json({error: "Failed to fetch user profile", details: text}, {status: 500});
+        const tokenData = await tokenResponse.json() as TokenResponse;
+        if (!tokenData.access_token || !tokenData.user_id) {
+            return NextResponse.json({error: "Invalid token response format"}, {status: 500});
         }
-        const profileData = await profileResponse.json();
 
-        const username = profileData.username;
-        const profileImageUrl = profileData.profile_picture_url ?? null;
-
-        // After getting the initial access token, exchange it for a long-lived token
+        // Exchange for long-lived token first before getting profile
+        // as per Instagram's best practices
         const longLivedTokenResponse = await fetch(
-            `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${clientSecret}&access_token=${accessToken}`
+            `https://graph.instagram.com/access_token?${new URLSearchParams({
+                grant_type: 'ig_exchange_token',
+                client_secret: clientSecret,
+                access_token: tokenData.access_token
+            })}`,
+            {
+                method: 'GET',
+                signal: AbortSignal.timeout(10000)
+            }
         );
+
         if (!longLivedTokenResponse.ok) {
             const text = await longLivedTokenResponse.text();
-            return NextResponse.json({error: "Failed to get long-lived token", details: text}, {status: 500});
-        }
-        const longLivedTokenData = await longLivedTokenResponse.json();
-        const longLivedAccessToken = longLivedTokenData.access_token;
-
-        // Use it before saving
-        if (!isValidAccessToken(longLivedAccessToken)) {
             return NextResponse.json({
-                error: "Invalid access token format",
-                details: "The token format is not valid"
+                error: "Failed to get long-lived token",
+                status: longLivedTokenResponse.status,
+                details: text
+            }, {status: 500});
+        }
+
+        const longLivedTokenData = await longLivedTokenResponse.json() as LongLivedTokenResponse;
+        
+        if (!isValidAccessToken(longLivedTokenData.access_token)) {
+            return NextResponse.json({
+                error: "Invalid access token format"
             }, {status: 400});
         }
 
-        // Use longLivedAccessToken instead of accessToken when saving to database
-        // Replace the direct upsert with a call to the insert_instagram_account function
-        const { data, error: supabaseError } = await supabase
+        // Fetch user profile info using the long-lived token
+        const profileResponse = await fetch(
+            `https://graph.instagram.com/me?${new URLSearchParams({
+                fields: 'id,username',
+                access_token: longLivedTokenData.access_token
+            })}`,
+            {
+                method: 'GET',
+                signal: AbortSignal.timeout(10000)
+            }
+        );
+
+        if (!profileResponse.ok) {
+            const text = await profileResponse.text();
+            return NextResponse.json({
+                error: "Failed to fetch user profile",
+                status: profileResponse.status,
+                details: text
+            }, {status: 500});
+        }
+
+        const profileData = await profileResponse.json() as ProfileResponse;
+
+        // Store in database with the long-lived token
+        const { error: supabaseError } = await supabase
             .rpc('insert_instagram_account', {
-                p_id: userId,
+                p_id: profileData.id,
                 p_user_id: (await supabase.auth.getUser()).data.user?.id,
-                p_username: username,
-                p_profile_image_url: profileImageUrl,
-                p_access_token: longLivedAccessToken, // Use the long-lived token here
+                p_username: profileData.username,
+                p_profile_image_url: null, // Instagram Basic Display API doesn't provide this
+                p_access_token: longLivedTokenData.access_token,
                 p_timestamp: Date.now()
             });
 
         if (supabaseError) {
             return NextResponse.json({
-                error: "Failed to save Instagram credentials",
+                error: "Database operation failed",
                 details: supabaseError.message
             }, {status: 500});
         }
 
-        // Redirect after success
         return NextResponse.redirect(new URL("/instagram-success", request.url));
     } catch (err) {
-        console.error(err);
+        console.error('Instagram integration error:', err instanceof Error ? err.message : 'Unknown error');
         return NextResponse.json({error: "Unexpected server error"}, {status: 500});
+    } finally {
+        // Clean up Supabase client
+        await supabase.auth.signOut();
     }
 }
