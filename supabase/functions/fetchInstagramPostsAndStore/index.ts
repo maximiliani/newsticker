@@ -130,9 +130,43 @@ async function createIGMedia(
     throw new Error("media_id and access_token are required");
   }
 
-  // Fix response parsing
+  // First, check if the token is valid by making a test request
+  const testResponse = await fetch(
+    `https://graph.instagram.com/me?access_token=${access_token}`
+  );
+  console.debug("Test response:", testResponse);
+  
+  if (!testResponse.ok) {
+    console.error("Access token is invalid or expired. Trying to refresh:", await testResponse.text());
+    // Try to refresh the token
+    try {
+      const refreshResponse = await fetch(
+        `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${access_token}`
+      );
+      if (!refreshResponse.ok) {
+        throw new Error(`Failed to refresh token: ${await refreshResponse.text()}`);
+      }
+      const refreshData = await refreshResponse.json();
+      
+      // Update the token in the database
+      await supabase
+        .from('instagram_accounts')
+        .update({
+          access_token: refreshData.access_token,
+          token_expires_at: new Date(Date.now() + refreshData.expires_in * 1000).toISOString()
+        })
+        .eq('user_id', user_id);
+      
+      // Use the new token
+      access_token = refreshData.access_token;
+    } catch (error) {
+      throw new Error(`Invalid access token and failed to refresh: ${error.message}`);
+    }
+  }
+
+  // Continue with the existing code using the potentially refreshed token
   const response = await fetch(
-    `https://graph.instagram.com/${media_id}?fields=id,media_type,media_url,permalink,thumbnail_url,timestamp,caption&access_token=${access_token}`
+    `https://graph.instagram.com/${media_id}?fields=id,media_type,media_url,thumbnail_url,timestamp,caption&access_token=${access_token}`
   );
   if (!response.ok) {
     throw new Error(`Instagram API error: ${await response.text()}`);
@@ -206,7 +240,6 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Start transaction
     const { data: igAccounts, error: accountsError } = await supabase
       .from("instagram_accounts")
       .select<
@@ -219,6 +252,7 @@ Deno.serve(async (req: Request) => {
         `Failed to fetch Instagram accounts: ${accountsError.message}`,
       );
     }
+
     if (!igAccounts?.length) {
       return new Response(
         JSON.stringify({ message: "No Instagram accounts found" }),
@@ -226,9 +260,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Process accounts in parallel with rate limiting
-    const results = await Promise.allSettled(
-      igAccounts.map(async (account) => {
+    // Process accounts sequentially to better handle rate limits and token issues
+    const results = [];
+    for (const account of igAccounts) {
+      try {
         let nextUrl =
           `https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp&access_token=${account.access_token}`;
 
@@ -242,24 +277,23 @@ Deno.serve(async (req: Request) => {
           const validated = InstagramAPIResponseSchema.parse(json);
 
           for (const ig_media of validated.data) {
-            const media_id = ig_media.id;
-            const user_id = account.user_id;
-            const access_token = account.access_token;
-
-            await createIGMedia(supabase, media_id, user_id, access_token);
+            await createIGMedia(supabase, ig_media.id, account.user_id, account.access_token);
           }
 
           nextUrl = validated.paging?.next || "";
+          
+          // Add a small delay to respect rate limits
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-      }),
-    );
+        results.push({ status: "fulfilled", account: account.username });
+      } catch (error) {
+        results.push({ status: "rejected", account: account.username, error });
+      }
+    }
 
-    // Process results
     const errors = results
-      .filter((result): result is PromiseRejectedResult =>
-        result.status === "rejected"
-      )
-      .map((result) => result.reason);
+      .filter(result => result.status === "rejected")
+      .map(result => result.error);
 
     if (errors.length) {
       console.error("Errors during processing:", errors);
@@ -268,6 +302,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         message: "Instagram posts processed",
+        results,
         errors: errors.length ? errors.map((e) => e.message) : undefined,
       }),
       {
