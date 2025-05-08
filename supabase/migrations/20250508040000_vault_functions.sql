@@ -89,8 +89,7 @@ BEGIN
     END IF;
 
     -- Check both service_role and specific permission
-    IF NOT (auth.role() = 'service_role' AND 
-            pg_has_role(current_user, 'instagram_token_reader', 'MEMBER'))
+    IF NOT (auth.role() = 'service_role')
     THEN
         RAISE EXCEPTION 'Insufficient permissions';
     END IF;
@@ -100,7 +99,7 @@ BEGIN
         a.id,
         a.user_id::UUID,
         a.username,
-        s.secret as access_token
+        s.decrypted_secret as access_token
     FROM instagram_accounts a
     JOIN vault.decrypted_secrets s ON s.id = a.access_token_secret_id
     ORDER BY a.id
