@@ -227,7 +227,8 @@ export function ProfileSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent
+          className="sm:max-w-[525px] md:max-w-[625px] lg:max-w-[725px] xl:max-w-[825px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit profile</DialogTitle>
         </DialogHeader>
