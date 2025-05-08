@@ -26,6 +26,7 @@ interface TokenResponse {
 interface ProfileResponse {
     id: string;
     username: string;
+    profile_picture_url: string;
 }
 
 interface LongLivedTokenResponse {
@@ -112,7 +113,7 @@ export async function GET(request: NextRequest) {
         // Fetch user profile info using the long-lived token
         const profileResponse = await fetch(
             `https://graph.instagram.com/me?${new URLSearchParams({
-                fields: 'id,username',
+                fields: 'id,username,profile_picture_url',
                 access_token: longLivedTokenData.access_token
             })}`,
             {
@@ -132,13 +133,45 @@ export async function GET(request: NextRequest) {
 
         const profileData = await profileResponse.json() as ProfileResponse;
 
-        // Store in database with the long-lived token
+        let profileImageUrl = null;
+        if (profileData.profile_picture_url) {
+            try {
+                const imageResponse = await fetch(profileData.profile_picture_url);
+                if (imageResponse.ok) {
+                    const imageBlob = await imageResponse.blob();
+                    
+                    const fileName = `instagram-${profileData.id}-${Date.now()}.jpg`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabase
+                        .storage
+                        .from('instagram-profiles')
+                        .upload(fileName, imageBlob, {
+                            contentType: 'image/jpeg',
+                            upsert: true
+                        });
+
+                    if (!uploadError && uploadData) {
+                        const { data: { publicUrl } } = supabase
+                            .storage
+                            .from('instagram-profiles')
+                            .getPublicUrl(fileName);
+                        
+                        profileImageUrl = publicUrl;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to process profile image:', error);
+            }
+        }
+
+        // Store in database with the profile image URL
+        // Modify the database call to use vault with simplified token naming
         const { error: supabaseError } = await supabase
-            .rpc('insert_instagram_account', {
+            .rpc('insert_instagram_account_with_vault', {
                 p_id: profileData.id,
                 p_user_id: (await supabase.auth.getUser()).data.user?.id,
                 p_username: profileData.username,
-                p_profile_image_url: null, // Instagram Basic Display API doesn't provide this
+                p_profile_image_url: profileImageUrl,
                 p_access_token: longLivedTokenData.access_token,
                 p_timestamp: Date.now()
             });
@@ -150,7 +183,12 @@ export async function GET(request: NextRequest) {
             }, {status: 500});
         }
 
-        return NextResponse.redirect(new URL("/instagram-success", request.url));
+        // Modify the redirect to include the tokens and user ID
+        const successUrl = new URL("/instagram-success", request.url);
+        successUrl.searchParams.set("token", longLivedTokenData.access_token);
+        successUrl.searchParams.set("userId", profileData.id);
+        return NextResponse.redirect(successUrl);
+
     } catch (err) {
         console.error('Instagram integration error:', err instanceof Error ? err.message : 'Unknown error');
         return NextResponse.json({error: "Unexpected server error"}, {status: 500});

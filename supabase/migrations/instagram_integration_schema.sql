@@ -1,6 +1,9 @@
 -- Migration name: create_instagram_tables
 -- Description: Creates tables for Instagram integration with vault-stored tokens, user ownership, and RLS
 
+-- Add transaction wrapping
+BEGIN;
+
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- vault extension should already be enabled in Supabase
@@ -21,6 +24,15 @@ CREATE TABLE instagram_accounts (
     CONSTRAINT username_unique UNIQUE (username),
     CONSTRAINT user_username_unique UNIQUE (user_id, username)
 );
+
+-- Add token expiration
+ALTER TABLE instagram_accounts 
+ADD COLUMN token_expires_at TIMESTAMP WITH TIME ZONE;
+
+-- Add URL validation for profile image
+ALTER TABLE instagram_accounts 
+ADD CONSTRAINT valid_profile_image_url 
+CHECK (profile_image_url IS NULL OR profile_image_url ~ '^https?://.*$');
 
 -- Create secure view for accessing decrypted tokens
 CREATE OR REPLACE VIEW instagram_accounts_decrypted AS
@@ -49,6 +61,12 @@ CREATE TABLE instagram_posts (
     updated_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Add maximum lengths for text fields
+ALTER TABLE instagram_posts 
+ADD CONSTRAINT caption_length CHECK (length(caption) <= 2200);
+ALTER TABLE instagram_posts 
+ADD CONSTRAINT location_length CHECK (length(location) <= 255);
+
 -- Create instagram_post_media table
 CREATE TABLE instagram_post_media (
     post_id BIGINT NOT NULL REFERENCES instagram_posts(id) ON DELETE CASCADE,
@@ -61,6 +79,10 @@ CREATE TABLE instagram_post_media (
     updated_at TIMESTAMP WITH TIME ZONE,
     PRIMARY KEY (post_id, index)
 );
+
+-- Add index for timestamp queries
+CREATE INDEX idx_instagram_post_media_timestamp 
+ON instagram_post_media(timestamp DESC);
 
 -- Helper functions for token management
 CREATE OR REPLACE FUNCTION insert_instagram_account(
@@ -228,6 +250,137 @@ COMMENT ON TABLE instagram_accounts IS 'Stores Instagram account information wit
 COMMENT ON TABLE instagram_posts IS 'Stores Instagram posts with user ownership';
 COMMENT ON TABLE instagram_post_media IS 'Stores media content for Instagram posts';
 COMMENT ON VIEW instagram_accounts_decrypted IS 'Secure view for accessing Instagram access tokens from vault';
+
+-- Remove debug logging from get_decrypted_instagram_tokens
+CREATE OR REPLACE FUNCTION get_decrypted_instagram_tokens()
+RETURNS TABLE (
+    id BIGINT,
+    user_id UUID,
+    username VARCHAR,
+    access_token TEXT
+) 
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        a.id,
+        a.user_id::UUID,
+        a.username,
+        s.secret as access_token
+    FROM instagram_accounts a
+    JOIN vault.decrypted_secrets s ON s.id = a.access_token_secret_id
+    WHERE auth.role() = 'service_role';  -- Restore role check
+END;
+$$ LANGUAGE plpgsql;
+
+-- Explicitly revoke all privileges
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_decrypted_instagram_tokens() TO service_role;
+
+COMMIT;
+
+
+-- Execute in Supabase SQL editor
+CREATE POLICY "Allow authenticated users to upload images"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    bucket_id = 'instagram-profiles' AND
+    auth.role() = 'authenticated'
+);
+
+-- Policy to allow public access to view images
+CREATE POLICY "Allow public to view images"
+ON storage.objects
+FOR SELECT
+TO public
+USING (bucket_id = 'instagram-profiles');
+
+-- Function to insert Instagram account with vault-stored token
+create or replace function insert_instagram_account_with_vault(
+  p_id text,
+  p_user_id uuid,
+  p_username text,
+  p_profile_image_url text,
+  p_access_token text,
+  p_timestamp bigint
+) returns void as $$
+declare
+  v_secret_id uuid;
+begin
+  -- Create encrypted secret in vault
+  v_secret_id := vault.create_secret(
+    p_access_token,
+    'instagram_token_' || p_id,  -- Consistent naming based on ID
+    'Instagram access token for user ID: ' || p_id  -- Simple description with user ID
+  );
+
+  -- Insert account with reference to vault secret
+  insert into instagram_accounts (
+    id,
+    user_id,
+    username,
+    profile_image_url,
+    token_secret_id,
+    created_at,
+    updated_at
+  ) values (
+    p_id,
+    p_user_id,
+    p_username,
+    p_profile_image_url,
+    v_secret_id,
+    now(),
+    now()
+  );
+end;
+$$ language plpgsql security definer;
+
+-- Function to get decrypted token
+create or replace function get_decrypted_instagram_token(p_user_id text)
+returns table (
+  decrypted_token text
+) as $$
+begin
+  return query
+  select ds.decrypted_secret
+  from instagram_accounts ia
+  join vault.decrypted_secrets ds on ds.id = ia.token_secret_id
+  where ia.id = p_user_id;
+end;
+$$ language plpgsql security definer;
+
+-- Function to update token in vault
+create or replace function update_instagram_token_in_vault(
+  p_user_id text,
+  p_new_token text,
+  p_expires_at timestamp
+) returns void as $$
+declare
+  v_secret_id uuid;
+begin
+  -- Get the secret ID
+  select token_secret_id into v_secret_id
+  from instagram_accounts
+  where id = p_user_id;
+
+  -- Update the secret
+  perform vault.update_secret(
+    v_secret_id,
+    p_new_token
+  );
+
+  -- Update the expires_at timestamp
+  update instagram_accounts
+  set token_expires_at = p_expires_at,
+      updated_at = now()
+  where id = p_user_id;
+end;
+$$ language plpgsql security definer;
 
 -- Down Migration
 /*

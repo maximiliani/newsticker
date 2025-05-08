@@ -13,7 +13,7 @@ interface RequestBody {
 interface IGUser {
   id: string;
   access_token: string;
-  user_id: string;
+  user_id?: string;
 }
 
 interface TokenResponse {
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
 
     const {data: users, error} = await supabase
         .from('instagram_accounts')
-        .select('id, access_token')
+        .select('id, access_token, user_id')
         .in('id', userIds);
 
     if (error) throw error;
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       headers: {"Content-Type": "application/json"}
     });
   } catch (error) {
-    return new Response(JSON.stringify({error: error.message}), {
+    return new Response(JSON.stringify({error: error instanceof Error ? error.message : 'An unknown error occurred'}), {
       status: 400,
       headers: {"Content-Type": "application/json"}
     });
