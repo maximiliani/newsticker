@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
         // Store in database with the profile image URL
         // Modify the database call to use vault with simplified token naming
         const { error: supabaseError } = await supabase
-            .rpc('insert_instagram_account_with_vault', {
+            .rpc('insert_instagram_account', {
                 p_id: profileData.id,
                 p_user_id: (await supabase.auth.getUser()).data.user?.id,
                 p_username: profileData.username,

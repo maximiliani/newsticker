@@ -1,5 +1,10 @@
 BEGIN;
 
+-- Enable Row Level Security
+ALTER TABLE instagram_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE instagram_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE instagram_post_media ENABLE ROW LEVEL SECURITY;
+
 -- Account-level security policies
 -- Allow public to view basic account information (excluding access token)
 CREATE POLICY "Public can view basic account information"
