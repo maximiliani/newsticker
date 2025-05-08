@@ -35,6 +35,5 @@ GRANT SELECT ON instagram_posts TO PUBLIC;
 -- Grant SELECT permission on instagram_post_media in the public schema to all users
 GRANT SELECT ON instagram_post_media TO PUBLIC;
 
-
 -- Commit the transaction
 COMMIT;

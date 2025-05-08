@@ -1,13 +1,5 @@
 BEGIN;
 
--- Function to insert a new Instagram account with encrypted access token
--- Parameters:
---   p_id: Instagram account ID
---   p_user_id: User identifier
---   p_username: Instagram username
---   p_profile_image_url: URL of the profile image
---   p_access_token: Instagram API access token (will be encrypted)
---   p_timestamp: Timestamp of the account creation/update
 CREATE OR REPLACE FUNCTION insert_instagram_account(
     p_id BIGINT,
     p_user_id UUID,
@@ -16,49 +8,93 @@ CREATE OR REPLACE FUNCTION insert_instagram_account(
     p_access_token TEXT,
     p_timestamp BIGINT
 ) RETURNS instagram_accounts 
-SECURITY DEFINER -- Function runs with definer's privileges
-SET search_path = public -- Explicitly set schema search path for security
+SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
-    v_secret_id UUID;    -- Stores the ID of the encrypted secret
-    v_result instagram_accounts;    -- Stores the result of the insertion
+    v_secret_id UUID;
+    v_result instagram_accounts;
 BEGIN
-    -- Store the access token in the vault.secrets table and get its ID
-    INSERT INTO vault.secrets (secret)
-    VALUES (p_access_token)
-    RETURNING id INTO v_secret_id;
+    -- Input validation
+    IF p_id IS NULL OR p_user_id IS NULL OR p_username IS NULL OR p_access_token IS NULL THEN
+        RAISE EXCEPTION 'Required parameters cannot be null';
+    END IF;
 
-    -- Insert the Instagram account details
-    -- The access token is stored as a reference to the encrypted secret
-    INSERT INTO instagram_accounts (
-        id, user_id, username, profile_image_url, 
-        access_token_secret_id, timestamp
-    )
-    VALUES (
-        p_id, p_user_id, p_username, p_profile_image_url,
-        v_secret_id, p_timestamp
-    )
-    RETURNING * INTO v_result;
-    
+    -- Validate username format (alphanumeric, dots, and underscores only)
+    IF NOT p_username ~ '^[A-Za-z0-9._]{1,30}$' THEN
+        RAISE EXCEPTION 'Invalid Instagram username format';
+    END IF;
+
+    -- Validate URL format if provided
+    IF p_profile_image_url IS NOT NULL AND NOT p_profile_image_url ~ '^https?://[^\s/$.?#].[^\s]*$' THEN
+        RAISE EXCEPTION 'Invalid profile image URL format';
+    END IF;
+
+    -- Transaction for atomicity
+    BEGIN
+        -- Check for duplicate account
+        IF EXISTS (SELECT 1 FROM instagram_accounts WHERE id = p_id) THEN
+            RAISE EXCEPTION 'Instagram account with ID % already exists', p_id;
+        END IF;
+
+        -- Store the access token
+        INSERT INTO vault.secrets (secret)
+        VALUES (p_access_token)
+        RETURNING id INTO v_secret_id;
+
+        -- Insert account details
+        INSERT INTO instagram_accounts (
+            id, user_id, username, profile_image_url, 
+            access_token_secret_id, timestamp
+        )
+        VALUES (
+            p_id, p_user_id, p_username, p_profile_image_url,
+            v_secret_id, p_timestamp
+        )
+        RETURNING * INTO v_result;
+
+    EXCEPTION
+        WHEN others THEN
+            -- Cleanup on failure
+            IF v_secret_id IS NOT NULL THEN
+                DELETE FROM vault.secrets WHERE id = v_secret_id;
+            END IF;
+            RAISE;
+    END;
+
     RETURN v_result;
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to retrieve decrypted Instagram tokens
--- Returns a table with account information and decrypted access tokens
--- Can only be accessed with service_role privileges
-CREATE OR REPLACE FUNCTION get_decrypted_instagram_tokens()
-RETURNS TABLE (
+CREATE OR REPLACE FUNCTION get_decrypted_instagram_tokens(
+    p_limit INTEGER DEFAULT 1000,
+    p_offset INTEGER DEFAULT 0
+) RETURNS TABLE (
     id BIGINT,
     user_id UUID,
     username VARCHAR,
     access_token TEXT
 ) 
-SECURITY DEFINER -- Function runs with definer's privileges
-STABLE -- Indicates function doesn't modify the database
-SET search_path = public -- Explicitly set schema search path for security
+SECURITY DEFINER
+STABLE 
+SET search_path = public, pg_temp
 AS $$
 BEGIN
+    -- Validate parameters
+    IF p_limit < 1 OR p_limit > 1000 THEN
+        RAISE EXCEPTION 'Limit must be between 1 and 1000';
+    END IF;
+    IF p_offset < 0 THEN
+        RAISE EXCEPTION 'Offset must be non-negative';
+    END IF;
+
+    -- Check both service_role and specific permission
+    IF NOT (auth.role() = 'service_role' AND 
+            pg_has_role(current_user, 'instagram_token_reader', 'MEMBER'))
+    THEN
+        RAISE EXCEPTION 'Insufficient permissions';
+    END IF;
+
     RETURN QUERY
     SELECT 
         a.id,
@@ -67,7 +103,9 @@ BEGIN
         s.secret as access_token
     FROM instagram_accounts a
     JOIN vault.decrypted_secrets s ON s.id = a.access_token_secret_id
-    WHERE auth.role() = 'service_role'; -- Restricts access to service role only
+    ORDER BY a.id
+    LIMIT p_limit
+    OFFSET p_offset;
 END;
 $$ LANGUAGE plpgsql;
 
