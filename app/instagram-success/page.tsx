@@ -1,7 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface InstagramAccount {
@@ -12,7 +12,7 @@ interface InstagramAccount {
     timestamp: number;
 }
 
-export default function InstagramSuccess() {
+function InstagramSuccessContent() {
     const searchParams = useSearchParams();
     const initialToken = searchParams.get('token');
     const initialUserId = searchParams.get('userId');
@@ -137,5 +137,13 @@ export default function InstagramSuccess() {
                 Go back home
             </a>
         </div>
+    );
+}
+
+export default function InstagramSuccess() {
+    return (
+        <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+            <InstagramSuccessContent />
+        </Suspense>
     );
 }
