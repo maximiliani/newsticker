@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatDate } from "@/utils/utils";
 
 export function Clock() {
   const [time, setTime] = useState(new Date());
@@ -19,6 +18,7 @@ export function Clock() {
       <time 
         className="text-xl font-bold tracking-wide flex items-center gap-2 motion-safe:after:w-2 motion-safe:after:h-2 motion-safe:after:rounded-full motion-safe:after:bg-red-500 motion-safe:after:animate-ping"
         dateTime={time.toISOString()}
+        suppressHydrationWarning={true}
       >
         {time.toLocaleTimeString(undefined, {
           hour: '2-digit',
@@ -26,7 +26,7 @@ export function Clock() {
           second: '2-digit'
         })}
       </time>
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground" suppressHydrationWarning={true}>
         {time.toLocaleDateString(undefined, {
           weekday: 'long',
           year: 'numeric',
@@ -36,4 +36,4 @@ export function Clock() {
       </div>
     </div>
   );
-} 
+}

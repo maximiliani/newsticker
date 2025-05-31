@@ -27,20 +27,32 @@ export function CreateArticleForm({ onClose, onArticleCreated }: CreateArticleFo
     const supabase = createClient();
     
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    // Removed authorFullName and authorAvatarUrl states
+    const [isClient, setIsClient] = useState(false);
 
+    // Initialize with empty strings to avoid hydration mismatch
     const [formData, setFormData] = useState<ArticleInput>({
         title: '',
         description: '',
         content: '',
-        visibility_from: new Date().toISOString().substring(0, 16),
-        visibility_to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16),
+        visibility_from: '',
+        visibility_to: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
 
     useEffect(() => {
+        // Set client flag and initialize date fields
+        setIsClient(true);
+        const now = new Date();
+        const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        
+        setFormData(prev => ({
+            ...prev,
+            visibility_from: now.toISOString().substring(0, 16),
+            visibility_to: weekFromNow.toISOString().substring(0, 16),
+        }));
+
         const fetchUser = async () => {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             if (sessionError) {
@@ -50,7 +62,6 @@ export function CreateArticleForm({ onClose, onArticleCreated }: CreateArticleFo
             }
             if (session?.user) {
                 setCurrentUser(session.user);
-                // No longer need to set authorFullName or authorAvatarUrl here for the form's state
             } else {
                 setAuthError('You must be logged in to create an article.');
             }
@@ -88,15 +99,13 @@ export function CreateArticleForm({ onClose, onArticleCreated }: CreateArticleFo
 
         const articleToInsert = {
             ...formData,
-            user_id: currentUser.id, // Only user_id is needed for author association
-            // author_name and author_avatar are no longer set here
+            user_id: currentUser.id,
             visibility_from: new Date(formData.visibility_from).toISOString(),
             visibility_to: new Date(formData.visibility_to).toISOString(),
             created_at: new Date().toISOString(),
             modified_at: new Date().toISOString(),
         };
 
-        // Inserts into the 'articles' table, not the view
         const { data, error: submissionError } = await supabase
             .from('articles') 
             .insert([articleToInsert])
@@ -109,12 +118,15 @@ export function CreateArticleForm({ onClose, onArticleCreated }: CreateArticleFo
             setError(`Failed to create article: ${submissionError.message}`);
         } else {
             console.log('Article created:', data);
+            // Reset form with current dates
+            const now = new Date();
+            const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             setFormData({
                 title: '',
                 description: '',
                 content: '',
-                visibility_from: new Date().toISOString().substring(0, 16),
-                visibility_to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16),
+                visibility_from: now.toISOString().substring(0, 16),
+                visibility_to: weekFromNow.toISOString().substring(0, 16),
             });
             if (onArticleCreated) {
                 onArticleCreated();
@@ -132,6 +144,11 @@ export function CreateArticleForm({ onClose, onArticleCreated }: CreateArticleFo
     }
     if (!currentUser && !authError) {
         return <p className="p-4">Loading user information...</p>;
+    }
+
+    // Don't render form inputs until client-side hydration is complete
+    if (!isClient) {
+        return <div className="p-4">Loading form...</div>;
     }
 
     return (
