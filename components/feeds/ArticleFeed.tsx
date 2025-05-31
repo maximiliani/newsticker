@@ -91,16 +91,17 @@ export default function ArticleFeed() {
     return (
         <div className="h-full flex flex-col overflow-hidden">
             <div className="flex justify-between items-center p-4 border-b flex-shrink-0">
-                <h1 className="text-xl font-bold">Articles</h1>
+                <h1 className="text-xl font-bold">Latest News</h1>
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                     <DialogTrigger asChild>
-                        <Button size="sm" onClick={() => setShowCreateDialog(true)}>
-                            <PlusIcon className="mr-2 h-4 w-4"/> Add
+                        <Button size="sm" variant="outline" className="flex items-center" onClick={() => setShowCreateDialog(true)}>
+                            <PlusIcon className="mr-2 h-4 w-4"/>
+                            Create news article
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[600px]">
                         <DialogHeader>
-                            <DialogTitle>Create New Article</DialogTitle>
+                            <DialogTitle>Create news article</DialogTitle>
                         </DialogHeader>
                         <CreateArticleForm
                             onClose={() => setShowCreateDialog(false)}
