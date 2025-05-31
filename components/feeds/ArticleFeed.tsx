@@ -1,255 +1,130 @@
-import {NewsPreview} from "@/components/news-preview";
-import {Button} from "../ui/button";
-import {PlusIcon} from "@radix-ui/react-icons";
-import {useState} from 'react';
-import {createClient} from '@/lib/supabase/client';
+"use client";
 
-// Define the NewsPreviewData type
-type NewsPreviewData = {
+import { NewsPreview } from "@/components/news-preview";
+import { Button } from "@/components/ui/button";
+import { PlusIcon } from "@radix-ui/react-icons";
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {CreateArticleForm} from "@/components/CreateArticleForm";
+
+// Type for data structure from the 'articles_with_author_info' view
+type ArticleFromView = {
     id: string;
-    metadata: {
-        id: string;
-        title: string; // Ensure title is a required string
-        description: string; // Ensure description is a required string
-        createdAt: Date;
-        modifiedAt: Date;
-        author: {
-            name: string;
-            avatar: string;
-        };
-        visibility: {
-            from: Date;
-            to: Date;
-        };
-    };
-    content: string; // Include content if needed
+    title: string;
+    description: string;
+    created_at: string; 
+    modified_at: string; 
+    author_name: string | null;
+    author_avatar: string | null;
 };
 
-const mockNews: NewsPreviewData[] = [
-    {
-        id: "1",
-        metadata: {
-            id: "1",
-            title: "Breakthrough in Quantum Computing: Scientists Achieve New Milestone",
-            description: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            modifiedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
-            author: {
-                name: "Dr. James Wilson",
-                avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
-            },
-            visibility: {
-                from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                to: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-        },
-        content: "Full article text goes here...",
-    },
-    {
-        id: "2",
-        metadata: {
-            id: "2",
-            title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-            description: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-            createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-            modifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            author: {
-                name: "Dr. Sarah Chen",
-                avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
-            },
-            visibility: {
-                from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                to: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-        },
-        content: "Full article text goes here...",
-    },
-    {
-        id: "3",
-        metadata: {
-            id: "3",
-            title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-            description: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-            createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-            modifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            author: {
-                name: "Dr. Sarah Chen",
-                avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
-            },
-            visibility: {
-                from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                to: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-        },
-        content: "Full article text goes here...",
-    },
-    {
-        id: "4",
-        metadata: {
-            id: "4",
-            title: "New AI Model Breaks Language Barrier: Unleashing Multilingual Communication",
-            description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-            modifiedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            author: {
-                name: "Dr. Sarah Chen",
-                avatar: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df",
-            },
-            visibility: {
-                from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                to: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-        },
-        content: "Full article text goes here...",
-    },
-    {
-        id: "5",
-        metadata: {
-            id: "5",
-            title: "Test",
-            description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
-            modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
-            author: {
-                name: "Test Author",
-                avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
-            },
-            visibility: {
-                from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                to: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-        },
-        content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    },
-    {
-        id: "6",
-        metadata: {
-            id: "6",
-            title: "Test",
-            description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
-            modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
-            author: {
-                name: "Test Author 2",
-                avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
-            },
-            visibility: {
-                from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                to: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-        },
-        content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    },
-    {
-        id: "7",
-        metadata: {
-            id: "7",
-            title: "Test",
-            description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
-            modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
-            author: {
-                name: "Test Author 2",
-                avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
-            },
-            visibility: {
-                from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                to: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-        },
-        content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    },
-    {
-        id: "8",
-        metadata: {
-            id: "8",
-            title: "Test",
-            description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            createdAt: new Date(Date.now() - 203 * 60 * 60 * 1000),
-            modifiedAt: new Date(Date.now() - 20 * 60 * 60 * 1000),
-            author: {
-                name: "Test Author",
-                avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
-            },
-            visibility: {
-                from: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                to: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            },
-        },
-        content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    }
-    // ... add more mock news as needed
-];
+// Type expected by the NewsPreview component
+type NewsPreviewInputData = {
+    id: string;
+    title: string;
+    description: string;
+    createdAt: Date;
+    modifiedAt?: Date;
+    author: {
+        name: string;
+        avatar?: string;
+    };
+};
 
-export function ArticleFeed() {
-    return (
-        <div className="h-full overflow-y-auto">
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">Latest News</h2>
-                <Button size="sm" className="flex items-center gap-2" variant="outline">
-                    <PlusIcon className="h-4 w-4"/>
-                    Create news article
-                </Button>
-            </div>
-            <div className="my-4">
-                {mockNews.map((news) => (
-                    <NewsPreview key={news.id} news={news.metadata}/>
-                ))}
-            </div>
-        </div>
-    );
-}
+export default function ArticleFeed() {
+    const [newsItems, setNewsItems] = useState<NewsPreviewInputData[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-export function ArticleCreation() {
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
-    const [authorName, setAuthorName] = useState('');
+    const supabase = createClient();
 
-    const handleSubmit = async (e: any) => {
-        e.preventDefault();
-        const {data, error} = await createClient()
-            .from('articles') // Assuming you have an 'articles' table
-            .insert([
-                {
-                    title,
-                    content,
-                    author: {name: authorName},
-                    createdAt: new Date(),
-                    modifiedAt: new Date(),
+    const fetchNews = async () => {
+        setIsLoading(true);
+        setError(null);
+        
+        const { data, error: fetchError } = await supabase
+            .from('articles_with_author_info') 
+            .select('id, title, description, created_at, modified_at, author_name, author_avatar')
+            .order('created_at', { ascending: false });
+
+        if (fetchError) {
+            console.error('Error fetching news:', fetchError);
+            setError(fetchError.message);
+            setNewsItems([]);
+        } else if (data) {
+            const transformedData: NewsPreviewInputData[] = data.map((article: ArticleFromView) => ({
+                id: article.id,
+                title: article.title,
+                description: article.description,
+                createdAt: new Date(article.created_at),
+                modifiedAt: new Date(article.modified_at),
+                author: {
+                    name: article.author_name || 'Anonymous',
+                    avatar: article.author_avatar || undefined,
                 },
-            ]);
-
-        if (error) {
-            console.error('Error creating article:', error);
-        } else {
-            console.log('Article created:', data);
-            // Optionally redirect or reset form
+            }));
+            setNewsItems(transformedData);
         }
+        setIsLoading(false);
     };
 
+    useEffect(() => {
+        fetchNews();
+    }, []);
+
+    const handleArticleCreated = () => {
+        setShowCreateDialog(false);
+        fetchNews(); 
+    };
+
+    if (isLoading) {
+        return <div className="p-4 h-full overflow-hidden">Loading news...</div>;
+    }
+
+    if (error) {
+        return <div className="p-4 h-full overflow-hidden">Error loading news: {error}</div>;
+    }
+
     return (
-        <form onSubmit={handleSubmit}>
-            <input
-                type="text"
-                placeholder="Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-            />
-            <textarea
-                placeholder="Content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                required
-            />
-            <input
-                type="text"
-                placeholder="Author Name"
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
-                required
-            />
-            <button type="submit">Create Article</button>
-        </form>
+        <div className="h-full flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b flex-shrink-0">
+                <h1 className="text-xl font-bold">Articles</h1>
+                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                    <DialogTrigger asChild>
+                        <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+                            <PlusIcon className="mr-2 h-4 w-4"/> Add
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                        <DialogHeader>
+                            <DialogTitle>Create New Article</DialogTitle>
+                        </DialogHeader>
+                        <CreateArticleForm
+                            onClose={() => setShowCreateDialog(false)}
+                            onArticleCreated={handleArticleCreated}
+                        />
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+                {newsItems.length === 0 ? (
+                    <p className="text-muted-foreground">No news articles found.</p>
+                ) : (
+                    <div className="space-y-4">
+                        {newsItems.map((newsItem) => (
+                            <Link key={newsItem.id} href={`/news/${newsItem.id}`} passHref legacyBehavior>
+                                <a className="block cursor-pointer">
+                                    <NewsPreview news={newsItem} />
+                                </a>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
