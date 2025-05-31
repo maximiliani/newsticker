@@ -15,7 +15,7 @@ export function Clock() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-2 rounded-lg shadow-lg">
+    <div className="flex flex-col items-center justify-center px-6 py-2 rounded-lg">
       <time 
         className="text-xl font-bold tracking-wide flex items-center gap-2 motion-safe:after:w-2 motion-safe:after:h-2 motion-safe:after:rounded-full motion-safe:after:bg-red-500 motion-safe:after:animate-ping"
         dateTime={time.toISOString()}

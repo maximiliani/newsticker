@@ -192,6 +192,16 @@ export async function GET(request: NextRequest) {
             }, {status: 500});
         }
 
+        // Refresh feeds by invoking the Supabase function
+        const {data: fetchData, error: fetchError} = await supabase
+            .functions
+            .invoke('fetchInstagramPostsAndStore')
+        if (fetchError) {
+            console.error("Error refreshing feeds:", fetchError.message);
+        } else {
+            console.info("Feeds refreshed successfully:", fetchData);
+        }
+
         // Modify the redirect to include the tokens and user ID
         const successUrl = new URL("/instagram-success", request.url);
         successUrl.searchParams.set("token", longLivedTokenData.access_token);
@@ -201,7 +211,5 @@ export async function GET(request: NextRequest) {
     } catch (err: any) {
         console.error('Instagram integration error:', err instanceof Error ? err.message : 'Unknown error');
         return NextResponse.json({error: "Unexpected server error", details: err.message}, {status: 500});
-    } finally {
-        // Clean up Supabase client - Removed supabase.auth.signOut() as per previous fix
     }
 }
