@@ -55,7 +55,7 @@ export default function RootLayout({
               {children}
 
               <footer className="w-full flex items-center justify-center border-t bg-background text-xs py-4 gap-2 mt-auto">
-                <span>© 2025 Maximilian Inckmann</span>
+                <Link href="mailto:kontakt@inckmann.de">© 2025 Maximilian Inckmann</Link>
                 <span>
                   Powered by{" "}
                   <a
