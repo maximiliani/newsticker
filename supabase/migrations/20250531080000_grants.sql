@@ -13,9 +13,6 @@ GRANT USAGE ON SCHEMA public TO authenticated;
 -- Grant SELECT permission on all tables in the public schema to authenticated users
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO authenticated;
 
--- Grant execution permission on specific function to service_role
-GRANT EXECUTE ON FUNCTION get_decrypted_instagram_tokens() TO service_role;
-
 -- Grant execution permission on specific function to authenticated users
 GRANT EXECUTE ON FUNCTION insert_instagram_account(
     BIGINT, 

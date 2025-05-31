@@ -409,6 +409,59 @@ async function createIGMedia(
 // Deno HTTP server handler for batch media import
 // -------------------------
 
+async function syncToVault(supabase: SupabaseClient){
+  const supabaseUrlFromEnv = Deno.env.get("SUPABASE_URL");
+  const serviceKeyFromEnv = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  const vaultSupabaseUrlName = "CRON_SUPABASE_PROJECT_URL";
+  const vaultServiceKeyName = "CRON_SUPABASE_SERVICE_KEY";
+
+  if (!supabaseUrlFromEnv || !serviceKeyFromEnv) {
+    console.error(
+        "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables are not set. Cannot sync to Vault.",
+    );
+    // Depending on your error handling strategy, you might want to return an error response here.
+    // For example:
+    // return new Response(JSON.stringify({ error: "Critical environment variables missing, cannot sync to Vault." }), { status: 500, headers: { "Content-Type": "application/json" } });
+  } else {
+    try {
+      const upsertVaultSecret = async (name: string, value: string) => {
+        console.log(`Attempting to upsert vault secret '${name}' using SQL function.`);
+
+        // The supabase client is presumably already initialized and available as `supabase`
+        // in the scope where this function is called.
+        // If not, you'd initialize it here:
+        // const supabase = createClient(supabaseUrlFromEnv, serviceKeyFromEnv);
+
+        const { error: rpcError } = await supabase.rpc("upsert_vault_secret", {
+          p_secret_name: name,
+          p_secret_value: value,
+          p_secret_description: `Automatically synced ${name} by Edge Function`,
+          // p_key_id: null, // Or pass a specific UUID if needed; null uses the default
+        });
+
+        if (rpcError) {
+          console.error(`Error calling upsert_vault_secret for '${name}':`, rpcError.message);
+          throw rpcError;
+        }
+
+        console.log(`Successfully called upsert_vault_secret for '${name}'. The SQL function handled create or update.`);
+      };
+
+      // Sync the environment variables to the Vault
+      await upsertVaultSecret(vaultSupabaseUrlName, supabaseUrlFromEnv);
+      await upsertVaultSecret(vaultServiceKeyName, serviceKeyFromEnv);
+
+      console.log("Vault sync process completed.");
+
+    } catch (error) {
+      console.error("Failed to sync one or more environment variables to Supabase Vault:", error);
+      // Critical failure? If pg_cron relies on this, you might want to return an error.
+      return new Response(JSON.stringify({ error: "Failed to sync critical secrets to Vault." }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+  }
+}
+
 /**
  * Deno serverless function handler.
  * Triggered via HTTP POST to fetch and process media for all configured Instagram accounts.
@@ -418,9 +471,7 @@ async function createIGMedia(
 Deno.serve(async (req: Request) => {
   // Ensure the request method is POST
   if (req.method !== "POST") {
-    return new Response("Method not allowed. Please use POST.", {
-      status: 405,
-    });
+    return new Response("Method not allowed. Please use POST.", { status: 405 });
   }
 
   const startTime = Date.now(); // Record start time for performance metrics
@@ -443,6 +494,9 @@ Deno.serve(async (req: Request) => {
       },
     },
   );
+
+  // Sync environment variables to Supabase Vault (if needed)
+  await syncToVault(supabase);
 
   try {
     // Fetch all Instagram accounts with their decrypted access tokens from the database

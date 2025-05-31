@@ -108,4 +108,60 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Grant execution permission on specific function to service_role
+GRANT EXECUTE ON FUNCTION get_decrypted_instagram_tokens() TO service_role;
+REVOKE EXECUTE ON FUNCTION get_decrypted_instagram_tokens() FROM PUBLIC CASCADE;
+
+CREATE OR REPLACE FUNCTION public.upsert_vault_secret(
+    p_secret_name TEXT,
+    p_secret_value TEXT,
+    p_secret_description TEXT DEFAULT NULL,
+    p_key_id UUID DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = vault, public
+AS $$
+DECLARE
+    v_existing_secret_id UUID;
+    v_existing_description TEXT;
+BEGIN
+    SELECT s.id, s.description INTO v_existing_secret_id, v_existing_description
+    FROM vault.secrets s
+    WHERE s.name = p_secret_name
+    LIMIT 1;
+
+    IF v_existing_secret_id IS NOT NULL THEN
+        RAISE LOG 'Updating existing vault secret: % (ID: %)', p_secret_name, v_existing_secret_id;
+        PERFORM vault.update_secret(
+            secret_id := v_existing_secret_id,
+            new_secret := p_secret_value,
+            new_name := p_secret_name,
+            new_description := COALESCE(p_secret_description, v_existing_description),
+            new_key_id := p_key_id
+        );
+        RAISE LOG 'Successfully updated vault secret: %', p_secret_name;
+    ELSE
+        RAISE LOG 'Creating new vault secret: %', p_secret_name;
+        PERFORM vault.create_secret(
+            new_secret := p_secret_value,
+            new_name := p_secret_name,
+            new_description := p_secret_description,
+            new_key_id := p_key_id
+        );
+        RAISE LOG 'Successfully created vault secret: %', p_secret_name;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE WARNING 'Error in upsert_vault_secret for name "%": %', p_secret_name, SQLERRM;
+        RAISE;
+END;
+$$;
+
+ALTER FUNCTION public.upsert_vault_secret(TEXT, TEXT, TEXT, UUID) OWNER TO postgres;
+
+REVOKE EXECUTE ON FUNCTION public.upsert_vault_secret(TEXT, TEXT, TEXT, UUID) FROM PUBLIC CASCADE;
+GRANT EXECUTE ON FUNCTION public.upsert_vault_secret(TEXT, TEXT, TEXT, UUID) TO service_role;
+
 COMMIT;
