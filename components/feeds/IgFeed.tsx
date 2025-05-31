@@ -20,6 +20,7 @@ export default function IgFeed() {
 
     useEffect(() => {
         let isMounted = true;
+        let subscription: any = null;
 
         function mapPostData(post: any): IGPostData {
             return {
@@ -75,10 +76,49 @@ export default function IgFeed() {
             }
         }
 
+        // Initial fetch
         fetchPosts();
+
+        // Set up real-time subscription for instagram_posts
+        const setupSubscription = async () => {
+            subscription = supabase
+                .channel('instagram_posts_changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+                        schema: 'public',
+                        table: 'instagram_posts'
+                    },
+                    (payload) => {
+                        console.log('Instagram posts change received:', payload);
+                        // Refetch posts when any change occurs
+                        fetchPosts();
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'instagram_accounts'
+                    },
+                    (payload) => {
+                        console.log('Instagram accounts change received:', payload);
+                        // Refetch posts when account info changes (affects usernames/avatars)
+                        fetchPosts();
+                    }
+                )
+                .subscribe();
+        };
+
+        setupSubscription();
 
         return () => {
             isMounted = false;
+            if (subscription) {
+                supabase.removeChannel(subscription);
+            }
         };
     }, []);
 
@@ -100,51 +140,52 @@ export default function IgFeed() {
     }
 
     return (
-        <div className="h-full flex flex-col">
-            <h2 className="text-xl font-bold">Instagram Feed</h2>
-
-            {/* User Selector */}
-            <div className="justify-center items-center my-4">
-                <ToggleGroup
-                    variant="outline"
-                    type="multiple"
-                    orientation="horizontal"
-                    value={activeUsers}
-                    onValueChange={(value) => {
-                        if (value.includes("all")) {
-                            if (areAllUsersSelected) {
-                                setActiveUsers([]);
+        <div className="h-full flex flex-col overflow-hidden">
+            <div className="flex items-center p-4 border-b flex-shrink-0 relative">
+                <h1 className="text-xl font-bold">Instagram Feed</h1>
+                <div className="absolute left-1/2 transform -translate-x-1/2">
+                    {/* Instagram account picker */}
+                    <ToggleGroup
+                        variant="outline"
+                        type="multiple"
+                        orientation="horizontal"
+                        value={activeUsers}
+                        onValueChange={(value) => {
+                            if (value.includes("all")) {
+                                if (areAllUsersSelected) {
+                                    setActiveUsers([]);
+                                } else {
+                                    setActiveUsers([...availableUsers]);
+                                }
                             } else {
-                                setActiveUsers([...availableUsers]);
+                                setActiveUsers(value);
                             }
-                        } else {
-                            setActiveUsers(value);
-                        }
-                    }}
-                    className="flex flex-wrap gap-2"
-                >
-                    <ToggleGroupItem
-                        key="all"
-                        value="all"
-                        aria-label="All"
-                        defaultChecked
-                        className="hover:bg-primary hover:text-primary-foreground"
-                        data-state={areAllUsersSelected ? "on" : "off"}
+                        }}
+                        className="flex flex-wrap gap-2"
                     >
-                        All
-                    </ToggleGroupItem>
-                    {availableUsers.map((username) => (
                         <ToggleGroupItem
-                            key={username}
-                            value={username}
-                            aria-label={username}
+                            key="all"
+                            value="all"
+                            aria-label="All"
+                            defaultChecked
                             className="hover:bg-primary hover:text-primary-foreground"
-                            data-state={activeUsers.includes(username) ? "on" : "off"}
+                            data-state={areAllUsersSelected ? "on" : "off"}
                         >
-                            {username}
+                            All
                         </ToggleGroupItem>
-                    ))}
-                </ToggleGroup>
+                        {availableUsers.map((username) => (
+                            <ToggleGroupItem
+                                key={username}
+                                value={username}
+                                aria-label={username}
+                                className="hover:bg-primary hover:text-primary-foreground"
+                                data-state={activeUsers.includes(username) ? "on" : "off"}
+                            >
+                                {username}
+                            </ToggleGroupItem>
+                        ))}
+                    </ToggleGroup>
+                </div>
             </div>
 
             {/* Posts Container */}
@@ -162,4 +203,3 @@ export default function IgFeed() {
         </div>
     )
 }
-
