@@ -53,6 +53,75 @@ export function InstagramAccountsManager({ initialAccounts, userId }: Props) {
     setAccountToDelete(account);
   };
 
+  /**
+   * Helper function to delete storage files by path pattern
+   */
+  const deleteStorageFiles = async (bucket: string, pathPrefix: string) => {
+    try {
+      console.log(`Deleting files from bucket '${bucket}' with prefix '${pathPrefix}'`);
+      
+      // List all files in the bucket
+      const { data: files, error: listError } = await supabase
+        .storage
+        .from(bucket)
+        .list('');
+
+      if (listError) {
+        console.error(`Error listing files in bucket '${bucket}':`, listError);
+        return;
+      }
+
+      if (!files || files.length === 0) {
+        console.log(`No files found in bucket '${bucket}'`);
+        return;
+      }
+
+      // Filter files that match the prefix pattern
+      const matchingFiles = files.filter(file => file.name.startsWith(pathPrefix));
+
+      if (matchingFiles.length === 0) {
+        console.log(`No files found in bucket '${bucket}' with prefix '${pathPrefix}'`);
+        return;
+      }
+
+      // Delete files in batches to avoid overwhelming the API
+      const filePaths = matchingFiles.map(file => file.name);
+      console.log(`Found ${filePaths.length} files to delete from bucket '${bucket}':`, filePaths);
+
+      const { error: deleteError } = await supabase
+        .storage
+        .from(bucket)
+        .remove(filePaths);
+
+      if (deleteError) {
+        console.error(`Error deleting files from bucket '${bucket}':`, deleteError);
+      } else {
+        console.log(`Successfully deleted ${filePaths.length} files from bucket '${bucket}'`);
+      }
+    } catch (error) {
+      console.error(`Unexpected error while deleting files from bucket '${bucket}':`, error);
+    }
+  };
+
+  /**
+   * Delete profile image files for the account
+   * Profile images are named like: instagram-{accountId}-{timestamp}.jpg
+   */
+  const deleteProfileFiles = async (accountId: string) => {
+    const profilePrefix = `instagram-${accountId}-`;
+    await deleteStorageFiles('instagram-profiles', profilePrefix);
+  };
+
+  /**
+   * Delete all media files associated with the account's posts
+   */
+  const deleteMediaFiles = async (postIds: number[]) => {
+    // Delete media files for each post
+    for (const postId of postIds) {
+      await deleteStorageFiles('instagram-media', `posts/${postId}/`);
+    }
+  };
+
   const handleDelete = async () => {
     if (!accountToDelete) return;
 
@@ -63,7 +132,7 @@ export function InstagramAccountsManager({ initialAccounts, userId }: Props) {
 
       // Fetch posts associated with the account
       const { data: posts, error: postsError } = await supabase
-        .from("instagram_posts") // Assuming 'posts' table with 'account_id'
+        .from("instagram_posts")
         .select("id")
         .eq("user_id", accountId);
 
@@ -72,22 +141,26 @@ export function InstagramAccountsManager({ initialAccounts, userId }: Props) {
         throw postsError;
       }
 
+      let postIds: number[] = [];
       if (posts && posts.length > 0) {
-        const postIds = posts.map((post) => post.id);
+        postIds = posts.map((post) => post.id);
 
-        // Delete media associated with these posts
-        // Assuming 'media' table with 'post_id'
+        // Delete media files from storage before deleting database records
+        console.log(`Deleting media files for ${postIds.length} posts...`);
+        await deleteMediaFiles(postIds);
+
+        // Delete media records from database
         const { error: mediaError } = await supabase
           .from("instagram_post_media")
           .delete()
           .in("post_id", postIds);
 
         if (mediaError) {
-          console.error("Error deleting media:", mediaError);
+          console.error("Error deleting media records:", mediaError);
           throw mediaError;
         }
 
-        // Delete the posts
+        // Delete the posts from database
         const { error: deletePostsError } = await supabase
           .from("instagram_posts")
           .delete()
@@ -99,7 +172,12 @@ export function InstagramAccountsManager({ initialAccounts, userId }: Props) {
         }
       }
 
-      // Delete the Instagram account
+      // Delete profile image files from storage
+      // Profile images are named like: instagram-{accountId}-{timestamp}.jpg
+      console.log(`Deleting profile files for account ID ${accountId}...`);
+      await deleteProfileFiles(accountId);
+
+      // Delete the Instagram account from database
       const { error: accountError } = await supabase
         .from("instagram_accounts")
         .delete()
@@ -111,14 +189,16 @@ export function InstagramAccountsManager({ initialAccounts, userId }: Props) {
         throw accountError;
       }
 
+      console.log(`Successfully deleted account ${accountToDelete.username} and all associated data`);
       setAccounts(accounts.filter(acc => acc.id !== accountId));
       router.refresh();
     } catch (error) {
       console.error("Error during deletion process:", error);
       // Optionally, display an error message to the user
+      alert(`Failed to delete account: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsDeleting(null);
-      setAccountToDelete(null); // Clear the account to delete
+      setAccountToDelete(null);
     }
   };
 

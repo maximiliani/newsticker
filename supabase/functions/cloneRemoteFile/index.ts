@@ -1,9 +1,4 @@
 /// <reference lib="deno.ns" />
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
-// Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient, SupabaseClient} from "jsr:@supabase/supabase-js@2";
 
@@ -103,7 +98,7 @@ async function downloadAndUploadMedia(
             }
 
             // Upload to Supabase
-            const { error: uploadError, data: uploadData } = await supabase
+            const { error: uploadError } = await supabase
                 .storage
                 .from(storageBucket)
                 .upload(storagePath, buffer, {
@@ -171,6 +166,9 @@ async function downloadAndUploadMedia(
     throw new Error("Maximum retry attempts reached");
 }
 
+// Export the function with the expected name
+export const cloneRemoteFile = downloadAndUploadMedia;
+
 Deno.serve(async (req) => {
     if (req.method !== "POST") {
         return new Response("Method Not Allowed", { status: 405 });
@@ -188,6 +186,7 @@ Deno.serve(async (req) => {
             { status: 400, headers: { "Content-Type": "application/json" } },
         );
     }
+    
     try {
         const result = await downloadAndUploadMedia(
             supabase,
@@ -202,7 +201,9 @@ Deno.serve(async (req) => {
     } catch (error) {
         console.error("Error:", error);
         return new Response(
-            'An unknown error occurred',
+            JSON.stringify({ 
+                error: error instanceof Error ? error.message : 'An unknown error occurred' 
+            }),
             { status: 500, headers: { "Content-Type": "application/json" } },
         );
     }

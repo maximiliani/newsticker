@@ -3,6 +3,38 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient, SupabaseClient} from "jsr:@supabase/supabase-js@2";
 import {z} from 'zod/v4';
 
+// Remove this import since we'll call it via HTTP:
+// import {cloneRemoteFile} from "../cloneRemoteFile/index.ts";
+
+// Add a function to call the cloneRemoteFile edge function via HTTP
+async function callCloneRemoteFile(
+  url: string,
+  storageBucket: string,
+  storagePath: string
+): Promise<{publicUrl: string; contentType: string; size: number}> {
+  const functionUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/cloneRemoteFile`;
+  
+  const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    },
+    body: JSON.stringify({
+      url,
+      storageBucket,
+      storagePath
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to clone remote file: ${response.status} ${response.statusText}. ${errorText}`);
+  }
+
+  return await response.json();
+}
+
 // -------------------------
 // Validation schemas and types for Instagram data
 // -------------------------
@@ -23,14 +55,35 @@ export const IGUserSchema = z.object({
 /**
  * Defines the Zod schema for media associated with an Instagram post (e.g., image or video).
  */
+/**
+ * Updated Zod schema for media with local storage fields
+ */
 export const IGMediaSchema = z.object({
-  post_id: z.number().gte(0), // ID of the parent post, must be a non-negative integer
-  index: z.number().gte(0), // Index of the media item within a carousel post (0 for single media)
-  media_type: z.enum(["image", "video"]), // Type of media, restricted to "image" or "video"
-  media_url: z.url(), // URL of the media content
-  thumbnail_url: z.url().optional().nullable(), // Optional URL for the media thumbnail
-  timestamp: z.number(), // Generic timestamp for the media item
+  post_id: z.number().gte(0),
+  index: z.number().gte(0),
+  media_type: z.enum(["image", "video"]),
+  media_url: z.url(),
+  thumbnail_url: z.url().optional().nullable(),
+  local_media_url: z.string().optional().nullable(),
+  local_thumbnail_url: z.string().optional().nullable(),
+  file_size: z.number().optional().nullable(),
+  mime_type: z.string().optional().nullable(),
+  download_status: z.enum(["pending", "downloading", "completed", "failed"]).default("pending"),
+  download_error: z.string().optional().nullable(),
+  downloaded_at: z.string().optional().nullable(),
+  timestamp: z.number(),
 });
+
+export type IGMedia = z.infer<typeof IGMediaSchema>;
+
+/**
+ * Result interface for media download operations
+ */
+export interface MediaDownloadResult {
+  localUrl: string;
+  fileSize: number;
+  mimeType: string;
+}
 
 /**
  * Defines the Zod schema for an Instagram post record in the database.
@@ -85,7 +138,6 @@ const RefreshTokenResponseSchema = z.object({
 // TypeScript types inferred from the Zod schemas
 export type IGUser = z.infer<typeof IGUserSchema>;
 export type IGPost = z.infer<typeof IGPostSchema>;
-export type IGMedia = z.infer<typeof IGMediaSchema>;
 type InstagramAPIMedia = z.infer<typeof InstagramAPIMediaSchema>;
 type InstagramAPIResponse = z.infer<typeof InstagramAPIResponseSchema>;
 
@@ -127,13 +179,7 @@ const fetchWithTimeout = async (
 // -------------------------
 
 /**
- * Processes a single media item (image or video) associated with a post and upserts it into the database.
- * @param preparedPost The parent Instagram post object (already created or upserted in DB).
- * @param ig_media The raw media data from the Instagram API.
- * @param supabase The Supabase client instance.
- * @param index The index of this media item, primarily for carousels (defaults to 0).
- * @returns A Promise that resolves with the processed and validated IGMedia object.
- * @throws If media data is invalid, media type is unsupported, or database operation fails.
+ * Updated handleSingleElement with HTTP calls to cloneRemoteFile edge function
  */
 async function handleSingleElement(
   preparedPost: IGPost,
@@ -149,7 +195,6 @@ async function handleSingleElement(
   }
 
   const media_type = ig_media.media_type.toLowerCase();
-  // Ensure media type is supported
   if (!["image", "video"].includes(media_type)) {
     throw new Error(`Unsupported media type encountered: ${media_type}`);
   }
@@ -158,21 +203,88 @@ async function handleSingleElement(
     `Processing media of type "${media_type}" for post ID: ${preparedPost.id}, media API ID: ${ig_media.id}`,
   );
 
-  // Upsert (insert or update) the media entry in the 'instagram_post_media' table
+  // Initialize local storage variables
+  let localMediaUrl: string | null = null;
+  let localThumbnailUrl: string | null = null;
+  let fileSize: number | null = null;
+  let mimeType: string | null = null;
+  let downloadStatus = "pending";
+  let downloadError: string | null = null;
+  let downloadedAt: string | null = null;
+
+  // Attempt to download and store main media locally
+  if (ig_media.media_url) {
+    try {
+      downloadStatus = "downloading";
+      console.log(`Downloading main media for post ${preparedPost.id}, index ${index}`);
+      
+      const fileName = `posts/${preparedPost.id}/media_${index}_${Date.now()}.${getFileExtension(ig_media.media_url)}`;
+      const downloadResult = await callCloneRemoteFile(
+        ig_media.media_url,
+        "instagram-media", // Changed from "posts" to "instagram-media"
+        fileName
+      );
+      
+      localMediaUrl = downloadResult.publicUrl;
+      fileSize = downloadResult.size;
+      mimeType = downloadResult.contentType;
+      downloadStatus = "completed";
+      downloadedAt = new Date().toISOString();
+      
+      console.log(`Successfully downloaded main media to: ${localMediaUrl}`);
+    } catch (error) {
+      console.error(`Failed to download main media for ${ig_media.id}:`, error);
+      downloadStatus = "failed";
+      downloadError = error instanceof Error ? error.message : String(error);
+      // Continue with external URL as fallback
+    }
+  }
+
+  // Attempt to download and store thumbnail if available and different from main media
+  if (ig_media.thumbnail_url && ig_media.thumbnail_url !== ig_media.media_url) {
+    try {
+      console.log(`Downloading thumbnail for post ${preparedPost.id}, index ${index}`);
+      
+      const thumbnailFileName = `posts/${preparedPost.id}/thumbnail_${index}_${Date.now()}.${getFileExtension(ig_media.thumbnail_url)}`;
+      const thumbnailResult = await callCloneRemoteFile(
+        ig_media.thumbnail_url,
+        "instagram-media", // Changed from "posts" to "instagram-media"
+        thumbnailFileName
+      );
+      
+      localThumbnailUrl = thumbnailResult.publicUrl;
+      console.log(`Successfully downloaded thumbnail to: ${localThumbnailUrl}`);
+    } catch (error) {
+      console.error(`Failed to download thumbnail for ${ig_media.id}:`, error);
+      // Continue without local thumbnail - external URL will be used as fallback
+    }
+  }
+
+  // ... rest of the function remains the same
+  
+  // Upsert the media entry with both local and external URLs
   const { data, error } = await supabase
     .from("instagram_post_media")
     .upsert({
       post_id: preparedPost.id,
       index: index,
-      media_type: media_type as "image" | "video", // Cast to specific enum types
+      media_type: media_type as "image" | "video",
+      // Keep original Meta URLs as backup
       media_url: ig_media.media_url,
       thumbnail_url: ig_media.thumbnail_url,
-      timestamp: new Date(ig_media.timestamp).getTime(), // Convert ISO string to Unix timestamp
+      // Add local storage information
+      local_media_url: localMediaUrl,
+      local_thumbnail_url: localThumbnailUrl,
+      file_size: fileSize,
+      mime_type: mimeType,
+      download_status: downloadStatus,
+      download_error: downloadError,
+      downloaded_at: downloadedAt,
+      timestamp: new Date(ig_media.timestamp).getTime(),
     })
-    .select() // Select the upserted row
-    .single(); // Expect a single row
+    .select()
+    .single();
 
-  // Handle potential database errors
   if (error || !data) {
     console.error("Failed to upsert media element:", error);
     throw new Error(
@@ -181,10 +293,58 @@ async function handleSingleElement(
       }`,
     );
   }
-  console.info("Successfully processed and stored media element:", data);
 
-  // Validate the database response against the IGMediaSchema and return
-  return IGMediaSchema.parse(data);
+  console.info("Successfully processed and stored media element:", {
+    postId: preparedPost.id,
+    index,
+    localUrl: localMediaUrl,
+    downloadStatus,
+    fileSize
+  });
+
+  // Update the schema to include new fields for validation
+  const ExtendedIGMediaSchema = IGMediaSchema.extend({
+    local_media_url: z.string().optional().nullable(),
+    local_thumbnail_url: z.string().optional().nullable(),
+    file_size: z.number().optional().nullable(),
+    mime_type: z.string().optional().nullable(),
+    download_status: z.enum(["pending", "downloading", "completed", "failed"]),
+    download_error: z.string().optional().nullable(),
+    downloaded_at: z.string().optional().nullable(),
+  });
+
+  return ExtendedIGMediaSchema.parse(data);
+}
+
+/**
+ * Helper function to extract file extension from URL
+ */
+function getFileExtension(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    const extension = pathname.split('.').pop()?.toLowerCase();
+    
+    // Map common extensions
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'jpg';
+      case 'png':
+        return 'png';
+      case 'gif':
+        return 'gif';
+      case 'mp4':
+        return 'mp4';
+      case 'mov':
+        return 'mov';
+      default:
+        // Default based on content type inference
+        return 'jpg';
+    }
+  } catch {
+    return 'jpg'; // Default fallback
+  }
 }
 
 // -------------------------

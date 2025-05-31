@@ -1,63 +1,146 @@
-import Image from "next/image";
+import React, { useState } from 'react';
+
 interface MediaDisplayProps {
+  type: "image" | "video";
   src: string;
   alt?: string;
-  type: "image" | "video";
   className?: string;
-  aspectRatio?: "square" | "video" | "wide";
-  onError?: () => void;
 }
 
-export function MediaDisplay({
-  src,
-  alt = "",
-  type,
-  className = "",
-  aspectRatio = "square",
-  onError,
-}: MediaDisplayProps) {
-  // Define aspect ratio classes
-  const aspectRatioClasses = {
-    square: "aspect-square",
-    video: "aspect-video",
-    wide: "aspect-[16/9]",
+export function MediaDisplay({ type, src, alt, className }: MediaDisplayProps) {
+  const [hasError, setHasError] = useState(false);
+
+  const handleError = () => {
+    setHasError(true);
   };
 
-  // Base classes for both image and video
-  const baseClasses = `w-full object-cover ${aspectRatioClasses[aspectRatio]} ${className}`;
-
-  // Handle media load error
-  const handleError = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>) => {
-    console.error("Error loading media:", e);
-    onError?.();
+  const handleLoad = () => {
+    setHasError(false);
   };
 
   if (type === "video") {
     return (
-      <video
-        src={src}
-        className={baseClasses}
-        controls
-        onError={handleError}
-        playsInline
-        autoPlay
-        muted
-        loop
-      >
-        Your browser does not support the video tag.
-      </video>
+      <div className={`relative ${className}`}>
+        <video
+          src={src}
+          controls
+          onError={handleError}
+          onLoadedData={handleLoad}
+          className="w-full h-full object-cover"
+          preload="metadata"
+        >
+          Your browser does not support the video tag.
+        </video>
+        {hasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+            <span className="text-gray-500">Failed to load video</span>
+          </div>
+        )}
+      </div>
     );
   }
 
   return (
-    <Image
-      src={src}
-      alt={alt}
-      onError={handleError}
-      loading="lazy"
-      width={500}
-      height={300}
-      className={baseClasses}
-    />
+    <div className={`relative ${className}`}>
+      <img
+        src={src}
+        alt={alt || 'Media content'}
+        onError={handleError}
+        onLoad={handleLoad}
+        className="w-full h-full object-cover"
+      />
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+          <span className="text-gray-500">Failed to load image</span>
+        </div>
+      )}
+    </div>
   );
-} 
+}
+
+// Enhanced version for Instagram media with fallback support
+interface InstagramMediaProps {
+  media: {
+    local_media_url?: string | null;
+    media_url: string;
+    local_thumbnail_url?: string | null;
+    thumbnail_url?: string | null;
+    download_status?: string;
+  };
+  type: "image" | "video";
+  alt?: string;
+  className?: string;
+}
+
+export function InstagramMediaDisplay({ media, type, alt, className }: InstagramMediaProps) {
+  const [hasError, setHasError] = useState(false);
+  const [currentUrlIndex, setCurrentUrlIndex] = useState(0);
+
+  // Create priority list of URLs to try
+  const urlOptions = [
+    media.local_media_url && media.download_status === 'completed' ? media.local_media_url : null,
+    media.media_url
+  ].filter(Boolean) as string[];
+
+  const currentUrl = urlOptions[currentUrlIndex] || media.media_url;
+
+  const handleError = () => {
+    // Try next URL option if available
+    if (currentUrlIndex < urlOptions.length - 1) {
+      setCurrentUrlIndex(currentUrlIndex + 1);
+      setHasError(false);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  const handleLoad = () => {
+    setHasError(false);
+  };
+
+  if (type === "video") {
+    return (
+      <div className={`relative ${className}`}>
+        <video
+          key={currentUrl} // Force re-render when URL changes
+          src={currentUrl}
+          controls
+          muted
+          autoPlay
+          loop
+          onError={handleError}
+          onLoadedData={handleLoad}
+          className="w-full h-full object-cover"
+          preload="metadata"
+        >
+          Your browser does not support the video tag.
+        </video>
+        
+        {hasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+            <span className="text-gray-500">Failed to load video</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`relative ${className}`}>
+      <img
+        key={currentUrl} // Force re-render when URL changes
+        src={currentUrl}
+        alt={alt || 'Instagram media'}
+        onError={handleError}
+        onLoad={handleLoad}
+        className="w-full h-full object-cover"
+      />
+      
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+          <span className="text-gray-500">Failed to load image</span>
+        </div>
+      )}
+    </div>
+  );
+}
