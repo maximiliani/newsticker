@@ -1,12 +1,12 @@
 "use client";
 
-import { NewsPreview } from "@/components/news-preview";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "@radix-ui/react-icons";
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import {NewsPreview} from "@/components/news-preview";
+import {Button} from "@/components/ui/button";
+import {PlusIcon} from "@radix-ui/react-icons";
+import {useEffect, useState} from 'react';
+import {createClient} from '@/lib/supabase/client';
 import Link from 'next/link';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog";
 import {CreateArticleForm} from "@/components/CreateArticleForm";
 
 // Type for data structure from the 'articles_with_author_info' view
@@ -14,8 +14,10 @@ type ArticleFromView = {
     id: string;
     title: string;
     description: string;
-    created_at: string; 
-    modified_at: string; 
+    created_at: string;
+    modified_at: string;
+    visibility_from: string;
+    visibility_to: string | null; // visibility_to can be null
     author_name: string | null;
     author_avatar: string | null;
 };
@@ -27,6 +29,8 @@ type NewsPreviewInputData = {
     description: string;
     createdAt: Date;
     modifiedAt?: Date;
+    visibilityFrom: Date;
+    visibilityTo: Date | null;
     author: {
         name: string;
         avatar?: string;
@@ -44,11 +48,11 @@ export default function ArticleFeed() {
     const fetchNews = async () => {
         setIsLoading(true);
         setError(null);
-        
-        const { data, error: fetchError } = await supabase
-            .from('articles_with_author_info') 
-            .select('id, title, description, created_at, modified_at, author_name, author_avatar')
-            .order('created_at', { ascending: false });
+
+        const {data, error: fetchError} = await supabase
+            .from('articles_with_author_info')
+            .select('id, title, description, created_at, modified_at, visibility_from, visibility_to, author_name, author_avatar')
+            .order('created_at', {ascending: false});
 
         if (fetchError) {
             console.error('Error fetching news:', fetchError);
@@ -61,6 +65,8 @@ export default function ArticleFeed() {
                 description: article.description,
                 createdAt: new Date(article.created_at),
                 modifiedAt: new Date(article.modified_at),
+                visibilityFrom: new Date(article.visibility_from),
+                visibilityTo: article.visibility_to ? new Date(article.visibility_to) : null,
                 author: {
                     name: article.author_name || 'Anonymous',
                     avatar: article.author_avatar || undefined,
@@ -77,7 +83,7 @@ export default function ArticleFeed() {
 
     const handleArticleCreated = () => {
         setShowCreateDialog(false);
-        fetchNews(); 
+        fetchNews();
     };
 
     if (isLoading) {
@@ -94,7 +100,8 @@ export default function ArticleFeed() {
                 <h1 className="text-xl font-bold">Latest News</h1>
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                     <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" className="flex items-center" onClick={() => setShowCreateDialog(true)}>
+                        <Button size="sm" variant="outline" className="flex items-center"
+                                onClick={() => setShowCreateDialog(true)}>
                             <PlusIcon className="mr-2 h-4 w-4"/>
                             Create news article
                         </Button>
@@ -116,13 +123,20 @@ export default function ArticleFeed() {
                     <p className="text-muted-foreground">No news articles found.</p>
                 ) : (
                     <div className="space-y-4">
-                        {newsItems.map((newsItem) => (
-                            <Link key={newsItem.id} href={`/news/${newsItem.id}`} passHref legacyBehavior>
-                                <a className="block cursor-pointer">
-                                    <NewsPreview news={newsItem} />
-                                </a>
-                            </Link>
-                        ))}
+                        {newsItems
+                            .filter(
+                                (newsItem) => {
+                                    const now = new Date();
+                                    return now >= newsItem.visibilityFrom && (!newsItem.visibilityTo || now <= newsItem.visibilityTo);
+                                }
+                            )
+                            .map((newsItem) => (
+                                <Link key={newsItem.id} href={`/news/${newsItem.id}`} passHref legacyBehavior>
+                                    <a className="block cursor-pointer">
+                                        <NewsPreview news={newsItem}/>
+                                    </a>
+                                </Link>
+                            ))}
                     </div>
                 )}
             </div>
