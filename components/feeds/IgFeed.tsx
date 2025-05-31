@@ -22,18 +22,6 @@ export default function IgFeed() {
         let isMounted = true;
 
         function mapPostData(post: any): IGPostData {
-            // const mainMedia = {
-            //     type: post.media_type === "VIDEO" ? "video" : "image",
-            //     url: post.media_url,
-            // };
-            //
-            // const childrenMedia = (post.instagram_post_media || []).map((m: any) => ({
-            //     type: m.media_type === "VIDEO" ? "video" : "image",
-            //     url: m.media_url,
-            // }));
-            //
-            // const media = mainMedia ? [mainMedia, ...childrenMedia] : childrenMedia;
-
             return {
                 id: post.id,
                 username: post.instagram_accounts?.username || "Unknown",
@@ -55,7 +43,8 @@ export default function IgFeed() {
                     .select(`
                     id,
                     timestamp,
-                    instagram_accounts:instagram_user_id (
+                    posted_at,
+                    instagram_accounts:user_id (
                         username,
                         profile_image_url
                     )
