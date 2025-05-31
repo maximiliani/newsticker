@@ -76,7 +76,7 @@ export default async function ArticleFeed() {
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {/* Static header with client-side dialog */}
-            <ArticleFeedClient initialArticles={initialArticles} />
+            <ArticleFeedClient/>
             
             {/* Server-rendered articles list */}
             <div className="flex-1 overflow-y-auto p-4">

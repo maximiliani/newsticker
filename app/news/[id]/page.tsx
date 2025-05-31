@@ -1,10 +1,11 @@
-import {createClient} from '@/lib/supabase/server';
+import {createClient} from '@/utils/supabase/server';
 import {notFound} from 'next/navigation';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {ArrowLeft} from 'lucide-react';
 import Link from 'next/link';
 import {ClickableAuthorAvatar} from '@/components/ClickableAuthorAvatar';
+import {ArticleActions} from '@/app/news/[id]/client';
 
 // Type for a single article fetched from the 'articles_with_author_info' view
 type ArticleDetailFromView = {
@@ -55,7 +56,11 @@ const formatDate = (dateString?: string | null): string => {
 };
 
 export default async function ArticlePage({params}: ArticlePageProps) {
+    const supabase = await createClient();
     const resolvedParams = await params;
+
+    // Fetch user and article on the server
+    const {data: {user}} = await supabase.auth.getUser();
     const article = await getArticleById(resolvedParams.id);
 
     if (!article) {
@@ -70,21 +75,34 @@ export default async function ArticlePage({params}: ArticlePageProps) {
     const authorNameDisplay = article.author_name || 'Anonymous';
     const authorAvatarDisplay = article.author_avatar || undefined;
 
+    // Check if current user owns this article
+    const isOwner = user && article.user_id === user.id;
+
     return (
         <div className="container mx-auto p-4 lg:p-8 max-w-4xl">
             {/* Back to Dashboard Button */}
             <div className="mb-6">
-                <Link href="/">
-                    <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                        <ArrowLeft className="h-4 w-4"/>
-                        <span>Back to Dashboard</span>
-                    </Button>
-                </Link>
+                <div className="flex items-center justify-between">
+                    <Link href="/protected">
+                        <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                            <ArrowLeft className="h-4 w-4"/>
+                            <span>Back to Dashboard</span>
+                        </Button>
+                    </Link>
+
+                    {/* Edit and Delete buttons - only show to owner */}
+                    {isOwner && (
+                        <ArticleActions
+                            articleId={article.id}
+                            articleTitle={article.title}
+                        />
+                    )}
+                </div>
             </div>
 
             <article className="prose lg:prose-xl dark:prose-invert break-words">
                 <header className="mb-8 border-b pb-4 dark:border-gray-700">
-                    {!isCurrentlyVisible && ( // This badge might only show if RLS was more permissive for some roles
+                    {!isCurrentlyVisible && (
                         <Badge variant="outline"
                                className="mb-2 bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-200 dark:border-yellow-500">
                             This article is currently not within its visibility period.
@@ -129,11 +147,13 @@ export default async function ArticlePage({params}: ArticlePageProps) {
 export async function generateMetadata({params}: ArticlePageProps) {
     const resolvedParams = await params;
     const article = await getArticleById(resolvedParams.id);
+
     if (!article) {
         return {
             title: 'Article Not Found',
         };
     }
+
     return {
         title: article.title,
         description: article.description,

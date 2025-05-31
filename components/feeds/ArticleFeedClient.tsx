@@ -1,92 +1,79 @@
-
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "@radix-ui/react-icons";
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CreateArticleForm } from "@/components/CreateArticleForm";
 import { useRouter } from 'next/navigation';
+import { User } from '@supabase/supabase-js';
+import { CreateArticleButton } from "@/components/CreateArticleButton";
 
-type NewsPreviewInputData = {
-    id: string;
-    title: string;
-    description: string;
-    createdAt: Date;
-    modifiedAt?: Date;
-    visibilityFrom: Date;
-    visibilityTo: Date | null;
-    author: {
-        name: string;
-        avatar?: string;
-    };
-};
-
+// Removed initialArticles from props as it wasn't used in this component.
+// If articles are displayed, it's likely by another component on the /news/manage page.
 interface ArticleFeedClientProps {
-    initialArticles: NewsPreviewInputData[];
+    // No props needed if this component is self-contained for user and actions
 }
 
-export function ArticleFeedClient({ initialArticles }: ArticleFeedClientProps) {
-    const [showCreateDialog, setShowCreateDialog] = useState(false);
+export function ArticleFeedClient({}: ArticleFeedClientProps) {
+    const [user, setUser] = useState<User | null>(null);
     const router = useRouter();
-
+    
+    // This callback is passed to CreateArticleButton.
+    // It's responsible for refreshing data after an article is created.
+    // The dialog closing should be handled within CreateArticleButton itself.
     const handleArticleCreated = useCallback(() => {
-        setShowCreateDialog(false);
-        // Refresh the server component data
         router.refresh();
     }, [router]);
 
     useEffect(() => {
         const supabase = createClient();
         
-        // Set up real-time subscription for live updates
-        const subscription = supabase
+        // Get initial session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+        });
+
+        // Listen for auth changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        const supabase = createClient();
+        
+        // Listen for changes in the 'articles' table and refresh the page
+        // to show the latest data. This is useful for a management page.
+        const articlesSubscription = supabase
             .channel('articles_changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'articles'
-                },
-                () => {
-                    // Refresh server component when data changes
-                    router.refresh();
-                }
-            )
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'articles'
+            }, () => {
+                router.refresh();
+            })
             .subscribe();
 
         return () => {
-            supabase.removeChannel(subscription);
+            supabase.removeChannel(articlesSubscription);
         };
     }, [router]);
 
     return (
         <div className="flex justify-between items-center p-4 border-b flex-shrink-0 relative">
             <h1 className="text-xl font-bold">Latest News</h1>
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogTrigger asChild>
-                    <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex items-center"
-                        onClick={() => setShowCreateDialog(true)}
-                    >
-                        <PlusIcon className="mr-2 h-4 w-4" />
-                        Create news article
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                        <DialogTitle>Create news article</DialogTitle>
-                    </DialogHeader>
-                    <CreateArticleForm
-                        onClose={() => setShowCreateDialog(false)}
-                        onArticleCreated={handleArticleCreated}
-                    />
-                </DialogContent>
-            </Dialog>
+            {/* 
+              The CreateArticleButton component likely handles its own dialog state.
+              We pass the user object (for auth checks within the button/form)
+              and a callback to refresh the page once an article is created.
+            */}
+            <CreateArticleButton 
+                user={user}
+                onArticleCreated={handleArticleCreated}
+            />
         </div>
     );
 }
