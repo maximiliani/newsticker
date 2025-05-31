@@ -81,7 +81,7 @@ export function IGPost({postId}: {postId: string}) {
             location: data.location || null,
             media,
             caption: data.caption || null,
-            postedAt: new Date(data.timestamp),
+            postedAt: new Date(data.posted_at || data.timestamp),
         };
     }
     if (loading) {
