@@ -1,3 +1,4 @@
+// Your existing layout component code...
 export default async function Layout({
   children,
 }: {

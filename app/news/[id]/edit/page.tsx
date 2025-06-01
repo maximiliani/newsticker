@@ -3,12 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { EditArticleForm } from "./EditArticleForm";
 
 interface EditArticlePageProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 export default async function EditArticlePage({ params }: EditArticlePageProps) {
+    const { id } = await params; // Await the params
     const supabase = await createClient();
 
     // Get current user
@@ -22,7 +23,7 @@ export default async function EditArticlePage({ params }: EditArticlePageProps) 
     const { data: article, error } = await supabase
         .from('articles')
         .select('*')
-        .eq('id', params.id)
+        .eq('id', id) // Use the awaited id
         .eq('user_id', user.id) // Ensure user owns this article
         .single();
 
