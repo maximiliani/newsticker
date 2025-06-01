@@ -41,10 +41,10 @@ export function ArticleManagerClient({
     updateFilter
   } = useArticles(initialArticles, user);
 
-  // Callback handlers for article actions
-  const handleArticleCreated = useCallback(() => {
-    refreshArticles();
-  }, [refreshArticles]);
+  // // Callback handlers for article actions
+  // const handleArticleCreated = useCallback(() => {
+  //   refreshArticles();
+  // }, [refreshArticles]);
 
   const handleEdit = useCallback((article: Article) => {
     router.push(`/news/${article.id}/edit`);
@@ -77,15 +77,16 @@ export function ArticleManagerClient({
   }, [articleToDelete, refreshArticles]);
 
   return (
-    <div className="space-y-6">
-      {/* Header with title and create button */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Manage Articles</h1>
-        <CreateArticleButton 
-          user={user}
-          onArticleCreated={handleArticleCreated}
-        />
-      </div>
+      <div>
+    {/*// <div className="space-y-6">*/}
+    {/*//   /!* Header with title and create button *!/*/}
+    {/*//   <div className="flex justify-between items-center">*/}
+    {/*//     <h1 className="text-2xl font-bold">Manage Articles</h1>*/}
+    {/*//     <CreateArticleButton */}
+    {/*//       user={user}*/}
+    {/*//       onArticleCreated={handleArticleCreated}*/}
+    {/*//     />*/}
+    {/*//   </div>*/}
 
       {/* Filter controls */}
       <ArticleFilters 

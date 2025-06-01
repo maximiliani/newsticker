@@ -1,38 +1,47 @@
-import {DashboardNav} from "@/components/dashboard-nav";
 import {ReactNode} from 'react';
 import {redirect} from 'next/navigation';
 import {createClient} from '@/lib/supabase/server';
-import {UserService} from '@/features/users/services/user-service';
+import {
+    Sidebar,
+    SidebarContent, SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent, SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem, SidebarRail, SidebarSeparator,
+    SidebarTrigger
+} from '@/components/ui/sidebar';
+import {ArrowLeftIcon, Calendar, FileTextIcon, Home, Instagram, UserPen} from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
-const adminNavItems = [
+const items = [
     {
-        title: 'Dashboard',
-        href: '/settings',
-        icon: 'HomeIcon',
+        title: "Settings Dashboard",
+        url: "/settings",
+        icon: Home,
     },
     {
-        title: 'Profile',
-        href: '/settings/profile',
-        icon: 'UserPen',
+        title: "Profile",
+        url: "/settings/profile",
+        icon: UserPen,
     },
     {
-        title: 'User Management',
-        href: '/settings/users',
-        icon: 'UsersIcon',
+        title: "User Management",
+        url: "/settings/users",
+        icon: Calendar,
     },
     {
-        title: 'Instagram Feeds',
-        href: '/settings/instagram',
-        icon: 'InstagramIcon',
+        title: "Instagram Feeds",
+        url: "/settings/instagram",
+        icon: Instagram,
     },
     {
-        title: 'News Articles',
-        href: '/settings/articles',
-        icon: 'NewspaperIcon',
+        title: "News Articles",
+        url: "/settings/articles",
+        icon: FileTextIcon,
     },
-];
+]
 
 interface SettingsLayoutProps {
     children: ReactNode;
@@ -45,26 +54,51 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) redirect('/login');
 
-    // Check if user is admin for navigation
-    let isAdmin = false;
-    try {
-        isAdmin = await UserService.isCurrentUserAdmin();
-    } catch (error) {
-        console.error('Error checking admin status:', error);
-        // Continue even if admin check fails
-    }
-
     return (
-        <div className="flex min-h-screen flex-col">
-            <div
-                className="flex-1 items-start md:grid md:grid-cols-[220px_1fr] md:gap-6 lg:grid-cols-[240px_1fr] lg:gap-10">
-                <aside
-                    className="fixed top-14 z-30 hidden h-[calc(100vh-3.5rem)] w-full shrink-0 overflow-y-auto border-r md:sticky md:block">
-                    <div className="py-6 pr-6 lg:py-8">
-                        <DashboardNav items={adminNavItems}/>
-                    </div>
-                </aside>
-                <main className="flex w-full flex-col overflow-hidden">
+        <div className="flex-1 w-full flex flex-col md:flex-row">
+            <Sidebar className="relative max-h-[calc(100dvh-196px)]" variant="floating" collapsible="icon">
+                <SidebarHeader>
+                    <SidebarMenuButton asChild>
+                        <a href="/">
+                            <ArrowLeftIcon/>
+                            <span>Return to Dashboard</span>
+                        </a>
+                    </SidebarMenuButton>
+                </SidebarHeader>
+                <SidebarSeparator/>
+                <SidebarContent className="bg-background font-medium text-lg">
+                    <SidebarGroup>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {items.map((item) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton asChild>
+                                            <a href={item.url}>
+                                                <item.icon/>
+                                                <span>{item.title}</span>
+                                            </a>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                </SidebarContent>
+                <SidebarFooter>
+                    <SidebarMenuButton asChild>
+                        <a href="/">
+                            <ArrowLeftIcon/>
+                            <span>Return to Dashboard</span>
+                        </a>
+                    </SidebarMenuButton>
+                </SidebarFooter>
+                <SidebarRail />
+            </Sidebar>
+            <div className="flex-1 flex flex-col min-h-0 bg-background">
+                <div className="flex items-center justify-between p-4">
+                    <SidebarTrigger/>
+                </div>
+                <main className="flex-1 p-6 overflow-y-auto">
                     {children}
                 </main>
             </div>

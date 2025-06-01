@@ -61,7 +61,6 @@ import { HighlighterIcon } from "@/components/tiptap-icons/highlighter-icon";
 import { LinkIcon } from "@/components/tiptap-icons/link-icon";
 
 // --- Hooks ---
-import { useMobile } from "@/hooks/use-mobile";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { useCursorVisibility } from "@/hooks/use-cursor-visibility";
 
@@ -84,6 +83,7 @@ import {Code} from "@tiptap/extension-code";
 import {CodeIcon} from "lucide-react";
 import BlockquoteButton from "@/components/tiptap-ui/blockquote-button/blockquote-button";
 import {CodeBlockButton} from "@/components/tiptap-ui/code-block-button";
+import {useIsMobile} from "@/hooks/use-mobile";
 
 interface RichTextEditorProps {
   content: string;
@@ -206,7 +206,7 @@ export function RichTextEditor({
   placeholder = "Write something...",
   userId
 }: RichTextEditorProps) {
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const windowSize = useWindowSize();
   const [mobileView, setMobileView] = React.useState<
     "main" | "highlighter" | "link"

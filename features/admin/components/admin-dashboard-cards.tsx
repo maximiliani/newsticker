@@ -1,72 +1,57 @@
 "use client";
 
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { UsersIcon, NewspaperIcon, InstagramIcon } from "lucide-react";
+import { InstagramIcon, NewspaperIcon, UserPen, UsersIcon } from "lucide-react";
+import {AdminCard} from "@/features/admin/components/admin_card_component";
+
+const cardData = [
+    {
+        icon: UserPen,
+        title: "Your Profile",
+        description: "Update your personal information and profile details",
+        content: "Manage your account settings, update your profile picture, and change your password. You can also delete your account if needed.",
+        buttonText: "Modify your profile",
+        href: "/settings/profile"
+    },
+    {
+        icon: UsersIcon,
+        title: "User Management",
+        description: "Manage user accounts and permissions",
+        content: "View, edit, or delete user profiles. Manage admin access and user roles.",
+        buttonText: "Manage Users",
+        href: "/settings/users"
+    },
+    {
+        icon: InstagramIcon,
+        title: "Instagram Feeds",
+        description: "Manage all Instagram content",
+        content: "Review and delete Instagram posts from all users across the platform.",
+        buttonText: "Manage Instagram",
+        href: "/settings/instagram"
+    },
+    {
+        icon: NewspaperIcon,
+        title: "News Articles",
+        description: "Manage all news articles",
+        content: "View, edit, or delete news articles from all users across the platform.",
+        buttonText: "Manage Articles",
+        href: "/settings/articles"
+    }
+];
 
 export function AdminDashboardCards() {
-  return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <UsersIcon className="mr-2 h-5 w-5" />
-            User Management
-          </CardTitle>
-          <CardDescription>
-            Manage user accounts and permissions
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm">View, edit, or delete user profiles. Manage admin access and user roles.</p>
-        </CardContent>
-        <CardFooter>
-          <Link href="/protected/admin/users" passHref className="w-full">
-            <Button className="w-full">Manage Users</Button>
-          </Link>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <InstagramIcon className="mr-2 h-5 w-5" />
-            Instagram Feeds
-          </CardTitle>
-          <CardDescription>
-            Manage all Instagram content
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm">Review and delete Instagram posts from all users across the platform.</p>
-        </CardContent>
-        <CardFooter>
-          <Link href="/protected/admin/instagram" passHref className="w-full">
-            <Button className="w-full">Manage Instagram</Button>
-          </Link>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <NewspaperIcon className="mr-2 h-5 w-5" />
-            News Articles
-          </CardTitle>
-          <CardDescription>
-            Manage all news articles
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm">View, edit, or delete news articles from all users across the platform.</p>
-        </CardContent>
-        <CardFooter>
-          <Link href="/protected/admin/articles" passHref className="w-full">
-            <Button className="w-full">Manage Articles</Button>
-          </Link>
-        </CardFooter>
-      </Card>
-    </div>
-  );
+    return (
+        <div className="grid gap-8 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr max-w-full overflow-hidden">
+            {cardData.map((card, index) => (
+                <AdminCard
+                    key={index}
+                    icon={card.icon}
+                    title={card.title}
+                    description={card.description}
+                    content={card.content}
+                    buttonText={card.buttonText}
+                    href={card.href}
+                />
+            ))}
+        </div>
+    );
 }

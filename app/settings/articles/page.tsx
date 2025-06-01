@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import {redirect, useRouter} from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { UserService } from '@/features/users/services/user-service';
 import { ArticleService, ArticlesByUser } from '@/features/articles/services/article-service';
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArticleManagerClient } from '@/features/articles/components/article-manager-client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { Article } from '@/types/article';
+import Link from "next/link";
 
 export default function ArticlesPage() {
     const router = useRouter();
@@ -151,10 +152,14 @@ export default function ArticlesPage() {
                     
                     <TabsContent value="my-articles" className="mt-4">
                         <div className="flex justify-end mb-4">
-                            <Button onClick={() => router.push('/news/create')} className="flex items-center gap-2">
-                                <Plus className="h-4 w-4" />
-                                Create New Article
-                            </Button>
+                            <Link
+                                href="/news/create"
+                                >
+                                <Button className="flex items-center gap-2">
+                                    <Plus className="h-4 w-4" />
+                                    Create New Article
+                                </Button>
+                            </Link>
                         </div>
                         
                         {userArticles.length === 0 ? (
@@ -167,8 +172,7 @@ export default function ArticlesPage() {
                             <ArticleManagerClient 
                                 initialArticles={userArticles} 
                                 user={user} 
-                                showDebug={false} 
-                                onArticleCreated={handleArticleCreated}
+                                showDebug={false}
                             />
                         )}
                     </TabsContent>
