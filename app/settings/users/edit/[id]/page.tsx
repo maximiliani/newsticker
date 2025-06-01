@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-export default async function AdminUserEditPage({ params }: { params: { id: string } }) {
+export default async function UserEditPage({ params }: { params: { id: string } }) {
   // Check if the user is authenticated and admin
   const supabase = await createClient();
 
@@ -17,18 +17,18 @@ export default async function AdminUserEditPage({ params }: { params: { id: stri
   if (!user) redirect('/login');
 
   const isAdmin = await UserService.isCurrentUserAdmin();
-  if (!isAdmin) redirect('/protected');
+  if (!isAdmin) redirect('/settings');
 
   // Fetch the user being edited
   let userToEdit = null;
   try {
     userToEdit = await UserService.getUserById(params.id);
     if (!userToEdit) {
-      redirect('/protected/admin/users');
+      redirect('/settings/users');
     }
   } catch (error) {
     console.error('Error fetching user:', error);
-    redirect('/protected/admin/users');
+    redirect('/settings/users');
   }
 
   return (
@@ -38,7 +38,7 @@ export default async function AdminUserEditPage({ params }: { params: { id: stri
           heading="Edit User Profile"
           text={`Editing user: ${userToEdit.full_name || userToEdit.email}`}
         />
-        <Link href="/protected/admin/users" passHref>
+        <Link href="/settings/users" passHref>
           <Button variant="outline">Back to Users</Button>
         </Link>
       </div>

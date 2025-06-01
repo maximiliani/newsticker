@@ -87,7 +87,7 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
       });
 
       // Navigate back to article manager
-      router.push('/protected');
+      router.push('/settings/articles');
       router.refresh();
     } catch (error) {
       console.error('Error updating article:', error);
@@ -102,7 +102,7 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
   };
 
   const handleCancel = () => {
-    router.push('/protected');
+    router.push('/settings/articles');
   };
 
   return (

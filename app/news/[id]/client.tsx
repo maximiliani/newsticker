@@ -98,7 +98,7 @@ export function ArticleActions({ articleId, articleTitle }: ArticleActionsProps)
             });
 
             // Redirect to dashboard
-            router.push('/protected');
+            router.push('/settings/articles');
         } catch (error) {
             console.error('Error deleting article:', error);
             toast({

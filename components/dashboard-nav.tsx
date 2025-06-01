@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LucideIcon, HomeIcon, UsersIcon, InstagramIcon, NewspaperIcon } from "lucide-react";
+import {LucideIcon, HomeIcon, UsersIcon, InstagramIcon, NewspaperIcon, UserPen} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Map string identifiers to actual icon components
 const iconMap: Record<string, LucideIcon> = {
   HomeIcon,
   UsersIcon,
+  UserPen,
   InstagramIcon,
   NewspaperIcon,
 };

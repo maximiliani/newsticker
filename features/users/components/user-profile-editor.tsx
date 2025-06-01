@@ -47,7 +47,7 @@ export function UserProfileEditor({ user }: UserProfileEditorProps) {
 
       // Navigate back to users list after successful update
       setTimeout(() => {
-        router.push('/protected/admin/users');
+        router.push('/settings/users');
       }, 1500);
     } catch (error) {
       console.error('Failed to update user profile:', error);

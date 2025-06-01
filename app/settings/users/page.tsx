@@ -1,11 +1,16 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { UserService } from '@/features/users/services/user-service';
+import { UserManagementWrapper } from '@/features/admin/components/user-management-wrapper';
 import { PageHeading } from '@/components/ui/page-heading';
 import { DashboardShell } from '@/components/shell';
-import { AdminDashboardCards } from '@/features/admin/components/admin-dashboard-cards';
 
-export default async function AdminDashboardPage() {
+export const dynamic = 'force-dynamic';
+
+/**
+ * User management page component that displays a list of users
+ * and allows admins to manage them
+ */
+export default async function UsersPage() {
   // Check if the user is authenticated and admin
   const supabase = await createClient();
 
@@ -20,16 +25,24 @@ export default async function AdminDashboardPage() {
     .single();
 
   const isAdmin = roleData?.is_admin === true;
-  if (!isAdmin) redirect('/protected');
+  if (!isAdmin) redirect('/settings?error=permission&message=You do not have permission to access this page');
+
+  // Fetch users with server component
+  const { data: users } = await supabase
+    .from('users_secure')
+    .select('*');
 
   return (
     <DashboardShell>
       <PageHeading
-        heading="Admin Dashboard"
-        text="Manage all aspects of your platform"
+        heading="User Management"
+        text="Manage user accounts and access permissions"
       />
 
-      <AdminDashboardCards />
+      <UserManagementWrapper 
+        initialUsers={users || []} 
+        currentUserId={user.id} 
+      />
     </DashboardShell>
   );
 }

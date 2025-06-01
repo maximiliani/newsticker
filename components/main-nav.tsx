@@ -12,15 +12,15 @@ export function MainNav({ isAdmin = false }: MainNavProps) {
   const pathname = usePathname();
 
   const navItems = [
-    { title: "Dashboard", href: "/protected" },
-    { title: "Profile", href: "/protected/profile" },
-    { title: "Instagram", href: "/protected/instagram" },
-    { title: "Articles", href: "/protected/articles" },
+    { title: "Dashboard", href: "/settings" },
+    { title: "Profile", href: "/settings/profile" },
+    { title: "Instagram", href: "/settings/instagram" },
+    { title: "Articles", href: "/settings/articles" },
   ];
 
   // Add admin link if user is admin
   if (isAdmin) {
-    navItems.push({ title: "Admin", href: "/protected/admin" });
+    navItems.push({ title: "Admin", href: "/settings/admin" });
   }
 
   return (

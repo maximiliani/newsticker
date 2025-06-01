@@ -100,27 +100,27 @@ export function ProfileDropdown({ user, userDetails }: ProfileDropdownProps) {
               </p>
             </div>
           </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => router.push("/protected/instagram")}>
-            <Instagram className="mr-2 h-4 w-4"/>
-            <span>Manage Instagram feeds</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/protected/articles")}>
-            <FileText className="mr-2 h-4 w-4"/>
-            <span>Manage news articles</span>
-          </DropdownMenuItem>
-          {isAdmin && (
-            <DropdownMenuItem onClick={() => router.push("/protected/users")}>
-              <Users className="mr-2 h-4 w-4"/>
-              <span>Manage users</span>
-            </DropdownMenuItem>
-          )}
+          {/*<DropdownMenuSeparator />*/}
+          {/*<DropdownMenuItem onClick={() => router.push("/protected/instagram")}>*/}
+          {/*  <Instagram className="mr-2 h-4 w-4"/>*/}
+          {/*  <span>Manage Instagram feeds</span>*/}
+          {/*</DropdownMenuItem>*/}
+          {/*<DropdownMenuItem onClick={() => router.push("/protected/articles")}>*/}
+          {/*  <FileText className="mr-2 h-4 w-4"/>*/}
+          {/*  <span>Manage news articles</span>*/}
+          {/*</DropdownMenuItem>*/}
+          {/*{isAdmin && (*/}
+          {/*  <DropdownMenuItem onClick={() => router.push("/protected/users")}>*/}
+          {/*    <Users className="mr-2 h-4 w-4"/>*/}
+          {/*    <span>Manage users</span>*/}
+          {/*  </DropdownMenuItem>*/}
+          {/*)}*/}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowProfile(true)}>
             <Eye className="mr-2 h-4 w-4" />
             <span>View profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowSettings(true)}>
+          <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
           </DropdownMenuItem>
