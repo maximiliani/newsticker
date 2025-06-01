@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Import useRouter
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -19,10 +19,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/app/actions";
 import { User } from "@supabase/supabase-js";
-import {Settings, LogOut, Moon, Sun, Eye, Laptop, Instagram, TextIcon, FileText} from "lucide-react";
+import {Settings, LogOut, Moon, Sun, Eye, Laptop, Instagram, TextIcon, FileText, Users} from "lucide-react";
 import { ProfileSettingsDialog } from "@/components/user/profile-settings-dialog";
 import { ProfileViewDialog } from "@/components/user/profile-view-dialog";
 import { useTheme } from "next-themes";
+import { createClient } from "@/lib/supabase/client";
 // Remove: import {router} from "next/client"; 
 
 interface ProfileDropdownProps {
@@ -37,7 +38,30 @@ export function ProfileDropdown({ user, userDetails }: ProfileDropdownProps) {
   const router = useRouter(); // Initialize router using the hook
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { theme, setTheme } = useTheme();
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('is_admin')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!error && data) {
+          setIsAdmin(data.is_admin);
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user.id]);
 
   // Add cache buster to avatar URL
   const avatarUrl = userDetails.avatar_url 
@@ -85,6 +109,12 @@ export function ProfileDropdown({ user, userDetails }: ProfileDropdownProps) {
             <FileText className="mr-2 h-4 w-4"/>
             <span>Manage news articles</span>
           </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem onClick={() => router.push("/protected/users")}>
+              <Users className="mr-2 h-4 w-4"/>
+              <span>Manage users</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowProfile(true)}>
             <Eye className="mr-2 h-4 w-4" />

@@ -172,7 +172,7 @@ export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArt
               <FormItem>
                 <FormLabel>Visible From</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="datetime-local" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -186,7 +186,7 @@ export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArt
               <FormItem>
                 <FormLabel>Visible Until (Optional)</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="datetime-local" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -196,18 +196,17 @@ export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArt
 
         <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-800 mt-4">
           <Button 
-            type="button" 
+            type="reset"
             variant="outline" 
             onClick={onClose} 
             disabled={loading}
-            className="border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800 transition-colors"
           >
             Cancel
           </Button>
           <Button 
-            type="submit" 
+            type="submit"
+            variant="default"
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
           >
             {loading ? "Creating..." : "Create Article"}
           </Button>

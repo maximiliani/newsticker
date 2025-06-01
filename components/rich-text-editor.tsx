@@ -364,7 +364,8 @@ export function RichTextEditor({
               )}
             </Toolbar>
 
-            <div className="content-wrapper min-h-[300px] max-h-[500px] overflow-y-auto">
+            <div
+                className="content-wrapper min-h-[300px] sm:max-h-[500px] md:max-h-[600px] lg:max-h-[700px] overflow-y-auto">
               <EditorContent
                 editor={editor}
                 role="presentation"

@@ -35,7 +35,7 @@ export default async function CreateArticlePage() {
 
         <h1 className="text-3xl font-bold mb-8">Create New Article</h1>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
+        <div className="rounded-xl shadow-sm border p-6">
           <CreateArticleClient user={user} />
         </div>
       </div>

@@ -118,8 +118,8 @@ export default async function ArticlePage({params}: ArticlePageProps) {
                 </div>
             </div>
 
-            <article className="space-y-6 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                <header className="p-6 border-b dark:border-gray-800">
+            <article className="space-y-6 rounded-xl shadow-sm border overflow-hidden">
+                <header className="p-6 border-b">
                     {!isCurrentlyVisible && (
                         <Badge variant="outline"
                                className="mb-4 px-3 py-1 text-sm bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-200 dark:border-yellow-500">
@@ -127,7 +127,12 @@ export default async function ArticlePage({params}: ArticlePageProps) {
                         </Badge>
                     )}
                     <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight prose dark:prose-invert">{article.title}</h1>
-                    <div className="flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-400">
+                    {article.description && (
+                        <div className="my-4 p-4 rounded-lg border border-gray-100 dark:border-gray-700">
+                            <p className="text-lg prose dark:prose-invert">{article.description}</p>
+                        </div>
+                    )}
+                    <div className="flex items-center space-x-3 text-sm">
                         <ClickableAuthorAvatar
                             author={{
                                 name: authorNameDisplay,
@@ -142,19 +147,14 @@ export default async function ArticlePage({params}: ArticlePageProps) {
                             )}
                         </div>
                     </div>
-                    {article.description && (
-                        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                            <p className="text-lg text-gray-700 dark:text-gray-300 prose dark:prose-invert">{article.description}</p>
-                        </div>
-                    )}
                 </header>
 
                 {/* Use the new ArticleContent component */}
-                <div className="px-6 py-4">
+                <div className="px-4 py-4">
                     <ArticleContent article={article} />
                 </div>
 
-                <footer className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 border-t dark:border-gray-700">
+                <footer className="px-6 py-4 text-xs border-t dark:border-gray-700">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <p>Article ID: {article.id}</p>

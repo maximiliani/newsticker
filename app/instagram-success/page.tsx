@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState, Suspense } from 'react';
+export const dynamic = 'force-dynamic';
 import { useSearchParams } from 'next/navigation';
 
 interface InstagramAccount {
@@ -14,8 +15,8 @@ interface InstagramAccount {
 
 function InstagramSuccessContent() {
     const searchParams = useSearchParams();
-    const initialToken = searchParams.get('token');
-    const initialUserId = searchParams.get('userId');
+    const initialToken = searchParams?.get('token');
+    const initialUserId = searchParams?.get('userId');
 
     const [account, setAccount] = useState<InstagramAccount | null>(null);
     const [error, setError] = useState<string | null>(null);
