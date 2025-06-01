@@ -15,8 +15,8 @@ ALTER TABLE public.articles
     ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     ADD COLUMN IF NOT EXISTS modified_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     ADD COLUMN IF NOT EXISTS visibility_from TIMESTAMPTZ NOT NULL,
-    ADD COLUMN IF NOT EXISTS visibility_to TIMESTAMPTZ NOT NULL,
-    ADD COLUMN IF NOT EXISTS user_id UUID,
+    ADD COLUMN IF NOT EXISTS visibility_to TIMESTAMPTZ DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL,
     DROP COLUMN IF EXISTS author_name,
     DROP COLUMN IF EXISTS author_avatar;
 

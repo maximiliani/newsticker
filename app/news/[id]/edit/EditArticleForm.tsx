@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { Label } from "@/components/ui/label";
 import { Article } from "@/types/article";
 
@@ -18,6 +19,7 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title);
   const [description, setDescription] = useState(article.description);
   const [content, setContent] = useState(article.content);
+  const [jsonContent, setJsonContent] = useState(article.json_content || null);
   const [visibilityFrom, setVisibilityFrom] = useState(
     new Date(article.visibility_from).toISOString().slice(0, 16)
   );
@@ -67,6 +69,8 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
           title: title.trim(),
           description: description.trim(),
           content: content.trim(),
+          json_content: jsonContent,
+          html_content: content.trim(), // Store the HTML content in html_content field as well
           visibility_from: fromDate.toISOString(),
           visibility_to: toDate ? toDate.toISOString() : null,
           modified_at: new Date().toISOString(),
@@ -128,13 +132,14 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="content">Content *</Label>
-        <Textarea
-          id="content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Enter article content"
-          rows={10}
-          required
+        <RichTextEditor
+          content={content}
+          onChange={(htmlContent, json) => {
+            setContent(htmlContent);
+            setJsonContent(json);
+          }}
+          placeholder="Write your article content here..."
+          userId={article.user_id}
         />
       </div>
 

@@ -62,20 +62,47 @@ export class ArticleService {
    */
   static async createArticle(data: CreateArticleData & { user_id: string }): Promise<Article> {
     try {
+      console.log('ArticleService.createArticle called with data:', data);
+      
       const supabase = createClient();
+
+      // Extract media URLs from content if they exist
+      const mediaUrls = this.extractMediaUrls(data.content, 'article_media');
+
+      // Prepare the article data for insertion
+      const articleData = {
+        title: data.title,
+        description: data.description,
+        content: data.content,
+        user_id: data.user_id,
+        visibility_from: data.visibility_from,
+        visibility_to: data.visibility_to || null, // Explicitly set to null if undefined
+        json_content: data.json_content || null,
+        html_content: data.html_content || data.content, // Fallback to content if html_content not provided
+        media_urls: mediaUrls.length > 0 ? mediaUrls : null, // Use null instead of undefined
+      };
+
+      console.log('Final article data for database:', articleData);
+
       const { data: article, error } = await supabase
         .from('articles')
-        .insert(data)
+        .insert(articleData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Article created in database:', article);
 
       // Invalidate cache
       this.invalidateUserCache(data.user_id);
 
       return article;
     } catch (error) {
+      console.error('Error in ArticleService.createArticle:', error);
       logError(error, 'ArticleService.createArticle');
       throw new AppError(
         'Failed to create article', 
@@ -90,9 +117,28 @@ export class ArticleService {
   static async updateArticle(data: UpdateArticleData & { user_id: string }): Promise<Article> {
     try {
       const supabase = createClient();
+
+      // Only extract media URLs if content is being updated
+      let articleData = { ...data };
+
+      if (data.content) {
+        // Extract media URLs from content if they exist
+        const mediaUrls = this.extractMediaUrls(data.content, 'article_media');
+
+        // Add media_urls to the data if we found any
+        if (mediaUrls.length > 0) {
+          articleData.media_urls = mediaUrls;
+        }
+      }
+
+      // Handle json_content if provided
+      if (data.json_content !== undefined) {
+        articleData.json_content = data.json_content;
+      }
+
       const { data: article, error } = await supabase
         .from('articles')
-        .update(data)
+        .update(articleData)
         .eq('id', data.id)
         .select()
         .single();
@@ -193,5 +239,28 @@ export class ArticleService {
    */
   static clearCache(): void {
     cache.clear();
+  }
+
+  /**
+   * Extract media URLs from content
+   * This method parses HTML content and extracts URLs from img tags
+   * that match the specified bucket name
+   */
+  private static extractMediaUrls(content: string, bucketName: string): string[] {
+    if (!content) return [];
+
+    const mediaUrls: string[] = [];
+    const imgRegex = /<img[^>]+src="([^">]+)"/g;
+    let match;
+
+    while ((match = imgRegex.exec(content)) !== null) {
+      const url = match[1];
+      // Only include URLs from our bucket
+      if (url.includes(bucketName)) {
+        mediaUrls.push(url);
+      }
+    }
+
+    return mediaUrls;
   }
 }

@@ -33,31 +33,40 @@ export function CreateArticleButton({ user, onArticleCreated }: CreateArticleBut
     }
 
     return (
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-                <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center"
-                    onClick={() => setShowCreateDialog(true)}
-                >
-                    <PlusIcon className="mr-2 h-4 w-4"/>
-                    Create news article
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle>Create news article</DialogTitle>
-                </DialogHeader>
-                <CreateArticleForm
-                    onClose={() => setShowCreateDialog(false)}
-                    onArticleCreated={() => {
-                        setShowCreateDialog(false);
-                        onArticleCreated?.();
-                    }}
-                    user={user}
-                />
-            </DialogContent>
-        </Dialog>
+        <Button
+                size="sm"
+                variant="outline"
+                className="flex items-center"
+                onClick={() => router.push('/news/create')}
+            >
+                <PlusIcon className="mr-2 h-4 w-4"/>
+                Create news article
+            </Button>
+        // <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        //     <DialogTrigger asChild>
+        //         <Button
+        //             size="sm"
+        //             variant="outline"
+        //             className="flex items-center"
+        //             onClick={() => setShowCreateDialog(true)}
+        //         >
+        //             <PlusIcon className="mr-2 h-4 w-4"/>
+        //             Create news article
+        //         </Button>
+        //     </DialogTrigger>
+        //     <DialogContent className="sm:max-w-[800px] md:max-w-[900px]">
+        //         <DialogHeader>
+        //             <DialogTitle>Create news article</DialogTitle>
+        //         </DialogHeader>
+        //         <CreateArticleForm
+        //             onClose={() => setShowCreateDialog(false)}
+        //             onArticleCreated={() => {
+        //                 setShowCreateDialog(false);
+        //                 onArticleCreated?.();
+        //             }}
+        //             user={user}
+        //         />
+        //     </DialogContent>
+        // </Dialog>
     );
 }

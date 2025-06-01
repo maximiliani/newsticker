@@ -33,13 +33,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
-      <body className="bg-background text-foreground">
+      <body className="bg-background text-foreground overflow-auto">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
         >
-          <main className="min-h-screen flex flex-col items-center">
+          <main className="min-h-screen flex flex-col items-center overflow-auto">
             <div className="flex-1 w-full flex flex-col gap-2 items-center">
               <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
                 <div className="w-full flex justify-between items-center p-3 text-sm">
