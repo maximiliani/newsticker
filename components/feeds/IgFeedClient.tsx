@@ -1,4 +1,3 @@
-
 "use client";
 
 import { IGPost, IGPostData } from "@/features/instagram/components/instagram-post";

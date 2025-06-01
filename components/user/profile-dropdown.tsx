@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -18,11 +19,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/app/actions";
 import { User } from "@supabase/supabase-js";
-import { Settings, LogOut, Moon, Sun, Eye, Laptop } from "lucide-react";
+import {Settings, LogOut, Moon, Sun, Eye, Laptop, Instagram, TextIcon, FileText} from "lucide-react";
 import { ProfileSettingsDialog } from "@/components/user/profile-settings-dialog";
 import { ProfileViewDialog } from "@/components/user/profile-view-dialog";
 import { useTheme } from "next-themes";
-import { CurrentUserAvatar } from "@/components/user/current-user-avatar";
+// Remove: import {router} from "next/client"; 
 
 interface ProfileDropdownProps {
   user: User;
@@ -33,6 +34,7 @@ interface ProfileDropdownProps {
 }
 
 export function ProfileDropdown({ user, userDetails }: ProfileDropdownProps) {
+  const router = useRouter(); // Initialize router using the hook
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -74,6 +76,15 @@ export function ProfileDropdown({ user, userDetails }: ProfileDropdownProps) {
               </p>
             </div>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push("/protected/instagram")}>
+            <Instagram className="mr-2 h-4 w-4"/>
+            <span>Manage Instagram feeds</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/protected/articles")}>
+            <FileText className="mr-2 h-4 w-4"/>
+            <span>Manage news articles</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setShowProfile(true)}>
             <Eye className="mr-2 h-4 w-4" />
@@ -137,4 +148,4 @@ export function ProfileDropdown({ user, userDetails }: ProfileDropdownProps) {
       />
     </>
   );
-} 
+}

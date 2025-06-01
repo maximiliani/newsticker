@@ -101,7 +101,7 @@ export default async function ArticlePage({params}: ArticlePageProps) {
             {/* Back to Dashboard Button */}
             <div className="mb-6">
                 <div className="flex items-center justify-between">
-                    <Link href="/protected">
+                    <Link href="/">
                         <Button variant="ghost" size="sm" className="flex items-center space-x-2">
                             <ArrowLeft className="h-4 w-4"/>
                             <span>Back to Dashboard</span>

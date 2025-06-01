@@ -17,8 +17,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  title: "Newsticker",
+  description: "A modern news aggregator",
 };
 
 const geistSans = Geist({
@@ -58,14 +58,14 @@ export default function RootLayout({
                 <Link href="mailto:kontakt@inckmann.de">© 2025 Maximilian Inckmann</Link>
                 <span>
                   Powered by{" "}
-                  <a
+                  <Link
                     href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
                     target="_blank"
                     className="font-bold hover:underline"
                     rel="noreferrer"
                   >
                     Supabase
-                  </a>
+                  </Link>
                 </span>
                 <a href="https://github.com/maximiliani" target="_blank" rel="noreferrer">
                   <GitHubLogoIcon className="w-4 h-4" />

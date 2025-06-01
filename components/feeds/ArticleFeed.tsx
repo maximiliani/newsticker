@@ -1,7 +1,7 @@
 import { NewsPreview } from "@/components/news-preview";
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { ArticleFeedClient } from '@/features/articles/components/article-feed-client';
+import { ArticleFeedClient } from './article-feed-client';
 
 // Types aligned with project standards
 interface ArticleWithAuthorInfo {

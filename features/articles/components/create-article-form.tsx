@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { RichTextEditor } from "@/components/rich-text-editor";
 import { ArticleService } from "../services/article-service";
 import { logError } from "@/lib/utils/error-handling";
 import { User } from "@supabase/supabase-js";

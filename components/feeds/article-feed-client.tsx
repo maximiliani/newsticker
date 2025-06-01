@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/use-auth";
-import { CreateArticleButton } from "./create-article-button";
+import { CreateArticleButton } from "@/features/articles/components/create-article-button";
 import { createClient } from "@/lib/supabase/client";
 
 /**

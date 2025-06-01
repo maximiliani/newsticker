@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
 import {createClient} from "@/lib/supabase/server";
+import crypto from "crypto";
 
 const clientId = process.env.INSTAGRAM_CLIENT_ID!;
 const clientSecret = process.env.INSTAGRAM_CLIENT_SECRET!;
@@ -211,5 +212,103 @@ export async function GET(request: NextRequest) {
     } catch (err: any) {
         console.error('Instagram integration error:', err instanceof Error ? err.message : 'Unknown error');
         return NextResponse.json({error: "Unexpected server error", details: err.message}, {status: 500});
+    }
+}
+
+
+export async function POST(request: NextRequest) {
+    const supabase = await createClient();
+
+    try {
+        const formData = await request.formData();
+        const signedRequest = formData.get('signed_request') as string | null;
+
+        if (!signedRequest) {
+            console.log("Data deletion callback: Missing signed_request");
+            return NextResponse.json({ error: "Missing signed_request" }, { status: 400 });
+        }
+
+        const parts = signedRequest.split('.');
+        if (parts.length !== 2) {
+            console.log("Data deletion callback: Invalid signed_request format");
+            return NextResponse.json({ error: "Invalid signed_request format" }, { status: 400 });
+        }
+
+        const [encodedSig, encodedPayload] = parts;
+
+        // Verify the signature
+        // The signature is a HMAC SHA256 hash of the encoded_payload, using your app's client_secret.
+        // The encoded_payload is the raw base64url encoded string.
+        const calculatedSignatureBuffer = crypto
+            .createHmac('sha256', clientSecret)
+            .update(encodedPayload) // Use the raw base64url encoded payload for HMAC
+            .digest();
+
+        // Decode Instagram's provided signature from base64url to a buffer for comparison
+        const instagramSignatureBuffer = Buffer.from(encodedSig.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+
+        // Use timingSafeEqual to prevent timing attacks
+        if (!crypto.timingSafeEqual(instagramSignatureBuffer, calculatedSignatureBuffer)) {
+            console.warn("Data deletion callback: Invalid signature.");
+            return NextResponse.json({ error: "Invalid signed_request" }, { status: 400 });
+        }
+
+        // Decode the payload if the signature is valid
+        const base64UrlDecode = (str: string): string => {
+            let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+            // Padding is not strictly necessary for Buffer.from with base64 encoding
+            // if the input is a correct base64url string.
+            return Buffer.from(base64, 'base64').toString('utf8');
+        };
+
+        const payloadString = base64UrlDecode(encodedPayload);
+        const payloadData = JSON.parse(payloadString);
+
+        const instagramUserId = payloadData.user_id;
+
+        if (!instagramUserId) {
+            console.log("Data deletion callback: Missing user_id in payload");
+            return NextResponse.json({ error: "Missing user_id in payload" }, { status: 400 });
+        }
+
+        console.log(`Data deletion request received for Instagram user ID: ${instagramUserId}`);
+
+        // --- Perform data deletion in your database ---
+        // IMPORTANT: You will need to create a Supabase RPC function (e.g., 'delete_instagram_account_data').
+        // This function should accept the Instagram user ID and handle the deletion of all
+        // associated data for that user in your database.
+        // The `insert_instagram_account` RPC uses `p_id` for the Instagram profile ID (`profileData.id`),
+        // so it's recommended to use `p_id` consistently for the Instagram User ID in your delete RPC.
+
+        const { error: deleteError } = await supabase.rpc('delete_instagram_account_data', {
+            p_id: instagramUserId // Assuming 'p_id' is the parameter for the Instagram user ID in your RPC
+        });
+
+        if (deleteError) {
+            console.error(`Data deletion callback: Failed to delete data for Instagram user ID ${instagramUserId}:`, deleteError.message);
+            // Avoid exposing detailed database error messages to Instagram
+            return NextResponse.json({ error: "Failed to process data deletion request" }, { status: 500 });
+        }
+
+        // --- Respond to Instagram ---
+        // Instagram expects a JSON response containing a URL where the user can track the deletion
+        // status and a confirmation_code.
+        const confirmationCode = crypto.randomBytes(16).toString('hex'); // Generate a unique code
+
+        // Construct the status URL. This URL should lead to a page on your site.
+        // For example, it could be a generic data deletion status page or your privacy policy.
+        const statusUrl = `${new URL(request.url).origin}/instagram-data-deletion-status?code=${confirmationCode}`;
+
+        console.log(`Data for Instagram user ID: ${instagramUserId} has been processed for deletion. Confirmation code: ${confirmationCode}`);
+
+        return NextResponse.json({
+            url: statusUrl,
+            confirmation_code: confirmationCode
+        });
+
+    } catch (error: any) {
+        console.error('Instagram data deletion callback error:', error.message, error.stack);
+        // Return a generic error message to the client
+        return NextResponse.json({ error: "Unexpected server error during data deletion" }, { status: 500 });
     }
 }

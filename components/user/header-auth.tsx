@@ -33,9 +33,6 @@ export default async function AuthButton() {
   
   return user ? (
     <div className="flex items-center gap-4">
-      <Button asChild size="sm" variant={"link"}>
-        <Link href="/protected">Protected</Link>
-      </Button>
       <ProfileDropdown 
         user={user} 
         userDetails={{
