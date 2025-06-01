@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { UserWithRole, UserService } from "@/features/users/services/user-service";
-import Link from "next/link";
 import { UserTable } from "@/features/users/components/user-table";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -14,7 +14,7 @@ interface UserManagementProps {
   onUserDeleted?: (userId: string) => void;
 }
 
-export function UserManagement({ users: initialUsers, currentUserId }: UserManagementProps) {
+export function UserManagement({ users: initialUsers, currentUserId, onUserUpdated, onUserDeleted }: UserManagementProps) {
   const [users, setUsers] = useState<UserWithRole[]>(initialUsers);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -27,6 +27,17 @@ export function UserManagement({ users: initialUsers, currentUserId }: UserManag
         user.id === userId ? { ...user, is_admin: isAdmin } : user
       ));
       
+      // Call the callback if provided
+      if (onUserUpdated) {
+        const updatedUser = users.find(u => u.id === userId);
+        if (updatedUser) {
+          onUserUpdated({
+            ...updatedUser,
+            is_admin: isAdmin
+          });
+        }
+      }
+
       return Promise.resolve();
     } catch (error) {
       return Promise.reject(error);
@@ -35,11 +46,16 @@ export function UserManagement({ users: initialUsers, currentUserId }: UserManag
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      // Use server action instead of client-side service
-      await deleteUser(userId);
-      
+      // Use UserService instead of undefined deleteUser function
+      await UserService.deleteUser(userId);
+
       // Update the local state
       setUsers(users.filter(user => user.id !== userId));
+
+      // Call the callback if provided
+      if (onUserDeleted) {
+        onUserDeleted(userId);
+      }
       
       return Promise.resolve();
     } catch (error) {
@@ -53,22 +69,6 @@ export function UserManagement({ users: initialUsers, currentUserId }: UserManag
       const refreshedUsers = await UserService.getAllUsers();
       setUsers(refreshedUsers);
       toast.success("User list refreshed");
-
-      // Call the callback if provided
-      if (onUserUpdated) {
-        const updatedUser = users.find(u => u.id === userId);
-        if (updatedUser) {
-          onUserUpdated({
-            ...updatedUser,
-            is_admin: newStatus
-          });
-        }
-      }
-
-      // Call the callback if provided
-      if (onUserDeleted) {
-        onUserDeleted(userId);
-      }
     } catch (error) {
       toast.error(`Failed to refresh users: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -86,13 +86,14 @@ export function UserManagement({ users: initialUsers, currentUserId }: UserManag
       </CardHeader>
       <CardContent>
         <div className="mb-4 flex justify-end">
-          <button
+          <Button
             onClick={refreshUsers}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            variant="default"
+            size="sm"
           >
             {isLoading ? "Refreshing..." : "Refresh"}
-          </button>
+          </Button>
         </div>
         
         <UserTable

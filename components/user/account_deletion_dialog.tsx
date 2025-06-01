@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Trash2, AlertTriangle } from "lucide-react";
+import { ProfileService } from "@/features/users/services/profile-service";
+import {createClient} from "@/lib/supabase/client";
 
 interface AccountDeletionDialogProps {
   open: boolean;
@@ -57,64 +58,11 @@ export function AccountDeletionDialog({
     setError(null);
 
     try {
-      // First verify the password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email!,
-        password: passwordConfirmation,
-      });
+      // Use ProfileService to delete the account
+      await ProfileService.deleteAccount(passwordConfirmation);
 
-      if (signInError) {
-        throw new Error("Password verification failed. Please check your password.");
-      }
-
-      // Delete user's avatar from storage if it exists
-      try {
-        const { data: files } = await supabase.storage
-          .from("avatars")
-          .list();
-        
-        const userAvatar = files?.find(file => 
-          file.name.startsWith(`${user.id}.`)
-        );
-
-        if (userAvatar) {
-          await supabase.storage
-            .from("avatars")
-            .remove([userAvatar.name]);
-        }
-      } catch (storageError) {
-        console.warn("Failed to delete avatar:", storageError);
-        // Continue with account deletion even if avatar deletion fails
-      }
-
-      // Call your backend API to delete user data
-      // This should handle deleting all user-related data from your database
-      const response = await fetch('/api/user/delete', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete user data');
-      }
-
-      // Finally, delete the auth user
-      const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
-      
-      if (deleteError) {
-        throw new Error("Failed to delete account. Please contact support.");
-      }
-
-      // Sign out the user
-      await supabase.auth.signOut();
-      
-      // Redirect to home page or sign up page
+      // Redirect to home page with deleted query param
       router.push("/?deleted=true");
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {

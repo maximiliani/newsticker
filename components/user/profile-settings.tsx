@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { createClient } from "@/lib/supabase/client";
 import { Settings, Trash2, Shield, Save, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {AccountDeletionDialog} from "@/components/user/account_deletion_dialog";
+import { AccountDeletionDialog } from "@/components/user/account_deletion_dialog";
+import { ProfileService, UserProfile } from "@/features/users/services/profile-service";
+import {createClient} from "@/lib/supabase/client";
 
 interface UserDetails {
   full_name: string;
@@ -30,33 +31,34 @@ export function ProfileSettings() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
-    const getUser = async () => {
+    const loadUserProfile = async () => {
       try {
+        // Get user from auth
+        const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
+
+        // Get full profile from service
+        const profile = await ProfileService.getCurrentUserProfile();
+
         if (user) {
           setUser(user);
           setUserDetails({
-            full_name: user.user_metadata.full_name || "",
-            avatar_url: user.user_metadata.avatar_url || undefined,
+            full_name: profile?.full_name || "",
+            avatar_url: profile?.avatar_url || undefined,
           });
         }
       } catch (error) {
         console.error("Error fetching user:", error);
+        setError("Failed to load profile. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    getUser();
-  }, [supabase]);
-
-  const addCacheBuster = (url: string) => {
-    const timestamp = new Date().getTime();
-    return `${url}?t=${timestamp}`;
-  };
+    loadUserProfile();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,32 +77,13 @@ export function ProfileSettings() {
     try {
       if (!user) return;
 
-      const { data: existingFiles } = await supabase.storage
-        .from("avatars")
-        .list();
-      
-      const existingAvatar = existingFiles?.find(file => 
-        file.name.startsWith(`${user.id}.`)
-      );
+      // Use ProfileService to delete avatar
+      await ProfileService.deleteAvatar();
 
-      if (existingAvatar) {
-        await supabase.storage
-          .from("avatars")
-          .remove([existingAvatar.name]);
-
-        // Update user metadata to remove avatar URL
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: {
-            avatar_url: null,
-          },
-        });
-        if (updateError) throw updateError;
-
-        setSuccess("Avatar deleted successfully");
-        setPreviewUrl(null);
-        setUserDetails(prev => ({ ...prev, avatar_url: undefined }));
-        router.refresh();
-      }
+      setSuccess("Avatar deleted successfully");
+      setPreviewUrl(null);
+      setUserDetails(prev => ({ ...prev, avatar_url: undefined }));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete avatar");
     } finally {
@@ -140,7 +123,22 @@ export function ProfileSettings() {
     try {
       if (!user) throw new Error("User not found");
 
-      // Validate passwords if trying to change password
+      // Update profile information (name and email)
+      if (email !== user.email || firstName || lastName) {
+        await ProfileService.updateProfile({
+          firstName,
+          lastName,
+          email: email !== user.email ? email : undefined
+        });
+
+        // Update local state
+        const fullName = `${firstName} ${lastName}`;
+        if (fullName !== userDetails.full_name) {
+          setUserDetails(prev => ({ ...prev, full_name: fullName }));
+        }
+      }
+
+      // Update password if provided
       if (newPassword || confirmPassword || currentPassword) {
         if (!currentPassword) {
           throw new Error("Current password is required to change password");
@@ -149,106 +147,13 @@ export function ProfileSettings() {
           throw new Error("New passwords do not match");
         }
 
-        // Verify current password by attempting to sign in
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: user.email!,
-          password: currentPassword,
-        });
-
-        if (signInError) {
-          throw new Error("Current password is incorrect");
-        }
-
-        // Update password
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: newPassword,
-        });
-        if (passwordError) throw passwordError;
+        await ProfileService.updatePassword(currentPassword, newPassword);
       }
 
-      // Update email if changed
-      if (email !== user.email) {
-        const { error: emailError } = await supabase.auth.updateUser({
-          email: email,
-        });
-        if (emailError) throw emailError;
-      }
-
-      // Update avatar if a file was selected
+      // Upload avatar if a file was selected
       if (avatarFile && avatarFile instanceof File && avatarFile.size > 0) {
-        if (avatarFile.size > 5 * 1024 * 1024) {
-          throw new Error("Avatar file size must be less than 5MB");
-        }
-
-        if (!avatarFile.type.startsWith('image/')) {
-          throw new Error("File must be an image");
-        }
-
-        const fileExt = avatarFile.name.split(".").pop();
-        const filePath = `${user.id}.${fileExt}`;
-
-        try {
-          // Delete existing avatar if it exists
-          const { data: existingFiles } = await supabase.storage
-            .from("avatars")
-            .list();
-          
-          const existingAvatar = existingFiles?.find(file => 
-            file.name.startsWith(`${user.id}.`)
-          );
-
-          if (existingAvatar) {
-            await supabase.storage
-              .from("avatars")
-              .remove([existingAvatar.name]);
-          }
-
-          // Upload new avatar
-          const { error: uploadError } = await supabase.storage
-            .from("avatars")
-            .upload(filePath, avatarFile, {
-              upsert: true,
-              contentType: avatarFile.type,
-            });
-          
-          if (uploadError) throw uploadError;
-
-          // Get public URL with cache buster
-          const { data: urlData } = supabase.storage
-            .from("avatars")
-            .getPublicUrl(filePath);
-
-          // Update user metadata with new avatar URL including cache buster
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: {
-              avatar_url: addCacheBuster(urlData.publicUrl),
-            },
-          });
-          if (updateError) throw updateError;
-
-          setUserDetails(prev => ({ 
-            ...prev, 
-            avatar_url: addCacheBuster(urlData.publicUrl) 
-          }));
-        } catch (storageError) {
-          console.error('Storage error:', storageError);
-          throw new Error('Failed to upload avatar. Please try again.');
-        }
-      }
-
-      // Update name if changed
-      const fullName = `${firstName} ${lastName}`;
-      if (fullName !== userDetails.full_name) {
-        const { error: nameError } = await supabase.auth.updateUser({
-          data: {
-            full_name: fullName,
-            first_name: firstName,
-            last_name: lastName,
-          },
-        });
-        if (nameError) throw nameError;
-
-        setUserDetails(prev => ({ ...prev, full_name: fullName }));
+        const newAvatarUrl = await ProfileService.uploadAvatar(avatarFile);
+        setUserDetails(prev => ({ ...prev, avatar_url: newAvatarUrl }));
       }
 
       setSuccess("Profile updated successfully");
@@ -296,7 +201,7 @@ export function ProfileSettings() {
   }
 
   const [firstName, lastName] = userDetails.full_name.split(" ");
-  const displayAvatarUrl = previewUrl || (userDetails.avatar_url ? addCacheBuster(userDetails.avatar_url) : "");
+  const displayAvatarUrl = previewUrl || userDetails.avatar_url || "";
 
   return (
     <>

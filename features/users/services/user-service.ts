@@ -256,7 +256,7 @@ export class UserService {
     /**
      * Clean up all Instagram data for a user being deleted
      */
-    private static async cleanupUserInstagramData(userId: string): Promise<void> {
+    static async cleanupUserInstagramData(userId: string): Promise<void> {
         const {InstagramService} = await import('@/features/instagram/services/instagram-service');
         const supabase = createClient();
 
@@ -284,7 +284,7 @@ export class UserService {
     /**
      * Clean up all articles for a user being deleted
      */
-    private static async cleanupUserArticles(userId: string): Promise<void> {
+    static async cleanupUserArticles(userId: string): Promise<void> {
         const {ArticleService} = await import('@/features/articles/services/article-service');
         const supabase = createClient();
 

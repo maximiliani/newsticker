@@ -9,7 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-export default async function UserEditPage({ params }: { params: { id: string } }) {
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function UserEditPage({ params }: PageProps) {
   // Check if the user is authenticated and admin
   const supabase = await createClient();
 
@@ -19,10 +23,13 @@ export default async function UserEditPage({ params }: { params: { id: string } 
   const isAdmin = await UserService.isCurrentUserAdmin();
   if (!isAdmin) redirect('/settings');
 
+  // Await the params to get the actual values
+  const { id } = await params;
+
   // Fetch the user being edited
   let userToEdit = null;
   try {
-    userToEdit = await UserService.getUserById(params.id);
+    userToEdit = await UserService.getUserById(id);
     if (!userToEdit) {
       redirect('/settings/users');
     }
