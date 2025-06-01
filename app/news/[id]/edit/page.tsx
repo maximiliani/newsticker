@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { EditArticleForm } from "./EditArticleForm";
 

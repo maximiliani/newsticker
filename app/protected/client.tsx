@@ -1,7 +1,8 @@
 "use client";
 
 import { InfoIcon } from "lucide-react";
-import { InstagramAccountsManager } from "@/components/instagram_accounts_manager";
+import {InstagramAccountsManager} from "@/features/instagram/components/instagram-accounts-manager";
+import {InstagramAccount} from "@/types";
 
 interface DashboardClientProps {
     fullName: string;
@@ -9,7 +10,7 @@ interface DashboardClientProps {
         id: string;
         username: string;
         profile_image_url: string | null;
-    }>;
+    }> | [];
     userId: string;
 }
 
@@ -31,8 +32,8 @@ export function DashboardClient({
                 <h2 className="font-extrabold text-2xl">Welcome, {fullName}!</h2>
 
                 <InstagramAccountsManager
-                    initialAccounts={instagramAccounts}
                     userId={userId}
+                    initialAccounts={instagramAccounts as InstagramAccount[]}
                 />
             </div>
         </>

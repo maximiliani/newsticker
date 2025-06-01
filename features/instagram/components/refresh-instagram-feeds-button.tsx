@@ -3,7 +3,7 @@ import {createClient} from "@/lib/supabase/client";
 import {Button} from "@/components/ui/button";
 import {RefreshCcwIcon} from "lucide-react";
 
-export default function RefreshIGFeedsButton() {
+export default function RefreshInstagramFeedsButton() {
     // Calls the fetchInstagramPostsAndStore edge function with Supabase Edge Runtime
     const handleRefresh = async () => {
         try {

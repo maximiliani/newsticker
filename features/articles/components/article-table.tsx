@@ -12,12 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { PencilIcon, TrashIcon, EyeIcon } from "lucide-react";
-import { Article } from "./ArticleInterfaceTypes";
+import { Article } from "@/types/article";
 import { User } from "@supabase/supabase-js";
 
 interface ArticleTableProps {
   articles: Article[];
-  currentUser: User | null; // Add current user prop
+  currentUser: User | null;
   onEdit: (article: Article) => void;
   onDelete: (articleId: string) => void;
   onView: (article: Article) => void;
@@ -32,7 +32,7 @@ function getArticleStatus(article: Article): ArticleStatus {
   const now = new Date();
   const visibilityFrom = new Date(article.visibility_from);
   const visibilityTo = article.visibility_to ? new Date(article.visibility_to) : null;
-  
+
   if (visibilityFrom <= now && (!visibilityTo || visibilityTo >= now)) {
     return { label: "Active", variant: "default" };
   } else if (visibilityFrom > now) {
@@ -106,7 +106,7 @@ export function ArticleTable({ articles, currentUser, onEdit, onDelete, onView }
                     >
                       <EyeIcon className="h-4 w-4" />
                     </Button>
-                    
+
                     {/* Edit button - only visible to owner */}
                     {userOwnsArticle && (
                       <Button
@@ -118,7 +118,7 @@ export function ArticleTable({ articles, currentUser, onEdit, onDelete, onView }
                         <PencilIcon className="h-4 w-4" />
                       </Button>
                     )}
-                    
+
                     {/* Delete button - only visible to owner */}
                     {userOwnsArticle && (
                       <Button

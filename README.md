@@ -65,7 +65,222 @@ If you wish to just develop locally and not deploy to Vercel, [follow the steps 
    ```bash
    pnpm create next-app --example with-supabase with-supabase-app
    ```
+# Next.js Modern Web Application
 
+A modern web application built with Next.js, TypeScript, Tailwind CSS, and Supabase, organized using a feature-based architecture.
+
+## Features
+
+- 📝 Article Management System
+- 📸 Instagram Integration
+- 🔒 User Authentication
+- 📱 Responsive Design
+- 🌓 Dark/Light Mode
+- 🛡️ Robust Error Handling
+
+## Project Structure
+
+The project follows a feature-based organization to improve maintainability and scalability:
+
+```
+project/
+├── app/                      # Next.js app directory (routes)
+│   ├── error.tsx            # Global error boundary
+│   ├── loading.tsx          # Global loading state
+│   ├── not-found.tsx        # 404 page
+│   └── protected/           # Protected routes
+├── components/               # Shared UI components
+│   └── ui/                  # Design system components
+├── features/                 # Feature-based organization
+│   ├── articles/            # Article management feature
+│   │   ├── components/      # Feature-specific components
+│   │   └── services/        # Feature-specific data services
+│   └── instagram/           # Instagram integration feature
+├── lib/                      # Core utilities and configurations
+│   ├── hooks/               # Custom React hooks
+│   ├── supabase/            # Supabase client utilities
+│   └── utils/               # Shared utility functions
+└── types/                    # TypeScript type definitions
+```
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create environment variables:
+   ```bash
+   cp .env.example .env.local
+   ```
+4. Fill in your Supabase and other environment variables in `.env.local`
+5. Run the development server:
+   ```bash
+   npm run dev
+   ```
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Architecture
+
+This project follows Next.js best practices, including:
+
+### Server and Client Components
+# Next.js Modern Web Application
+
+A modern, feature-rich web application built with Next.js, TypeScript, Tailwind CSS, and Supabase.
+
+## Features
+
+- Article Management System
+- Instagram Integration
+- User Authentication
+- Responsive Design
+
+## Project Structure
+
+The project follows a feature-based organization with a clear separation of server and client components:
+
+```
+project/
+├── app/                      # Next.js app directory (server components)
+│   ├── protected/            # Protected routes requiring authentication
+│   ├── news/                 # News article routes
+│   └── api/                  # API routes
+├── components/               # Shared UI components
+│   └── ui/                  # Shadcn/ui components
+├── features/                 # Feature-based organization
+│   ├── articles/            # Article management feature
+│   │   ├── components/      # UI components
+│   │   └── services/        # Data services
+│   └── instagram/           # Instagram integration feature
+├── lib/                      # Core utilities and hooks
+│   ├── hooks/               # React hooks
+│   ├── supabase/            # Supabase clients
+│   └── utils/               # Utility functions
+└── types/                    # TypeScript type definitions
+```
+
+## Server Components vs Client Components
+
+This project follows Next.js best practices for component separation:
+
+- **Server Components** (`app/` directory): Fetch data, handle authentication, and render initial HTML
+- **Client Components** (marked with "use client"): Handle interactivity, state, and effects
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Copy `.env.example` to `.env.local` and fill in your environment variables
+4. Run the development server: `npm run dev`
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Environment Variables
+
+```
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+NEXT_PUBLIC_INSTAGRAM_CLIENT_ID=your-instagram-client-id
+```
+
+## Key Technologies
+
+- **Next.js**: React framework for server-side rendering and static site generation
+- **TypeScript**: Static type checking for JavaScript
+- **Tailwind CSS**: Utility-first CSS framework
+- **Supabase**: Open-source Firebase alternative with built-in authentication and database
+- **React Hook Form**: Form handling and validation
+- **Zod**: TypeScript-first schema validation
+- **Radix UI**: Headless UI components for building accessible interfaces
+
+## Development Guidelines
+
+1. **Server vs Client Components**:
+   - Server components should handle data fetching and initial rendering
+   - Client components should handle interactivity and state
+   - Use "use client" directive only when necessary
+
+2. **Feature Organization**:
+   - Group related components, services, and utilities by feature
+   - Keep component responsibilities clear and focused
+
+3. **Error Handling**:
+   - Use the error handling utilities for consistent error management
+   - Log errors with context information
+
+4. **Type Safety**:
+   - Define and use TypeScript types for all data structures
+   - Use Zod for runtime validation of user inputs
+
+5. **Hooks**:
+   - Create custom hooks for reusable logic
+   - Keep hooks focused on specific functionality
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+- **Server Components**: Used for data fetching, initial render, and SEO
+- **Client Components**: Used for interactivity and client-side state management
+
+### Data Flow
+
+1. Server components fetch initial data directly from Supabase
+2. Data is passed to client components as props
+3. Client components use custom hooks for state management and real-time updates
+4. Service classes provide centralized data access methods
+
+### Error Handling
+
+Comprehensive error handling using:
+
+- Global error boundary in `app/error.tsx`
+- Custom `AppError` class for consistent error types
+- Centralized error logging through `logError` function
+- Graceful fallbacks and error states in components
+
+## Key Technologies
+
+- **Next.js 14**: React framework with App Router
+- **TypeScript**: Static type checking and improved developer experience
+- **Tailwind CSS**: Utility-first CSS framework
+- **Supabase**: Open-source backend with auth, database, and storage
+- **React Hook Form**: Form handling with validation
+- **Radix UI**: Accessible component primitives
+- **Zod**: TypeScript-first schema validation
+
+## Development Guidelines
+
+1. **Component Organization**:
+   - Use server components for data fetching
+   - Keep client components focused on interactivity
+   - Use custom hooks for state management
+
+2. **Error Handling**:
+   - Always wrap async operations in try/catch
+   - Use the `logError` utility for consistent error logging
+   - Provide user-friendly error messages
+
+3. **Performance**:
+   - Implement data caching where appropriate
+   - Use suspense boundaries for loading states
+   - Keep client bundle size small
+
+4. **Code Style**:
+   - Add JSDoc comments for functions and components
+   - Use descriptive variable and function names
+   - Follow the established naming conventions
+
+## Contributing
+
+1. Create a feature branch: `git checkout -b feature/your-feature-name`
+2. Make your changes
+3. Run tests: `npm test`
+4. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 3. Use `cd` to change into the app's directory
 
    ```bash

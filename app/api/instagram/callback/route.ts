@@ -7,7 +7,7 @@ const redirectUri = process.env.INSTAGRAM_REDIRECT_URI!;
 
 function isValidAccessToken(token: string): boolean {
     // Check if token is a non-empty string
-    if (!token || typeof token !== 'string') return false;
+    if (!token) return false;
 
     // Check if token contains only valid characters
     if (!/^[A-Za-z0-9._-]+$/.test(token)) return false;

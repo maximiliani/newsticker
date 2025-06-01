@@ -20,32 +20,41 @@ function InstagramSuccessContent() {
     const [account, setAccount] = useState<InstagramAccount | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [showToken, setShowToken] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         async function fetchInstagramAccount() {
-            const supabase = createClient();
+            try {
+                setIsLoading(true);
+                const supabase = createClient();
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                setError('User not authenticated');
-                return;
-            }
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    setError('User not authenticated');
+                    return;
+                }
 
-            const { data, error } = await supabase
-                .from('public_instagram_accounts')  // Use the public view instead
-                .select('id, username, profile_image_url, timestamp')
-                .eq('user_id', user.id)
-                .order('timestamp', { ascending: false })
-                .limit(1)
-                .single();
+                const { data, error } = await supabase
+                    .from('public_instagram_accounts')  // Use the public view instead
+                    .select('id, username, profile_image_url, timestamp')
+                    .eq('user_id', user.id)
+                    .order('timestamp', { ascending: false })
+                    .limit(1)
+                    .single();
 
-            if (error) {
-                setError('Failed to fetch Instagram account');
-                return;
-            }
+                if (error) {
+                    setError('Failed to fetch Instagram account');
+                    return;
+                }
 
-            if (data) {
-                setAccount(data as InstagramAccount);
+                if (data) {
+                    setAccount(data as InstagramAccount);
+                }
+            } catch (error) {
+                console.error('Error fetching Instagram account:', error);
+                setError('An unexpected error occurred');
+            } finally {
+                setIsLoading(false);
             }
         }
 
@@ -67,6 +76,14 @@ function InstagramSuccessContent() {
             </div>
         );
     }
+
+            if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen p-4">
+                <p>Loading account information...</p>
+            </div>
+        );
+            }
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -130,9 +147,7 @@ function InstagramSuccessContent() {
                     </div>
                     <p className="text-green-600">Your Instagram account has been successfully connected!</p>
                 </div>
-            ) : (
-                <p>Loading account information...</p>
-            )}
+            ) : null}
             <a href="/" className="mt-4 text-blue-600 underline">
                 Go back home
             </a>

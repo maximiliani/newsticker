@@ -1,6 +1,10 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
+/**
+ * Create a Supabase client for use in server components
+ * This handles cookie management for authentication
+ */
 export async function createClient() {
   const cookieStore = await cookies()
 

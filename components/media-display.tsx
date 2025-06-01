@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 interface MediaDisplayProps {
   type: "image" | "video";
@@ -59,14 +59,16 @@ export function MediaDisplay({ type, src, alt, className }: MediaDisplayProps) {
 }
 
 // Enhanced version for Instagram media with fallback support
+interface InstagramMedia {
+  local_media_url?: string | null;
+  media_url: string;
+  local_thumbnail_url?: string | null;
+  thumbnail_url?: string | null;
+  download_status?: string;
+}
+
 interface InstagramMediaProps {
-  media: {
-    local_media_url?: string | null;
-    media_url: string;
-    local_thumbnail_url?: string | null;
-    thumbnail_url?: string | null;
-    download_status?: string;
-  };
+  media: InstagramMedia;
   type: "image" | "video";
   alt?: string;
   className?: string;

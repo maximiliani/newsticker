@@ -1,21 +1,11 @@
 
 "use client";
 
-import { IGPost } from "@/components/ig-post";
+import { IGPost, IGPostData } from "@/features/instagram/components/instagram-post";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRouter } from 'next/navigation';
-
-export type IGPostData = {
-    id: string;
-    username: string;
-    userAvatar: string;
-    caption: string;
-    location: string;
-    postedAt: Date;
-    media: any[];
-};
 
 interface IgFeedClientProps {
     initialPosts: IGPostData[];
@@ -48,7 +38,7 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
 
     useEffect(() => {
         const supabase = createClient();
-        
+
         // Set up real-time subscription for instagram_posts
         const subscription = supabase
             .channel('instagram_posts_changes')

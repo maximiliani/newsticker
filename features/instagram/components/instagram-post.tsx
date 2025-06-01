@@ -1,6 +1,6 @@
 import {MediaDisplay, InstagramMediaDisplay} from "@/components/media-display";
 import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,} from "@/components/ui/carousel";
-import {createClient} from "@/utils/supabase/client";
+import {createClient} from "@/lib/supabase/client";
 import {formatDate} from "@/utils/utils";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
@@ -84,28 +84,28 @@ export function IGPost({postId}: {postId: string}) {
                 ? media.local_media_url 
                 : media.media_url;
             
-        return {
-            type: media.media_type,
-            url: preferredUrl,
-            // Add the missing properties that InstagramMediaDisplay expects
-            media_url: media.media_url,
-            thumbnail_url: media.thumbnail_url,
-            local_media_url: media.local_media_url,
-            local_thumbnail_url: media.local_thumbnail_url,
-            download_status: media.download_status,
-        };
-    });
+            return {
+                type: media.media_type,
+                url: preferredUrl,
+                // Add the missing properties that InstagramMediaDisplay expects
+                media_url: media.media_url,
+                thumbnail_url: media.thumbnail_url,
+                local_media_url: media.local_media_url,
+                local_thumbnail_url: media.local_thumbnail_url,
+                download_status: media.download_status,
+            };
+        });
 
-    return {
-        id: data.id,
-        username: data.instagram_accounts.username,
-        userAvatar: data.instagram_accounts.profile_image_url,
-        location: data.location || null,
-        media,
-        caption: data.caption || null,
-        postedAt: new Date(data.posted_at || data.timestamp),
+        return {
+            id: data.id,
+            username: data.instagram_accounts.username,
+            userAvatar: data.instagram_accounts.profile_image_url,
+            location: data.location || null,
+            media,
+            caption: data.caption || null,
+            postedAt: new Date(data.posted_at || data.timestamp),
+        };
     };
-}
     
     if (loading) {
         return <div className="animate-pulse bg-gray-200 h-96 w-64 rounded-lg"></div>;

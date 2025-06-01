@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ArticleVisibilityStatus } from "./ArticleInterfaceTypes";
+import { ArticleVisibilityStatus } from "@/types/article";
 
 interface FilterOption {
   value: ArticleVisibilityStatus;

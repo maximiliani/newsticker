@@ -1,10 +1,10 @@
 import { NewsPreview } from "@/components/news-preview";
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { ArticleFeedClient } from './ArticleFeedClient';
+import { ArticleFeedClient } from '@/features/articles/components/article-feed-client';
 
-// Types remain the same
-type ArticleFromView = {
+// Types aligned with project standards
+interface ArticleWithAuthorInfo {
     id: string;
     title: string;
     description: string;
@@ -16,7 +16,7 @@ type ArticleFromView = {
     author_avatar: string | null;
 };
 
-type NewsPreviewInputData = {
+interface NewsPreviewData {
     id: string;
     title: string;
     description: string;
@@ -31,7 +31,7 @@ type NewsPreviewInputData = {
 };
 
 // Server-side data fetching
-async function getVisibleArticles(): Promise<NewsPreviewInputData[]> {
+async function getVisibleArticles(): Promise<NewsPreviewData[]> {
     const supabase = await createClient();
     const now = new Date();
 
@@ -50,7 +50,7 @@ async function getVisibleArticles(): Promise<NewsPreviewInputData[]> {
 
         if (!data) return [];
 
-        return data.map((article: ArticleFromView) => ({
+        return data.map((article: ArticleWithAuthorInfo) => ({
             id: article.id,
             title: article.title,
             description: article.description,

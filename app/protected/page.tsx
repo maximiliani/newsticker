@@ -1,30 +1,48 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { DashboardClient } from "./client";
-import ArticleManager from "@/components/ArticleManager/ArticleManager";
+import ArticleManager from "@/features/articles/components/article-manager";
+import { InstagramService } from "@/features/instagram/services/instagram-service";
+import { Suspense } from "react";
+import { logError } from "@/lib/utils/error-handling";
 
+/**
+ * Dashboard page component that displays user's dashboard
+ * with Instagram accounts and article management
+ */
 export default async function DashboardPage() {
     const supabase = await createClient();
-    
-    // Fix: Add await here
     const { data: { user } } = await supabase.auth.getUser();
+
+    // Get user's name from metadata or use a default
     const fullName = user?.user_metadata?.full_name || "User";
-    
-    const { data: instagramAccounts } = await supabase
-        .from("instagram_accounts")
-        .select("id, username, profile_image_url")
-        .eq("user_id", user?.id);
+
+    // Default empty array for Instagram accounts
+    let instagramAccounts: { id: string; username: string; profile_image_url: string | null; }[] = [];
+
+    if (user) {
+        try {
+            // Fetch Instagram accounts for the user
+            instagramAccounts = await InstagramService.getAccountsByUserId(user.id);
+        } catch (error) {
+            logError(error, 'DashboardPage.fetchInstagramAccounts');
+            // Continue rendering even if Instagram accounts fail to load
+        }
+    }
 
     return (
         <>
+            {/* Client component for user info and Instagram accounts */}
             <DashboardClient 
                 fullName={fullName}
-                instagramAccounts={instagramAccounts || []}
+                instagramAccounts={instagramAccounts}
                 userId={user?.id || ""}
             />
-            
-            {/* Add ArticleManager here as a server component */}
+
+            {/* Article manager with suspense boundary for streaming */}
             <div className="mt-6">
-                <ArticleManager />
+                <Suspense fallback={<div className="text-center py-8">Loading articles...</div>}>
+                    <ArticleManager />
+                </Suspense>
             </div>
         </>
     );
