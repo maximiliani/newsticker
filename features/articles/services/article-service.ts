@@ -1,11 +1,19 @@
 import { createClient } from '@/lib/supabase/client';
 import { Article, CreateArticleData, UpdateArticleData } from '@/types/article';
+import { UserService } from "@/features/users/services/user-service";
 import { logError } from '@/lib/utils/error-handling';
 import { AppError } from '@/lib/utils/error-handling';
 
 // Cache for article data to reduce database calls
 const cache = new Map<string, { data: Article[], timestamp: number }>();
 const CACHE_TTL = 60000; // 1 minute cache TTL
+
+export interface ArticlesByUser {
+  userId: string;
+  userEmail: string;
+  userFullName: string;
+  articles: Article[];
+}
 
 /**
  * Service for article-related operations
@@ -30,7 +38,7 @@ export class ArticleService {
     }
 
     try {
-      const supabase = await createClient();
+      const supabase = createClient();
       const { data, error } = await supabase
         .from('articles')
         .select('*')
@@ -58,12 +66,134 @@ export class ArticleService {
   }
 
   /**
+   * Get all articles grouped by user (admin only)
+   */
+  static async getAllArticlesGroupedByUser(): Promise<ArticlesByUser[]> {
+    try {
+      const supabase = createClient();
+
+      // Check if current user is admin
+      const isAdmin = await UserService.isCurrentUserAdmin();
+      if (!isAdmin) {
+        throw new Error('Unauthorized: Only admins can access all articles');
+      }
+
+      // First, get all articles
+      const { data: articles, error: articlesError } = await supabase
+        .from('articles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (articlesError) throw articlesError;
+
+      if (!articles || articles.length === 0) {
+        return [];
+      }
+
+      // Get unique user IDs from articles
+      // Add null/undefined checks and filter out invalid user_ids
+      const userIds = Array.from(new Set(articles.map(article => article.user_id)));
+
+      // Fetch user information for all users who have articles
+      // Try different approaches based on your database schema
+      let usersData: any[] = [];
+      
+      try {
+        // Try auth.users first
+        const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+        
+        if (!authError && authUsers?.users) {
+          usersData = authUsers.users.filter(user => userIds.includes(user.id));
+        } else {
+          throw new Error('Auth users not accessible');
+        }
+      } catch (authError) {
+        console.warn('Could not fetch from auth.users, trying alternative approach:', authError);
+        
+        try {
+          // Try users_secure table
+          const { data: secureUsers, error: secureError } = await supabase
+            .from('users_secure')
+            .select('id, email, full_name')
+            .in('id', userIds);
+
+          if (!secureError && secureUsers) {
+            usersData = secureUsers;
+          } else {
+            throw new Error('users_secure not accessible');
+          }
+        } catch (secureError) {
+          console.warn('Could not fetch from users_secure, using fallback:', secureError);
+          
+          // Fallback: create user objects with just IDs
+          usersData = userIds.map(id => ({
+            id,
+            email: 'Unknown',
+            full_name: 'Unknown User'
+          }));
+        }
+      }
+
+      // Group articles by user
+      const groupedArticles = new Map<string, ArticlesByUser>();
+
+      articles.forEach((article: Article) => {
+        const userId = article.user_id;
+        const user = usersData.find(u => u.id === userId);
+
+        if (!groupedArticles.has(userId)) {
+          groupedArticles.set(userId, {
+            userId,
+            userEmail: user?.email || user?.user_metadata?.email || 'Unknown',
+            userFullName: user?.full_name || user?.user_metadata?.full_name || 'Unknown User',
+            articles: []
+          });
+        }
+
+        groupedArticles.get(userId)?.articles.push(article);
+      });
+
+      return Array.from(groupedArticles.values());
+    } catch (error) {
+      logError(error, 'ArticleService.getAllArticlesGroupedByUser');
+      throw new AppError('Failed to fetch articles', 'ARTICLES_FETCH_ERROR');
+    }
+  }
+
+  /**
+   * Get all articles (admin only)
+   */
+  static async getAllArticles(): Promise<Article[]> {
+    try {
+      const supabase = createClient();
+
+      // Check if current user is admin
+      const isAdmin = await UserService.isCurrentUserAdmin();
+      if (!isAdmin) {
+        throw new Error('Unauthorized: Only admins can access all articles');
+      }
+
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      logError(error, 'ArticleService.getAllArticles');
+      throw new AppError('Failed to fetch articles', 'ARTICLES_FETCH_ERROR');
+    }
+  }
+
+  /**
    * Create a new article
    */
   static async createArticle(data: CreateArticleData & { user_id: string }): Promise<Article> {
     try {
       console.log('ArticleService.createArticle called with data:', data);
-      
+
       const supabase = createClient();
 
       // Extract media URLs from content if they exist
@@ -76,10 +206,10 @@ export class ArticleService {
         content: data.content,
         user_id: data.user_id,
         visibility_from: data.visibility_from,
-        visibility_to: data.visibility_to || null, // Explicitly set to null if undefined
+        visibility_to: data.visibility_to || null,
         json_content: data.json_content || null,
-        html_content: data.html_content || data.content, // Fallback to content if html_content not provided
-        media_urls: mediaUrls.length > 0 ? mediaUrls : null, // Use null instead of undefined
+        html_content: data.html_content || data.content,
+        media_urls: mediaUrls.length > 0 ? mediaUrls : null,
       };
 
       console.log('Final article data for database:', articleData);
@@ -167,6 +297,14 @@ export class ArticleService {
 
       // Get user_id first if not provided, to invalidate cache later
       let userIdToInvalidate = userId;
+      let isAdmin = false;
+
+      // Check if current user is admin when no userId is provided or user is trying to delete someone else's article
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+      if (!currentUser) {
+        throw new Error('Authentication required');
+      }
 
       if (!userIdToInvalidate) {
         const { data: article } = await supabase
@@ -176,7 +314,24 @@ export class ArticleService {
           .single();
 
         userIdToInvalidate = article?.user_id;
+
+        // If trying to delete someone else's article, check admin status
+        if (userIdToInvalidate && userIdToInvalidate !== currentUser.id) {
+          isAdmin = await UserService.isCurrentUserAdmin();
+          if (!isAdmin) {
+            throw new Error('Unauthorized: You cannot delete articles from other users');
+          }
+        }
+      } else if (userIdToInvalidate !== currentUser.id) {
+        // If userID is provided but differs from current user, check admin status
+        isAdmin = await UserService.isCurrentUserAdmin();
+        if (!isAdmin) {
+          throw new Error('Unauthorized: You cannot delete articles from other users');
+        }
       }
+
+      // Delete associated media files first
+      await this.deleteArticleMedia(id);
 
       const { error } = await supabase
         .from('articles')
@@ -195,6 +350,50 @@ export class ArticleService {
         'Failed to delete article', 
         'ARTICLE_DELETE_ERROR'
       );
+    }
+  }
+
+  /**
+   * Delete media files associated with an article
+   */
+  private static async deleteArticleMedia(articleId: string): Promise<void> {
+    try {
+      const supabase = createClient();
+
+      // Get article to find media URLs
+      const { data: article, error: articleError } = await supabase
+        .from('articles')
+        .select('media_urls')
+        .eq('id', articleId)
+        .single();
+
+      if (articleError) throw articleError;
+
+      // Delete media from storage if any exists
+      if (article?.media_urls && article.media_urls.length > 0) {
+        // Extract filenames from URLs
+        const mediaFiles = article.media_urls.map((url: string) => {
+          // Extract the filename from the URL path
+          const parts = url.split('/');
+          return parts[parts.length - 1];
+        });
+
+        // Delete files from storage
+        if (mediaFiles.length > 0) {
+          const { error: deleteError } = await supabase
+            .storage
+            .from('article-media')
+            .remove(mediaFiles);
+
+          if (deleteError) {
+            console.warn('Some article media files could not be deleted:', deleteError);
+            // Continue with article deletion even if media deletion partially fails
+          }
+        }
+      }
+    } catch (error) {
+      // Log but don't halt the overall deletion
+      console.warn(`Error deleting article media for article ${articleId}:`, error);
     }
   }
 
@@ -243,24 +442,22 @@ export class ArticleService {
 
   /**
    * Extract media URLs from content
-   * This method parses HTML content and extracts URLs from img tags
-   * that match the specified bucket name
    */
-  private static extractMediaUrls(content: string, bucketName: string): string[] {
-    if (!content) return [];
-
+  private static extractMediaUrls(content: string, bucket: string): string[] {
     const mediaUrls: string[] = [];
+    
+    // This is a placeholder implementation - you'll need to implement based on your content structure
+    // For example, if content contains HTML with img tags:
     const imgRegex = /<img[^>]+src="([^">]+)"/g;
     let match;
-
+    
     while ((match = imgRegex.exec(content)) !== null) {
       const url = match[1];
-      // Only include URLs from our bucket
-      if (url.includes(bucketName)) {
+      if (url.includes(bucket)) {
         mediaUrls.push(url);
       }
     }
-
+    
     return mediaUrls;
   }
 }

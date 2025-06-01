@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { 
@@ -108,13 +109,24 @@ export function UserTable({
                 {new Date(user.created_at).toLocaleDateString()}
               </TableCell>
               <TableCell className="text-right">
-                {user.id !== currentUserId && (
+                <div className="flex justify-end space-x-2">
+                  <Link href={`/protected/admin/users/edit/${user.id}`} passHref>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Edit user"
+                    >
+                      <UserCog className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  {user.id !== currentUserId && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button 
                         variant="ghost" 
                         size="icon"
                         disabled={isDeleting === user.id}
+                        title="Delete user"
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
@@ -139,6 +151,7 @@ export function UserTable({
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
+                </div>
               </TableCell>
             </TableRow>
           ))}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { UserWithRole, UserService } from "@/features/users/services/user-service";
+import Link from "next/link";
 import { UserTable } from "@/features/users/components/user-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -9,6 +10,8 @@ import { toast } from "sonner";
 interface UserManagementProps {
   users: UserWithRole[];
   currentUserId: string;
+  onUserUpdated?: (user: UserWithRole) => void;
+  onUserDeleted?: (userId: string) => void;
 }
 
 export function UserManagement({ users: initialUsers, currentUserId }: UserManagementProps) {
@@ -32,7 +35,8 @@ export function UserManagement({ users: initialUsers, currentUserId }: UserManag
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      await UserService.deleteUser(userId);
+      // Use server action instead of client-side service
+      await deleteUser(userId);
       
       // Update the local state
       setUsers(users.filter(user => user.id !== userId));
@@ -49,6 +53,22 @@ export function UserManagement({ users: initialUsers, currentUserId }: UserManag
       const refreshedUsers = await UserService.getAllUsers();
       setUsers(refreshedUsers);
       toast.success("User list refreshed");
+
+      // Call the callback if provided
+      if (onUserUpdated) {
+        const updatedUser = users.find(u => u.id === userId);
+        if (updatedUser) {
+          onUserUpdated({
+            ...updatedUser,
+            is_admin: newStatus
+          });
+        }
+      }
+
+      // Call the callback if provided
+      if (onUserDeleted) {
+        onUserDeleted(userId);
+      }
     } catch (error) {
       toast.error(`Failed to refresh users: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {

@@ -67,7 +67,7 @@ const formatDate = (dateString?: string | null): string => {
 export function ArticleActions({ articleId, articleTitle }: ArticleActionsProps) {
     const [isDeleting, setIsDeleting] = useState(false);
     const [articleToDelete, setArticleToDelete] = useState<string | null>(null);
-    
+
     const router = useRouter();
     const { toast } = useToast();
     const supabase = createClient();
