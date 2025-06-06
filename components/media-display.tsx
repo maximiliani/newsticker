@@ -108,7 +108,7 @@ export function InstagramMediaDisplay({ media, type, alt, className }: Instagram
           src={currentUrl}
           controls
           muted
-          autoPlay
+          {/*autoplay*/}
           loop
           onError={handleError}
           onLoadedData={handleLoad}
