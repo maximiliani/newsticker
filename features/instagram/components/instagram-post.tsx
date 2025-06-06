@@ -118,7 +118,7 @@ export function IGPost({postId}: {postId: string}) {
     }
 
     return (
-        <div className="bg-card rounded-lg overflow-hidden shadow-sm border h-96 w-64 flex-none flex flex-col">
+        <div className="bg-card rounded-lg overflow-hidden shadow-sm border max-w-1/8 max-h-3/8 flex-none flex flex-col">
             {/* Post Header */}
             <div className="p-2 flex items-center space-x-2 h-10 flex-none">
                 <Image

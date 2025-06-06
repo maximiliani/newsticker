@@ -112,7 +112,9 @@ export function InstagramMediaDisplay({ media, type, alt, className }: Instagram
           onError={handleError}
           onLoadedData={handleLoad}
           className="w-full h-full object-cover"
-          preload="metadata"
+          // preload="metadata"
+          preload="none"
+          poster={media.local_thumbnail_url || media.thumbnail_url || undefined}
         >
           Your browser does not support the video tag.
         </video>

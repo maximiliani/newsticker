@@ -20,14 +20,14 @@ export function Clock() {
         dateTime={time.toISOString()}
         suppressHydrationWarning={true}
       >
-        {time.toLocaleTimeString(undefined, {
+        {time.toLocaleTimeString("de-DE", {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit'
         })}
       </time>
       <div className="text-sm text-muted-foreground" suppressHydrationWarning={true}>
-        {time.toLocaleDateString(undefined, {
+        {time.toLocaleDateString("de-DE", {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
