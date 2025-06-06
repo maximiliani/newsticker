@@ -124,9 +124,9 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
 
             {/* Posts Container */}
             <div className="flex-1 overflow-y-auto">
-                <div className="grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-4 p-2 place-items-center">
+                <div className="grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-2 p-2">
                     {activePosts.map((post) => (
-                        <div className="w-64" key={post.id}>
+                        <div className="max-h-96 h-96 max-w-64 w-64" key={post.id}>
                             <IGPost postId={post.id} />
                         </div>
                     ))}

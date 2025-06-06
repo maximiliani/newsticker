@@ -108,19 +108,20 @@ export function IGPost({postId}: {postId: string}) {
     };
     
     if (loading) {
-        return <div className="animate-pulse bg-gray-200 h-96 w-64 rounded-lg"></div>;
+        // Ensure loading placeholder also respects sizing if needed, or use simpler fixed size
+        return <div className="animate-pulse bg-gray-200 w-full h-full rounded-lg"></div>;
     }
     if (error) {
-        return <div className="text-red-500">{error}</div>;
+        return <div className="text-red-500 p-2 w-full h-full">{error}</div>;
     }
     if (!post) {
-        return <div className="text-gray-500">No post found</div>;
+        return <div className="text-gray-500 p-2 w-full h-full">No post found</div>;
     }
 
     return (
-        <div className="bg-card rounded-lg overflow-hidden shadow-sm border max-w-1/8 max-h-3/8 flex-none flex flex-col">
+        <div className="bg-card rounded-lg overflow-hidden shadow-sm border w-full h-full flex flex-col">
             {/* Post Header */}
-            <div className="p-2 flex items-center space-x-2 h-10 flex-none">
+            <div className="p-2 flex items-center space-x-2 h-10 flex-none border-b">
                 <Image
                     src={post.userAvatar}
                     alt={post.username}
@@ -136,8 +137,8 @@ export function IGPost({postId}: {postId: string}) {
                 </div>
             </div>
 
-            {/* Post Image */}
-            <div className="w-full aspect-square flex-none">
+            {/* Post Media Content */}
+            <div className="w-full flex-1 overflow-hidden relative">
                 {post.media.length === 1 ? (
                     <InstagramMediaDisplay
                         media={post.media[0]}
@@ -146,32 +147,26 @@ export function IGPost({postId}: {postId: string}) {
                     />
                 ) : (
                     <Carousel
-                        opts={{
-                            align: "start",
-                            loop: true,
-                        }}
-                        plugins={[
-                            Autoplay({
-                                delay: 5000,
-                                stopOnInteraction: true,
-                                stopOnMouseEnter: true,
-                            }),
-                        ]}
                         className="w-full h-full"
+                        plugins={[Autoplay({delay: 5000, stopOnInteraction: true})]}
                     >
-                        <CarouselContent>
-                            {post.media.map((media, index) => (
-                                <CarouselItem key={`${media.url}-${index}`} className="w-full">
+                        <CarouselContent className="h-full">
+                            {post.media.map((mediaItem, index) => (
+                                <CarouselItem key={index} className="h-full">
                                     <InstagramMediaDisplay
-                                        media={media}
-                                        type={media.type}
+                                        media={mediaItem}
+                                        type={mediaItem.type}
                                         className="w-full h-full object-cover"
                                     />
                                 </CarouselItem>
                             ))}
                         </CarouselContent>
-                        <CarouselPrevious className="left-2"/>
-                        <CarouselNext className="right-2"/>
+                        {post.media.length > 1 && (
+                            <>
+                                <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 z-10"/>
+                                <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 z-10"/>
+                            </>
+                        )}
                     </Carousel>
                 )}
             </div>
@@ -189,5 +184,3 @@ export function IGPost({postId}: {postId: string}) {
         </div>
     );
 }
-
-export default IGPost;
