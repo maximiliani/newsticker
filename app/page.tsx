@@ -9,7 +9,7 @@ export default function Home() {
     <main className="w-full h-[calc(100vh-10rem)] overflow-hidden">
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel 
-          defaultSize={35}
+          defaultSize={45}
           minSize={30}
           maxSize={70}
         >
@@ -17,7 +17,7 @@ export default function Home() {
         </ResizablePanel>
         <ResizableHandle />
         <ResizablePanel 
-          defaultSize={65}
+          defaultSize={55}
           minSize={30}
           maxSize={70}
         >
