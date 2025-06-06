@@ -75,9 +75,9 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
     return (
         <>
             {/* Header with filtering */}
-            <div className="flex items-center p-4 border-b flex-shrink-0 relative">
+            <div className="items-center p-4 border-b relative">
                 <h1 className="text-xl font-bold">Instagram Feed</h1>
-                <div className="absolute left-1/2 transform -translate-x-1/2">
+                <div className="items-center">
                     {/* Instagram account picker */}
                     <ToggleGroup
                         variant="outline"
