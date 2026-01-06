@@ -1,5 +1,12 @@
 -- Create a view that combines user information with their roles
 -- This avoids needing admin API access for basic user management
+CREATE TABLE user_roles (
+   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE, -- Link to Supabase user
+   is_admin BOOLEAN NOT NULL DEFAULT FALSE,              -- Admin role flag
+   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Record creation time
+   updated_at TIMESTAMP WITH TIME ZONE,              -- Record last update time
+   PRIMARY KEY (user_id)
+   );
 
 CREATE OR REPLACE VIEW users_with_roles AS
 SELECT 

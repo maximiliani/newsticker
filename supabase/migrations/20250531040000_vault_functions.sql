@@ -109,8 +109,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Grant execution permission on specific function to service_role
-GRANT EXECUTE ON FUNCTION get_decrypted_instagram_tokens() TO service_role;
-REVOKE EXECUTE ON FUNCTION get_decrypted_instagram_tokens() FROM PUBLIC CASCADE;
+GRANT EXECUTE ON FUNCTION get_decrypted_instagram_tokens TO service_role;
+REVOKE EXECUTE ON FUNCTION get_decrypted_instagram_tokens FROM PUBLIC CASCADE;
 
 CREATE OR REPLACE FUNCTION public.upsert_vault_secret(
     p_secret_name TEXT,
