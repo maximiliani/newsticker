@@ -9,10 +9,10 @@ import { UserUpdateDTO, UserWithRoleDTO } from '@/types/users';
  * GET /api/users/:id
  * Admins can fetch any user. Non-admins can fetch only themselves.
  */
-export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, userId, isAdmin } = await requireAuth();
-    const targetUserId = context.params?.id || '';
+    const { id: targetUserId } = await context.params;
     if (!targetUserId) return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     if (!isAdmin && userId !== targetUserId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -45,12 +45,12 @@ export async function GET(_req: NextRequest, context: { params: { id: string } }
  * PATCH /api/users/:id
  * Admin-only: update profile fields and role.
  */
-export async function PATCH(req: NextRequest, context: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, isAdmin } = await requireAuth();
     if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const targetUserId = context.params?.id || '';
+    const { id: targetUserId } = await context.params;
     if (!targetUserId) return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
 
     const body = (await req.json()) as UserUpdateDTO;
@@ -90,7 +90,7 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
  * - If :id equals the current user's id, this performs data cleanup and records a deletion request.
  * - If the caller is an admin deleting another user, this attempts to delete the auth user using service-role and falls back if not configured.
  */
-export async function DELETE(_req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient();
 
@@ -99,7 +99,7 @@ export async function DELETE(_req: NextRequest, context: { params: { id: string 
       return NextResponse.json({ message: 'Authentication required' }, { status: 401 });
     }
 
-    const targetUserId = context.params?.id || '';
+    const { id: targetUserId } = await context.params;
     if (!targetUserId) {
       return NextResponse.json({ message: 'User ID is required' }, { status: 400 });
     }

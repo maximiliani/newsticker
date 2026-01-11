@@ -5,10 +5,11 @@ import { createClient as createSupabaseServerClient } from "@supabase/supabase-j
 /**
  * GET /api/features/instagram/posts/:id
  */
-export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { supabase, userId, isAdmin } = await requireAuth();
-    const id = Number(context.params?.id);
+    const { supabase } = await requireAuth();
+    const { id: rawId } = await context.params;
+    const id = Number(rawId);
     if (!id) return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
 
     // Fetch the post
@@ -43,10 +44,11 @@ export async function GET(_req: NextRequest, context: { params: { id: string } }
  * DELETE /api/features/instagram/posts/:id
  * Deletes the post and associated storage files. Admins can delete any post; non-admins can delete only their own.
  */
-export async function DELETE(_req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, userId, isAdmin } = await requireAuth();
-    const id = Number(context.params?.id);
+    const { id: rawId } = await context.params;
+    const id = Number(rawId);
     if (!id) return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
 
     // Fetch the post to get owning account id

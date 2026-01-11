@@ -6,10 +6,10 @@ import { UpdateArticleData } from "@/types/article";
  * GET /api/features/newspaper/articles/:id
  * Owner or admin may view the article.
  */
-export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, userId, isAdmin } = await requireAuth();
-    const id = context.params?.id;
+    const { id } = await context.params;
     if (!id) return NextResponse.json({ error: "Article ID is required" }, { status: 400 });
 
     const { data, error } = await supabase.from("articles").select("*").eq("id", id).single();
@@ -29,10 +29,10 @@ export async function GET(_req: NextRequest, context: { params: { id: string } }
  * PATCH /api/features/newspaper/articles/:id
  * Owner or admin may update the article.
  */
-export async function PATCH(req: NextRequest, context: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, userId, isAdmin } = await requireAuth();
-    const id = context.params?.id;
+    const { id } = await context.params;
     if (!id) return NextResponse.json({ error: "Article ID is required" }, { status: 400 });
 
     // Ensure ownership before updating
@@ -70,10 +70,10 @@ export async function PATCH(req: NextRequest, context: { params: { id: string } 
  * Owner or admin may delete the article.
  * Note: storage media cleanup should be handled by service layer or background job.
  */
-export async function DELETE(_req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, userId, isAdmin } = await requireAuth();
-    const id = context.params?.id;
+    const { id } = await context.params;
     if (!id) return NextResponse.json({ error: "Article ID is required" }, { status: 400 });
 
     // Ownership check

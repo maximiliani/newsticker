@@ -6,10 +6,10 @@ import { createClient as createSupabaseServerClient } from "@supabase/supabase-j
  * GET /api/features/instagram/accounts/:id
  * Returns account metadata if the caller is the owner or an admin.
  */
-export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, userId, isAdmin } = await requireAuth();
-    const accountId = context.params?.id;
+    const { id: accountId } = await context.params;
     if (!accountId) return NextResponse.json({ error: "Account ID is required" }, { status: 400 });
 
     // Fetch account
@@ -35,10 +35,10 @@ export async function GET(_req: NextRequest, context: { params: { id: string } }
  * DELETE /api/features/instagram/accounts/:id
  * Owner or admin can delete. Also attempts to remove related storage objects using service role.
  */
-export async function DELETE(_req: NextRequest, context: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { supabase, userId, isAdmin } = await requireAuth();
-    const accountId = context.params?.id;
+    const { id: accountId } = await context.params;
     if (!accountId) return NextResponse.json({ error: "Account ID is required" }, { status: 400 });
 
     // Fetch account to check ownership
