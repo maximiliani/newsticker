@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import type { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies";
 
 export const updateSession = async (request: NextRequest) => {
   // This `try/catch` block is only here for the interactive tutorial.
@@ -20,7 +21,7 @@ export const updateSession = async (request: NextRequest) => {
           getAll() {
             return request.cookies.getAll();
           },
-          setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
+          setAll(cookiesToSet: { name: string; value: string; options: Partial<ResponseCookie> }[]) {
             cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value),
             );
