@@ -33,20 +33,6 @@ export function InstagramAccountsManager({initialAccounts, userId}: Props) {
     const [accountToDelete, setAccountToDelete] = useState<InstagramAccount | null>(null);
     const router = useRouter();
 
-    const handleConnect = () => {
-        const clientId = process.env.NEXT_PUBLIC_INSTAGRAM_CLIENT_ID!;
-        const authUrl = new URL("https://www.instagram.com/oauth/authorize");
-        authUrl.searchParams.set("client_id", clientId);
-        const redirectUri = process.env.NEXT_PUBLIC_INSTAGRAM_REDIRECT_URI || `${window.location.origin}/api/features/instagram/callback`;
-        authUrl.searchParams.set("redirect_uri", redirectUri);
-        authUrl.searchParams.set("response_type", "code");
-        authUrl.searchParams.set("scope", "instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_content_publish,instagram_business_manage_insights");
-        authUrl.searchParams.set("enable_fb_login", "0");
-        authUrl.searchParams.set("force_authentication", "1");
-
-        window.location.href = authUrl.toString();
-    };
-
     const confirmDelete = (account: InstagramAccount) => {
         setAccountToDelete(account);
     };

@@ -4,7 +4,6 @@ import crypto from "crypto";
 
 const clientId = process.env.INSTAGRAM_CLIENT_ID!;
 const clientSecret = process.env.INSTAGRAM_CLIENT_SECRET!;
-const redirectUri = process.env.INSTAGRAM_REDIRECT_URI!;
 
 function isValidAccessToken(token: string): boolean {
     // Check if token is a non-empty string
@@ -60,7 +59,7 @@ export async function GET(request: NextRequest) {
                 client_id: clientId,
                 client_secret: clientSecret,
                 grant_type: "authorization_code",
-                redirect_uri: redirectUri,
+                redirect_uri: request.nextUrl.origin + "/api/features/instagram/callback",
                 code,
             }),
             signal: AbortSignal.timeout(10000), // 10 second timeout
