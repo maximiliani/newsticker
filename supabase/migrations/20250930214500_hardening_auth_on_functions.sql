@@ -62,10 +62,6 @@ BEGIN
     RAISE EXCEPTION 'instagram_api_request: no access token available for the requested scope';
   END IF;
 
-  IF v_token IS NULL THEN
-    RAISE EXCEPTION 'instagram_api_request: no access token available for the requested scope';
-  END IF;
-
   v_url := 'https://graph.instagram.com/' || regexp_replace(p_route, '^/+', '');
 
   -- Build query string for GET request
