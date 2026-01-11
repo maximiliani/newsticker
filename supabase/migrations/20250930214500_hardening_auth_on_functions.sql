@@ -107,7 +107,7 @@ DECLARE
   v_errors INT := 0;
   v_scope TEXT := 'current';
 BEGIN
-  IF lower(COALESCE(p_scope,'all')) = 'all' THEN
+  IF lower(COALESCE(p_scope,'current')) = 'all' THEN
     IF NOT COALESCE(check_is_admin(), false) THEN
       v_scope := 'current';
     ELSE
