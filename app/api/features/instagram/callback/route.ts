@@ -132,6 +132,7 @@ export async function GET(request: NextRequest) {
         }
 
         const profileData = await profileResponse.json() as ProfileResponse;
+        console.log('Fetched Instagram profile data:', profileData);
 
         let profileImageUrl = null;
         if (profileData.profile_picture_url) {
