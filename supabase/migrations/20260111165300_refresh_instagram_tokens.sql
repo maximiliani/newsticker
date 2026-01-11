@@ -7,6 +7,7 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
   r_acc RECORD;
+  v_url TEXT;
   v_resp JSONB;
   v_status INT;
   v_body_text TEXT;
@@ -58,15 +59,15 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION refresh_instagram_tokens(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION refresh_instagram_tokens(TEXT) TO authenticated;
-GRANT EXECUTE ON FUNCTION refresh_instagram_tokens(TEXT) TO service_role;
+REVOKE ALL ON FUNCTION refresh_instagram_tokens() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION refresh_instagram_tokens() TO authenticated;
+GRANT EXECUTE ON FUNCTION refresh_instagram_tokens() TO service_role;
 
 -- Create a cron job to refresh Instagram tokens every 24 hours
 SELECT
   cron.schedule(
     'Refresh Instagram Tokens every 24 hours', -- Job name
     '0 0 * * *', -- Schedule interval (every day at midnight)
-    'CALL refresh_instagram_tokens();'
+    'SELECT refresh_instagram_tokens();'
     );
 COMMIT;
