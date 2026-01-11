@@ -21,17 +21,6 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // // Ownership check for non-admins: ensure their account owns the post
-    // if (!isAdmin) {
-    //   const { data: acc, error: accErr } = await supabase
-    //     .from("instagram_accounts")
-    //     .select("user_id")
-    //     .eq("id", post.user_id)
-    //     .single();
-    //   if (accErr) return NextResponse.json({ error: accErr.message }, { status: 500 });
-    //   if (!acc || acc.user_id !== userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    // }
-
     return NextResponse.json(post);
   } catch (e: any) {
     const msg = e?.message || "Unexpected error";
