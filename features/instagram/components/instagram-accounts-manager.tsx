@@ -24,12 +24,11 @@ import {InstagramLoginButton} from "@/features/instagram/components/instagram-lo
 
 interface Props {
     initialAccounts: InstagramAccount[];
-    userId: string;
 }
 
-export function InstagramAccountsManager({initialAccounts, userId}: Props) {
+export function InstagramAccountsManager({initialAccounts}: Props) {
     const [accounts, setAccounts] = useState<InstagramAccount[]>(initialAccounts);
-    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<number | null>(null);
     const [accountToDelete, setAccountToDelete] = useState<InstagramAccount | null>(null);
     const router = useRouter();
 
@@ -46,7 +45,8 @@ export function InstagramAccountsManager({initialAccounts, userId}: Props) {
             setIsDeleting(accountId);
 
             // Use the service to handle all the deletion logic
-            await InstagramService.deleteAccount(accountId, userId);
+            // This will delete the account, all posts, media, and storage files
+            await InstagramService.deleteAccount(accountId);
 
             // Update local state
             setAccounts(accounts.filter(acc => acc.id !== accountId));

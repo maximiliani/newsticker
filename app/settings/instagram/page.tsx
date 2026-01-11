@@ -71,14 +71,14 @@ export default function InstagramPage() {
         checkAuthAndFetchData();
     }, [router]);
 
-    const handleDeleteAccount = async (accountId: string, userId: string) => {
+    const handleDeleteAccount = async (accountId: number) => {
         if (!confirm('Are you sure you want to delete this Instagram account? This action cannot be undone.')) {
             return;
         }
 
         try {
-            await InstagramService.deleteAccount(accountId, userId);
-            
+            await InstagramService.deleteAccount(accountId);
+
             // Refresh the data
             if (user) {
                 const fetchedUserAccounts = await InstagramService.getAccountsByUserId(user.id);
@@ -139,8 +139,7 @@ export default function InstagramPage() {
                     
                     <TabsContent value="my-accounts" className="mt-4">
                         <InstagramAccountsManager 
-                            initialAccounts={userAccounts} 
-                            userId={user.id} 
+                            initialAccounts={userAccounts}
                         />
                     </TabsContent>
                     
@@ -187,7 +186,7 @@ export default function InstagramPage() {
                                                                 <Button
                                                                     variant="destructive"
                                                                     size="sm"
-                                                                    onClick={() => handleDeleteAccount(account.id, userGroup.userId)}
+                                                                    onClick={() => handleDeleteAccount(account.id)}
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
                                                                 </Button>

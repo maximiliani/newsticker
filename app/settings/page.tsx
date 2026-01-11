@@ -11,14 +11,10 @@ import {InstagramService} from "@/features/instagram/services/instagram-service"
 import {UserService} from "@/features/users/services/user-service";
 import {logError} from "@/lib/utils/error-handling";
 import {AdminDashboardCards} from "@/features/admin/components/admin-dashboard-cards";
+import {InstagramAccount} from "@/types/instagram";
 
 export const dynamic = 'force-dynamic';
 
-interface InstagramAccount {
-    id: string;
-    username: string;
-    profile_image_url: string | null;
-}
 
 /**
  * Dashboard page component that displays user's dashboard

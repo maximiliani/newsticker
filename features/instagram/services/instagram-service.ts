@@ -141,61 +141,28 @@ export class InstagramService {
         return data || [];
     }
 
-    // ... rest of the existing methods remain the same
-    static async deleteAccount(accountId: string, userId?: string): Promise<void> {
-        const supabase = getSupabaseClient();
-
-        // Ensure user is authenticated
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-        if (!currentUser) throw new Error('Authentication required');
-
-        // Prefer calling server API to centralize deletion logic (storage + DB)
-        const res = await fetch(`/api/features/instagram/accounts/${accountId}`, { method: 'DELETE' });
-        if (!res.ok) {
-            const txt = await res.text().catch(() => '');
-            throw new Error(`Failed to delete Instagram account: ${txt || res.status}`);
-        }
-    }
-
-    private static async deleteAssociatedData(accountId: string): Promise<void> {
-        const supabase = getSupabaseClient();
-
+    /**
+     * Delete an Instagram account and all associated data
+     * Calls the API endpoint which uses the database function for cleanup
+     */
+    static async deleteAccount(accountId: number): Promise<void> {
         try {
-            // 1. Find posts
-            const {data: posts, error: postsError} = await supabase
-                .from("instagram_posts")
-                .select("id")
-                .eq("user_id", accountId);
+            const response = await fetch(`/api/features/instagram/delete?accountId=${accountId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
 
-            if (postsError) throw postsError;
-
-            const postIds = posts?.map(post => post.id) || [];
-
-            // 2. Delete media files from storage
-            if (postIds.length > 0) {
-                await this.deletePostMedia(postIds);
-
-                // 3. Delete media records
-                const {error: mediaError} = await supabase
-                    .from("instagram_post_media")
-                    .delete()
-                    .in("post_id", postIds);
-
-                if (mediaError) throw mediaError;
-
-                // 4. Delete posts
-                const {error: postsDeleteError} = await supabase
-                    .from("instagram_posts")
-                    .delete()
-                    .in("id", postIds);
-
-                if (postsDeleteError) throw postsDeleteError;
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Failed to delete account: ${response.status}`);
             }
 
-            // 5. Delete profile images
-            await this.deleteProfileImages(accountId);
+            const result = await response.json();
+            console.info('Instagram account deleted:', result);
         } catch (error) {
-            logError(error, 'InstagramService.deleteAssociatedData');
+            logError(error, `InstagramService.deleteAccount(${accountId})`);
             throw error;
         }
     }
