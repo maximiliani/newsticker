@@ -74,7 +74,7 @@ export async function signInAction(formData: FormData) {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  return redirect("/protected");
+  return redirect("/settings");
 }
 
 /**
@@ -96,7 +96,7 @@ export async function signUpAction(formData: FormData) {
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: `${origin}/api/auth/callback`,
       data: {
         full_name: fullName,
       },
