@@ -40,7 +40,7 @@ BEGIN
       RAISE EXCEPTION 'instagram_api_request: account % not found', p_account_id;
     END IF;
     IF (v_owner <> auth.uid()) AND (NOT v_is_admin) THEN
-      RAISE EXCEPTION 'instagram_api_request: not permitted to use another users account';
+      RAISE EXCEPTION 'instagram_api_request: not permitted to use another user''s account';
     END IF;
 
     SELECT s.decrypted_secret INTO v_token
