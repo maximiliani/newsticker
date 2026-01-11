@@ -3,7 +3,6 @@
 This folder contains all Next.js Route Handlers that form the server API for the app. The design keeps sensitive logic (e.g., Instagram access tokens) in Postgres stored procedures and uses these routes only as thin, authenticated orchestrators.
 
 Quick links:
-- Full backend architecture report: ../..//docs/backend-architecture-report.md
 - Env vars reference: ../../.env.example
 - Features route map: ./features/README.md
 

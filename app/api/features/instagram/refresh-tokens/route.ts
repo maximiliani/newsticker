@@ -19,7 +19,7 @@ export async function POST(_req: NextRequest) {
 
     const scope = isAdminData ? "all" : "current";
 
-    const { data, error } = await supabase.rpc("refresh_instagram_tokens", { p_scope: scope });
+    const { data, error } = await supabase.rpc("refresh_instagram_tokens");
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

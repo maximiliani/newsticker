@@ -5,6 +5,7 @@ import { ResizablePanelGroup } from "@/components/ui/resizable";
 import ArticleFeed from "@/components/feeds/ArticleFeed";
 
 export default function Home() {
+
   return (
     <main className="w-full h-[calc(100vh-10rem)] overflow-hidden">
       <ResizablePanelGroup direction="horizontal">
