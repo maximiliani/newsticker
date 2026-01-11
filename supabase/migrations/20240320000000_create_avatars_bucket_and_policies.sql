@@ -3,9 +3,6 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Enable RLS on the objects table
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
 -- Policy to allow users to upload their own avatar
 CREATE POLICY "Users can upload their own avatar" ON storage.objects
 FOR INSERT
