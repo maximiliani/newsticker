@@ -145,39 +145,15 @@ export class InstagramService {
     static async deleteAccount(accountId: string, userId?: string): Promise<void> {
         const supabase = getSupabaseClient();
 
-        // Check if the current user is an admin if no userId is provided or user is deleting someone else's account
-        let isAdmin = false;
-        const {data: {user: currentUser}} = await supabase.auth.getUser();
-
+        // Ensure user is authenticated
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (!currentUser) throw new Error('Authentication required');
 
-        // If userId is different from current user, check admin status
-        if (!userId || userId !== currentUser.id) {
-            isAdmin = await UserService.isCurrentUserAdmin();
-            if (!isAdmin) {
-                throw new Error('Unauthorized: Only admins can delete other users accounts');
-            }
-        }
-
-        // 1. Delete posts and media first
-        await this.deleteAssociatedData(accountId);
-
-        // 2. Delete the account itself
-        const query = supabase
-            .from("instagram_accounts")
-            .delete()
-            .eq("id", accountId);
-
-        // Only add user_id filter if not admin
-        if (!isAdmin && userId) {
-            query.eq("user_id", userId);
-        }
-
-        const {error} = await query;
-
-        if (error) {
-            logError(error, 'InstagramService.deleteAccount');
-            throw error;
+        // Prefer calling server API to centralize deletion logic (storage + DB)
+        const res = await fetch(`/api/features/instagram/accounts/${accountId}`, { method: 'DELETE' });
+        if (!res.ok) {
+            const txt = await res.text().catch(() => '');
+            throw new Error(`Failed to delete Instagram account: ${txt || res.status}`);
         }
     }
 

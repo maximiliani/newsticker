@@ -19,6 +19,24 @@ export function ArticleFeedClient() {
         router.refresh();
     }, [router]);
 
+    // Auto-refresh based on REFRESH_EVERY_MINUTES env variable
+    useEffect(() => {
+        const refreshMinutes = process.env.NEXT_PUBLIC_REFRESH_EVERY_MINUTES;
+
+        if (refreshMinutes) {
+            const minutes = parseInt(refreshMinutes, 10);
+            if (!isNaN(minutes) && minutes > 0) {
+                const intervalMs = minutes * 60 * 1000;
+                const interval = setInterval(() => {
+                    console.log(`Auto-refreshing article feed (every ${minutes} minutes)`);
+                    router.refresh();
+                }, intervalMs);
+
+                return () => clearInterval(interval);
+            }
+        }
+    }, [router]);
+
     // Set up realtime subscription for article changes
     useEffect(() => {
         const supabase = createClient();

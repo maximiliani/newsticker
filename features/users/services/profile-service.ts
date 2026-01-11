@@ -265,12 +265,8 @@ export class ProfileService {
       await this.deleteExistingAvatar();
 
       // Call backend API to delete user data
-      const response = await fetch('/api/user/delete', {
+      const response = await fetch(`/api/users/${user.id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: user.id }),
       });
 
       if (!response.ok) {

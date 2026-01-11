@@ -4,20 +4,21 @@ import {Button} from "@/components/ui/button";
 import {RefreshCcwIcon} from "lucide-react";
 
 export default function RefreshInstagramFeedsButton() {
-    // Calls the fetchInstagramPostsAndStore edge function with Supabase Edge Runtime
+    // Calls our Next.js API route which triggers a Postgres stored procedure
     const handleRefresh = async () => {
         try {
-            const supabase = createClient();
-            const {data, error} = await supabase
-                .functions
-                .invoke('fetchInstagramPostsAndStore')
-            if (error) {
-                console.error("Error refreshing feeds:", error.message);
+            const res = await fetch('/api/features/instagram/refresh', {
+                method: 'POST'
+            });
+            if (!res.ok) {
+                const txt = await res.text();
+                console.error("Error refreshing feeds:", txt);
                 alert("Failed to refresh feeds. Please try again later.");
-            } else {
-                console.debug("Feeds refreshed successfully:", data);
-                alert("Feeds refreshed successfully!");
+                return;
             }
+            const json = await res.json();
+            console.debug("Feeds refreshed successfully:", json);
+            alert("Feeds refreshed successfully!");
         } catch (error) {
             console.error("Error refreshing feeds:", error);
         }

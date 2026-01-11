@@ -35,6 +35,24 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
         setUsers(availableUsers);
     }, [initialPosts, availableUsers]);
 
+    // Auto-refresh based on REFRESH_EVERY_MINUTES env variable
+    useEffect(() => {
+        const refreshMinutes = process.env.NEXT_PUBLIC_REFRESH_EVERY_MINUTES;
+
+        if (refreshMinutes) {
+            const minutes = parseInt(refreshMinutes, 10);
+            if (!isNaN(minutes) && minutes > 0) {
+                const intervalMs = minutes * 60 * 1000;
+                const interval = setInterval(() => {
+                    console.log(`Auto-refreshing Instagram feed (every ${minutes} minutes)`);
+                    refreshData();
+                }, intervalMs);
+
+                return () => clearInterval(interval);
+            }
+        }
+    }, [refreshData]);
+
     useEffect(() => {
         const supabase = createClient();
 

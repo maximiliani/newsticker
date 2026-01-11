@@ -96,12 +96,13 @@ export class UserService {
 
             // Try the API endpoint as a last resort
             try {
-                const response = await fetch('/api/admin/users');
+                const response = await fetch('/api/users');
                 if (!response.ok) {
                     throw new Error(`API error: ${response.status}`);
                 }
                 const data = await response.json();
-                return data.users;
+                // Support both { users: [...] } (legacy) and { items: [...] } (new paged)
+                return (data.items ?? data.users) as UserWithRole[];
             } catch (apiError) {
                 console.error('API fallback failed:', apiError);
                 throw new Error('Failed to retrieve users. Please try again later.');
