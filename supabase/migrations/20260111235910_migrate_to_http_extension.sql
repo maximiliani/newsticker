@@ -3,27 +3,27 @@ BEGIN;
 -- Ensure http extension is available
 CREATE EXTENSION IF NOT EXISTS http WITH SCHEMA extensions;
 
--- Helper function to URL-encode JSONB parameters
-CREATE OR REPLACE FUNCTION urlencode(data jsonb)
-RETURNS text
-LANGUAGE plpgsql
-IMMUTABLE
-AS $$
-DECLARE
-  result text := '';
-  key text;
-  value text;
-BEGIN
-  FOR key, value IN SELECT * FROM jsonb_each_text(data)
-  LOOP
-    IF result <> '' THEN
-      result := result || '&';
-    END IF;
-    result := result || key || '=' || extensions.urlencode(value);
-  END LOOP;
-  RETURN result;
-END;
-$$;
+-- -- Helper function to URL-encode JSONB parameters
+-- CREATE OR REPLACE FUNCTION urlencode(data jsonb)
+-- RETURNS text
+-- LANGUAGE plpgsql
+-- IMMUTABLE
+-- AS $$
+-- DECLARE
+--   result text := '';
+--   key text;
+--   value text;
+-- BEGIN
+--   FOR key, value IN SELECT * FROM jsonb_each_text(data)
+--   LOOP
+--     IF result <> '' THEN
+--       result := result || '&';
+--     END IF;
+--     result := result || key || '=' || extensions.urlencode(value);
+--   END LOOP;
+--   RETURN result;
+-- END;
+-- $$;
 
 -- Migrate instagram_api_request to use http extension instead of pg_net
 CREATE OR REPLACE FUNCTION instagram_api_request(
@@ -89,7 +89,7 @@ BEGIN
   v_url := 'https://graph.instagram.com/' || regexp_replace(p_route, '^/+', '');
 
   -- Build query string for GET request
-  v_full_url := v_url || '?' || urlencode(COALESCE(p_params, '{}'::jsonb) || jsonb_build_object('access_token', v_token));
+  v_full_url := v_url || '?' || extensions.urlencode(COALESCE(p_params, '{}'::jsonb) || jsonb_build_object('access_token', v_token));
 
   -- Use http_get from http extension (synchronous)
   v_resp := extensions.http_get(v_full_url);
