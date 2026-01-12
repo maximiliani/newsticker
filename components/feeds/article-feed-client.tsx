@@ -1,17 +1,17 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/hooks/use-auth";
-import { CreateArticleButton } from "@/features/articles/components/create-article-button";
-import { createClient } from "@/lib/supabase/client";
+import {useCallback, useEffect} from "react";
+import {useRouter} from "next/navigation";
+import {useAuth} from "@/lib/hooks/use-auth";
+import {CreateArticleButton} from "@/features/articles/components/create-article-button";
+import {createClient} from "@/lib/supabase/client";
 
 /**
  * Client component for the article feed header
  * Shows the latest news title and create button
  */
 export function ArticleFeedClient() {
-    const { user } = useAuth();
+    const {user} = useAuth();
     const router = useRouter();
 
     // Refresh page data when an article is created
@@ -19,22 +19,13 @@ export function ArticleFeedClient() {
         router.refresh();
     }, [router]);
 
-    // Auto-refresh based on REFRESH_EVERY_MINUTES env variable
+    // Auto-refresh
     useEffect(() => {
-        const refreshMinutes = process.env.NEXT_PUBLIC_REFRESH_EVERY_MINUTES;
+        const interval = setInterval(() => {
+            router.refresh();
+        }, 30 * 1000); // Refresh every 30 seconds
 
-        if (refreshMinutes) {
-            const minutes = parseInt(refreshMinutes, 10);
-            if (!isNaN(minutes) && minutes > 0) {
-                const intervalMs = minutes * 60 * 1000;
-                const interval = setInterval(() => {
-                    console.log(`Auto-refreshing article feed (every ${minutes} minutes)`);
-                    router.refresh();
-                }, intervalMs);
-
-                return () => clearInterval(interval);
-            }
-        }
+        return () => clearInterval(interval);
     }, [router]);
 
     // Set up realtime subscription for article changes
@@ -62,7 +53,7 @@ export function ArticleFeedClient() {
     return (
         <div className="flex justify-between items-center p-4 border-b flex-shrink-0 relative">
             <h1 className="text-xl font-bold">Latest News</h1>
-            <CreateArticleButton 
+            <CreateArticleButton
                 user={user}
                 onArticleCreated={handleArticleCreated}
             />
