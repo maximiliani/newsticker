@@ -3,28 +3,6 @@ BEGIN;
 -- Ensure http extension is available
 CREATE EXTENSION IF NOT EXISTS http WITH SCHEMA extensions;
 
--- -- Helper function to URL-encode JSONB parameters
--- CREATE OR REPLACE FUNCTION urlencode(data jsonb)
--- RETURNS text
--- LANGUAGE plpgsql
--- IMMUTABLE
--- AS $$
--- DECLARE
---   result text := '';
---   key text;
---   value text;
--- BEGIN
---   FOR key, value IN SELECT * FROM jsonb_each_text(data)
---   LOOP
---     IF result <> '' THEN
---       result := result || '&';
---     END IF;
---     result := result || key || '=' || extensions.urlencode(value);
---   END LOOP;
---   RETURN result;
--- END;
--- $$;
-
 -- Migrate instagram_api_request to use http extension instead of pg_net
 CREATE OR REPLACE FUNCTION instagram_api_request(
   p_route TEXT,
@@ -40,9 +18,12 @@ DECLARE
   v_token TEXT;
   v_url TEXT;
   v_full_url TEXT;
-  v_resp extensions.http_response;
+
   v_status INT;
+  v_ct TEXT;
+  v_body_text TEXT;
   v_body_json JSONB;
+
   v_is_admin BOOLEAN := FALSE;
   v_owner UUID;
 BEGIN
@@ -89,19 +70,23 @@ BEGIN
   v_url := 'https://graph.instagram.com/' || regexp_replace(p_route, '^/+', '');
 
   -- Build query string for GET request
-  v_full_url := v_url || '?' || extensions.urlencode(COALESCE(p_params, '{}'::jsonb) || jsonb_build_object('access_token', v_token));
+  v_full_url := v_url || '?' || ( SELECT string_agg(key || '=' || value, '&') FROM jsonb_each_text(COALESCE(p_params, '{}'::jsonb) || jsonb_build_object('access_token', v_token)));
 
   -- Use http_get from http extension (synchronous)
-  v_resp := extensions.http_get(v_full_url);
+  SELECT status, content_type, content
+  INTO v_status, v_ct, v_body_text
+  FROM extensions.http_get(v_full_url);
 
-  v_status := COALESCE(v_resp.status::int, 0);
-
-  -- Try to parse body as JSON; fall back to text wrapper if not JSON
-  BEGIN
-    v_body_json := v_resp.content::jsonb;
-  EXCEPTION WHEN others THEN
-    v_body_json := jsonb_build_object('raw', COALESCE(v_resp.content, ''));
-  END;
+  -- Parse JSON body if JSON-like
+  IF COALESCE(LOWER(v_ct), '') LIKE 'application/json%' OR COALESCE(LOWER(v_ct), '') LIKE 'text/json%' THEN
+    BEGIN
+      v_body_json := v_body_text::jsonb;
+    EXCEPTION WHEN others THEN
+      v_body_json := jsonb_build_object('raw', COALESCE(v_body_text, ''));
+    END;
+  ELSE
+    v_body_json := jsonb_build_object('raw', COALESCE(v_body_text, ''));
+  END IF;
 
   -- Sanitize any sensitive values
   IF jsonb_typeof(v_body_json) = 'object' THEN
@@ -131,9 +116,12 @@ DECLARE
   r_acc RECORD;
   v_token TEXT;
   v_url TEXT;
-  v_resp extensions.http_response;
+
   v_status INT;
+  v_ct TEXT;
+  v_body_text TEXT;
   v_body JSONB;
+
   v_new_token TEXT;
   v_refreshed INT := 0;
   v_failed INT := 0;
@@ -172,19 +160,24 @@ BEGIN
     );
 
     BEGIN
-      v_resp := extensions.http_get(v_url);
-      v_status := COALESCE(v_resp.status::int, 0);
-
-      -- Try to parse body as JSON
-      BEGIN
-        v_body := v_resp.content::jsonb;
-      EXCEPTION WHEN OTHERS THEN
-        v_body := '{}'::jsonb;
-      END;
+      SELECT status, content_type, content
+      INTO v_status, v_ct, v_body_text
+      FROM extensions.http_get(v_url);
     EXCEPTION WHEN OTHERS THEN
       v_failed := v_failed + 1;
       CONTINUE;
     END;
+
+    -- Parse JSON body if JSON-like
+    IF COALESCE(LOWER(v_ct), '') LIKE 'application/json%' OR COALESCE(LOWER(v_ct), '') LIKE 'text/json%' THEN
+      BEGIN
+        v_body := v_body_text::jsonb;
+      EXCEPTION WHEN OTHERS THEN
+        v_body := '{}'::jsonb;
+      END;
+    ELSE
+      v_body := '{}'::jsonb;
+    END IF;
 
     -- Success path: 2xx and access_token present
     IF v_status = 200 AND (v_body ? 'access_token') THEN
