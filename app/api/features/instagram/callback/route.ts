@@ -193,39 +193,39 @@ export async function GET(request: NextRequest) {
             }, {status: 500});
         }
 
-        // Ensure vault secrets are up to date for cron jobs
-        const internalSecret = process.env.INTERNAL_ADMIN_SECRET;
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-
-        if (internalSecret) {
-            try {
-                // Store/update the internal admin secret in Vault
-                const {error: secretError} = await supabase.rpc('upsert_vault_secret', {
-                    p_name: 'CRON_INTERNAL_ADMIN_SECRET',
-                    p_secret: internalSecret
-                });
-
-                if (secretError) {
-                    console.warn('Failed to update CRON_INTERNAL_ADMIN_SECRET in Vault:', secretError.message);
-                }
-
-                // Store/update the app URL in Vault
-                const {error: urlError} = await supabase.rpc('upsert_vault_secret', {
-                    p_name: 'CRON_APP_URL',
-                    p_secret: appUrl
-                });
-
-                if (urlError) {
-                    console.warn('Failed to update CRON_APP_URL in Vault:', urlError.message);
-                } else {
-                    console.info('Vault secrets synchronized successfully');
-                }
-            } catch (e: any) {
-                console.warn('Failed to update Vault secrets:', e?.message || String(e));
-            }
-        } else {
-            console.warn('INTERNAL_ADMIN_SECRET not set - cron jobs may fail authentication');
-        }
+        // // Ensure vault secrets are up to date for cron jobs TODO
+        // const internalSecret = process.env.INTERNAL_ADMIN_SECRET;
+        // const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+        //
+        // if (internalSecret) {
+        //     try {
+        //         // Store/update the internal admin secret in Vault
+        //         const {error: secretError} = await supabase.rpc('upsert_vault_secret', {
+        //             p_name: 'CRON_INTERNAL_ADMIN_SECRET',
+        //             p_secret: internalSecret
+        //         });
+        //
+        //         if (secretError) {
+        //             console.warn('Failed to update CRON_INTERNAL_ADMIN_SECRET in Vault:', secretError.message);
+        //         }
+        //
+        //         // Store/update the app URL in Vault
+        //         const {error: urlError} = await supabase.rpc('upsert_vault_secret', {
+        //             p_name: 'CRON_APP_URL',
+        //             p_secret: appUrl
+        //         });
+        //
+        //         if (urlError) {
+        //             console.warn('Failed to update CRON_APP_URL in Vault:', urlError.message);
+        //         } else {
+        //             console.info('Vault secrets synchronized successfully');
+        //         }
+        //     } catch (e: any) {
+        //         console.warn('Failed to update Vault secrets:', e?.message || String(e));
+        //     }
+        // } else {
+        //     console.warn('INTERNAL_ADMIN_SECRET not set - cron jobs may fail authentication');
+        // }
 
         // Trigger Next.js refresh route (now responsible for cloning media into Storage)
         try {
