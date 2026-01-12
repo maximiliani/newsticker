@@ -242,7 +242,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Redirect to success page without exposing any tokens or sensitive data
-        const successUrl = new URL("/instagram-success", request.url);
+        const successUrl = new URL(`/instagram-success?userId=${profileData.id}`, request.url,);
         return NextResponse.redirect(successUrl);
 
     } catch (err: any) {
