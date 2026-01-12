@@ -59,7 +59,7 @@ function InstagramSuccessContent() {
             }
         }
 
-        fetchInstagramAccount();
+        fetchInstagramAccount()
     }, []);
 
     const toggleTokenDisplay = () => {
