@@ -36,14 +36,9 @@ export function SubscriptionManager() {
       if (Array.isArray(data)) {
         setSubscriptions(data);
       }
-<<<<<<< ours
-    } catch (e) {
-      console.error('Failed to fetch subscriptions:', e);
-=======
     } catch (e: any) {
       console.error('Failed to fetch subscriptions:', e);
       alert(e.message || 'Failed to fetch subscriptions');
->>>>>>> theirs
     } finally {
       setIsLoading(false);
     }
@@ -54,14 +49,9 @@ export function SubscriptionManager() {
       setSyncingId(id);
       await fetch(`/api/features/calendar/subscriptions/${id}/sync`, { method: 'POST' });
       await fetchSubscriptions();
-<<<<<<< ours
-    } catch (e) {
-      console.error('Failed to sync:', e);
-=======
     } catch (e: any) {
       console.error('Failed to sync:', e);
       alert(e.message || 'Failed to sync subscription');
->>>>>>> theirs
     } finally {
       setSyncingId(null);
     }
@@ -72,14 +62,9 @@ export function SubscriptionManager() {
       setDeletingId(id);
       await fetch(`/api/features/calendar/subscriptions/${id}`, { method: 'DELETE' });
       setSubscriptions(subs => subs.filter(s => s.id !== id));
-<<<<<<< ours
-    } catch (e) {
-      console.error('Failed to delete:', e);
-=======
     } catch (e: any) {
       console.error('Failed to delete:', e);
       alert(e.message || 'Failed to delete subscription');
->>>>>>> theirs
     } finally {
       setDeletingId(null);
     }
@@ -110,9 +95,9 @@ export function SubscriptionManager() {
           subscriptions.map(sub => (
             <div key={sub.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
               <div className="flex items-center gap-4">
-                <div 
-                  className="w-4 h-4 rounded-full" 
-                  style={{ backgroundColor: sub.color }} 
+                <div
+                  className="w-4 h-4 rounded-full"
+                  style={{ backgroundColor: sub.color }}
                 />
                 <div>
                   <div className="font-medium flex items-center gap-2">
@@ -126,7 +111,7 @@ export function SubscriptionManager() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -157,7 +142,7 @@ export function SubscriptionManager() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
+                      <AlertDialogAction
                         onClick={() => handleDelete(sub.id)}
                         className="bg-destructive text-white hover:bg-destructive/90"
                       >

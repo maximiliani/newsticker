@@ -1,9 +1,6 @@
 import ICAL from 'ical.js';
 import { ParsedCalendarEvent, CalendarAttachment } from '@/types/calendar';
-<<<<<<< ours
-=======
 import { isSafeUrl } from '@/lib/security';
->>>>>>> theirs
 
 /**
  * Normalizes webcal:// URLs to https://.
@@ -20,14 +17,11 @@ export function normalizeUrl(url: string): string {
  */
 export async function fetchPublicICal(url: string, etag?: string): Promise<{ icalText?: string; newEtag?: string; notModified: boolean }> {
   const normalizedUrl = normalizeUrl(url);
-<<<<<<< ours
-=======
-  
+
   if (!isSafeUrl(normalizedUrl)) {
     throw new Error(`Forbidden: Unsafe iCal URL ${normalizedUrl}`);
   }
 
->>>>>>> theirs
   const headers: Record<string, string> = {};
   if (etag) {
     headers['If-None-Match'] = etag;
@@ -64,7 +58,7 @@ export function parseICalText(text: string, windowStart: Date, windowEnd: Date):
 
   vevents.forEach(vevent => {
     const event = new ICAL.Event(vevent);
-    
+
     if (event.isRecurring()) {
       const expansion = event.iterator(event.startDate);
       let next;
@@ -74,11 +68,7 @@ export function parseICalText(text: string, windowStart: Date, windowEnd: Date):
         count++;
         if (next.compare(iCalWindowStart) >= 0) {
             const occurrence = event.getOccurrenceDetails(next);
-<<<<<<< ours
-            events.push(mapICALEventToParsedEvent(occurrence.item.component, next, occurrence.endDate, true, event.uid));
-=======
             events.push(mapICALEventToParsedEvent(occurrence.item.component, occurrence.startDate, occurrence.endDate, true, event.uid));
->>>>>>> theirs
         }
       }
     } else {
@@ -99,14 +89,14 @@ export function parseICalText(text: string, windowStart: Date, windowEnd: Date):
 function mapICALEventToParsedEvent(vevent: ICAL.Component, dtstart: ICAL.Time, dtend: ICAL.Time, isOccurrence: boolean, baseUid?: string): ParsedCalendarEvent {
   const event = new ICAL.Event(vevent);
   const uid = baseUid || event.uid;
-  
+
   const attachments: CalendarAttachment[] = [];
   const attachProps = vevent.getAllProperties('attach');
   attachProps.forEach(prop => {
     const value = prop.getFirstValue();
     const filenameParam = prop.getParameter('filename');
     const fmttypeParam = prop.getParameter('fmttype');
-    
+
     const filenameValue = Array.isArray(filenameParam) ? filenameParam[0] : (typeof filenameParam === 'string' ? filenameParam : null);
     const fmttypeValue = Array.isArray(fmttypeParam) ? fmttypeParam[0] : (typeof fmttypeParam === 'string' ? fmttypeParam : undefined);
 

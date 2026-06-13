@@ -371,18 +371,21 @@ export class ArticleService {
 
       // Delete media from storage if any exists
       if (article?.media_urls && article.media_urls.length > 0) {
-        // Extract filenames from URLs
-        const mediaFiles = article.media_urls.map((url: string) => {
-          // Extract the filename from the URL path
-          const parts = url.split('/');
-          return parts[parts.length - 1];
-        });
+        // Extract storage paths from public URLs
+        // URL format: .../storage/v1/object/public/article_media/{path}
+        const mediaFiles = article.media_urls
+          .map((url: string) => {
+            const marker = '/article_media/';
+            const idx = url.indexOf(marker);
+            return idx !== -1 ? url.slice(idx + marker.length) : null;
+          })
+          .filter(Boolean) as string[];
 
         // Delete files from storage
         if (mediaFiles.length > 0) {
           const { error: deleteError } = await supabase
             .storage
-            .from('article-media')
+            .from('article_media')
             .remove(mediaFiles);
 
           if (deleteError) {

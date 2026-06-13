@@ -1,19 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { streamDownloadToBuffer } from '@/lib/storage/stream';
 import { CalendarAttachment } from '@/types/calendar';
-<<<<<<< ours
-<<<<<<< ours
-=======
 import { isSafeUrl } from '@/lib/security';
->>>>>>> theirs
-=======
-import { isSafeUrl } from '@/lib/security';
->>>>>>> theirs
 
 /**
  * Downloads calendar event attachments and stores them in Supabase Storage.
  * Handles both data URLs and HTTP/HTTPS URLs.
- * 
+ *
  * @returns Array of public URLs for the stored attachments
  */
 export async function downloadAndStoreAttachments(
@@ -62,7 +55,7 @@ export async function downloadAndStoreAttachments(
       // Sanitize filename
       const sanitizedFilename = attachment.filename.replace(/[^a-zA-Z0-9_.-]/g, '_');
       const filePath = `${userId}/${subscriptionId}/${sanitizedEventUid}/${sanitizedFilename}`;
-      
+
       const { error: uploadError } = await admin.storage
         .from('calendar-attachments')
         .upload(filePath, buffer, {
@@ -72,24 +65,10 @@ export async function downloadAndStoreAttachments(
 
       if (uploadError) throw uploadError;
 
-<<<<<<< ours
-<<<<<<< ours
-      const { data } = admin.storage
-        .from('calendar-attachments')
-        .getPublicUrl(filePath);
-
-      publicUrls.push(data.publicUrl);
-=======
-=======
->>>>>>> theirs
       // Return a relative URL to our authenticated proxy route instead of a public Supabase URL.
       // This ensures that only the owner can access the attachment.
       const proxyUrl = `/api/features/calendar/attachments/${filePath}`;
       publicUrls.push(proxyUrl);
-<<<<<<< ours
->>>>>>> theirs
-=======
->>>>>>> theirs
     } catch (err) {
       console.warn(`Failed to process attachment ${attachment.filename}:`, err);
     }
@@ -97,34 +76,3 @@ export async function downloadAndStoreAttachments(
 
   return publicUrls;
 }
-
-<<<<<<< ours
-<<<<<<< ours
-/**
- * Validates that a URL is safe to fetch, preventing SSRF attacks.
- * Blocks non-HTTP/HTTPS protocols and private IP ranges.
- */
-function isSafeUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
-
-    const hostname = parsed.hostname.toLowerCase();
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return false;
-
-    // Check for private IP ranges (IPv4)
-    const privateIPRegex = /^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|169\.254\.)/;
-    if (privateIPRegex.test(hostname)) return false;
-
-    // IPv6 private/link-local ranges
-    if (hostname.startsWith('fe80:') || hostname.startsWith('fc00:') || hostname.startsWith('fd00:')) return false;
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-=======
->>>>>>> theirs
-=======
->>>>>>> theirs
