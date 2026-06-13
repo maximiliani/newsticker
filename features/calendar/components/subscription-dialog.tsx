@@ -164,7 +164,7 @@ export function SubscriptionDialog({ subscription, onSubscriptionAdded, onSubscr
         {step === 1 && (
           <div className="grid gap-4 py-4">
             <Tabs defaultValue="public" value={type} onValueChange={(v) => setType(v as 'public' | 'caldav')}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList>
                 <TabsTrigger value="public">Public iCal</TabsTrigger>
                 <TabsTrigger value="caldav">CalDAV</TabsTrigger>
               </TabsList>

@@ -94,14 +94,20 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
       // Skip if the event hasn't changed since the last sync
       if (existing && existing.source_hash === sourceHash) continue;
 
-      // Download attachments
-      const processedAttachments = await downloadAndStoreAttachments(
-        event.attachments,
-        subscriptionId,
-        event.uid,
-        subscription.user_id,
-        admin
-      );
+      let processedAttachments: { url: string; filename: string; path: string }[] = [];
+
+      try {
+        // Download attachments
+        processedAttachments = await downloadAndStoreAttachments(
+            event.attachments,
+            subscriptionId,
+            event.uid,
+            subscription.user_id,
+            admin
+        );
+      } catch (e) {
+        console.error(e);
+      }
 
       try {
         const content = generateArticleContent(event, subscription, userName, processedAttachments);

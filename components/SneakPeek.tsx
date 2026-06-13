@@ -17,7 +17,7 @@ export async function SneakPeek() {
 
   return (
     <div className="p-4 bg-card rounded-lg border h-full overflow-hidden flex flex-col">
-      <h3 className="font-semibold mb-2">Sneak Peek</h3>
+      <h3 className="font-semibold mb-2">Upcoming Events</h3>
       <div className="flex-1 overflow-auto space-y-3">
         {!events || events.length === 0 ? (
           <p className="text-sm text-muted-foreground">No upcoming events.</p>

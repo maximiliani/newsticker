@@ -1,6 +1,6 @@
 "use client";
 
-import { InstagramIcon, NewspaperIcon, UserPen, UsersIcon, Cpu } from "lucide-react";
+import {InstagramIcon, NewspaperIcon, UserPen, UsersIcon, Cpu, CalendarIcon} from "lucide-react";
 import {AdminCard} from "@/features/admin/components/admin_card_component";
 
 const cardData = [
@@ -35,6 +35,14 @@ const cardData = [
         content: "View, edit, or delete news articles from all users across the platform.",
         buttonText: "Manage Articles",
         href: "/settings/articles"
+    },
+    {
+        icon: CalendarIcon,
+        title: "Calendar Subscriptions",
+        description: "Manage all calendar subscriptions",
+        content: "View, edit, or delete calendar subscriptions from all users across the platform.",
+        buttonText: "Manage calendar subscriptions",
+        href: "/settings/calendar"
     }
 ];
 
