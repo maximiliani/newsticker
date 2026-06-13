@@ -8,7 +8,7 @@ import { downloadAndStoreAttachments } from './attachment-service';
 
 /**
  * Synchronizes a single calendar subscription.
- * Fetches the calendar feed (iCal or CalDAV), parses events, and updates 
+ * Fetches the calendar feed (iCal or CalDAV), parses events, and updates
  * the corresponding articles in the database.
  * 
  * @param subscriptionId UUID of the subscription to sync
@@ -177,13 +177,13 @@ function computeSourceHash(event: ParsedCalendarEvent): string {
  */
 function generateArticleContent(event: ParsedCalendarEvent, subscription: CalendarSubscription, userName: string, attachmentUrls: string[]) {
   const author = escapeHtml(`${subscription.name} by ${userName}`);
-  
+
   const dateStr = event.dtstart.toLocaleString();
   let html = `<p><strong>Event:</strong> ${escapeHtml(event.summary)}</p>`;
   html += `<p><strong>Time:</strong> ${dateStr}</p>`;
   if (event.location) html += `<p><strong>Location:</strong> ${escapeHtml(event.location)}</p>`;
   if (event.description) html += `<p>${escapeHtml(event.description).replace(/\n/g, '<br>')}</p>`;
-  
+
   if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
     html += `<p><a href="${event.url}" target="_blank">Event Link</a></p>`;
   }
@@ -216,17 +216,17 @@ export async function syncAllForUser(userId: string, admin: SupabaseClient): Pro
     .select('id')
     .eq('user_id', userId)
     .eq('active', true);
-    
+
   if (error) throw error;
-  
+
   const results = await Promise.allSettled(subs.map(sub => syncSubscription(sub.id, admin)));
-  return results.map(r => r.status === 'fulfilled' ? r.value : { 
-    subscriptionId: 'unknown', 
-    status: 'error', 
-    added: 0, 
-    updated: 0, 
-    deleted: 0, 
-    error: String((r as PromiseRejectedResult).reason) 
+  return results.map(r => r.status === 'fulfilled' ? r.value : {
+    subscriptionId: 'unknown',
+    status: 'error',
+    added: 0,
+    updated: 0,
+    deleted: 0,
+    error: String((r as PromiseRejectedResult).reason)
   });
 }
 
@@ -239,17 +239,17 @@ export async function syncAllSubscriptions(admin: SupabaseClient): Promise<SyncR
     .from('calendar_subscriptions')
     .select('id')
     .eq('active', true);
-    
+
   if (error) throw error;
-  
+
   const results = await Promise.allSettled(subs.map(sub => syncSubscription(sub.id, admin)));
-  return results.map(r => r.status === 'fulfilled' ? r.value : { 
-    subscriptionId: 'unknown', 
-    status: 'error', 
-    added: 0, 
-    updated: 0, 
-    deleted: 0, 
-    error: String((r as PromiseRejectedResult).reason) 
+  return results.map(r => r.status === 'fulfilled' ? r.value : {
+    subscriptionId: 'unknown',
+    status: 'error',
+    added: 0,
+    updated: 0,
+    deleted: 0,
+    error: String((r as PromiseRejectedResult).reason)
   });
 }
 

@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         .select('user_id')
         .eq('id', id)
         .single();
-        
+
       if (!sub || sub.user_id !== user.id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
 
     const admin = createAdminClient();
     const result = await syncSubscription(id, admin);
-    
+
     return NextResponse.json(result);
   } catch (e: any) {
     console.error('Sync subscription error:', e);

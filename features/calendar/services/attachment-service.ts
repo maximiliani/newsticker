@@ -1,6 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { streamDownloadToBuffer } from '@/lib/storage/stream';
 import { CalendarAttachment } from '@/types/calendar';
+<<<<<<< ours
+=======
+import { isSafeUrl } from '@/lib/security';
+>>>>>>> theirs
 
 /**
  * Downloads calendar event attachments and stores them in Supabase Storage.
@@ -64,11 +68,18 @@ export async function downloadAndStoreAttachments(
 
       if (uploadError) throw uploadError;
 
+<<<<<<< ours
       const { data } = admin.storage
         .from('calendar-attachments')
         .getPublicUrl(filePath);
 
       publicUrls.push(data.publicUrl);
+=======
+      // Return a relative URL to our authenticated proxy route instead of a public Supabase URL.
+      // This ensures that only the owner can access the attachment.
+      const proxyUrl = `/api/features/calendar/attachments/${filePath}`;
+      publicUrls.push(proxyUrl);
+>>>>>>> theirs
     } catch (err) {
       console.warn(`Failed to process attachment ${attachment.filename}:`, err);
     }
@@ -77,6 +88,7 @@ export async function downloadAndStoreAttachments(
   return publicUrls;
 }
 
+<<<<<<< ours
 /**
  * Validates that a URL is safe to fetch, preventing SSRF attacks.
  * Blocks non-HTTP/HTTPS protocols and private IP ranges.
@@ -101,3 +113,5 @@ function isSafeUrl(url: string): boolean {
     return false;
   }
 }
+=======
+>>>>>>> theirs
