@@ -44,7 +44,11 @@ function normalizeUrl(url: string, baseUrl?: string): string {
 
 /**
  * Fetches iCal data for all events in a specific CalDAV calendar.
+<<<<<<< ours
  *
+=======
+ * 
+>>>>>>> theirs
  * @param serverUrl Base URL of the CalDAV server
  * @param calendarUrl Specific URL of the calendar collection
  * @param authType Authentication method (basic or bearer)
@@ -60,15 +64,26 @@ export async function fetchCalendarICalTexts(
   since?: Date
 ): Promise<{ texts: string[]; ctag: string }> {
   const client = await buildClient(serverUrl, authType, credentials);
+<<<<<<< ours
 
   const calendars = await client.fetchCalendars();
   const normalizedTarget = normalizeUrl(calendarUrl, serverUrl);
 
+=======
+  
+  const calendars = await client.fetchCalendars();
+  const normalizedTarget = normalizeUrl(calendarUrl, serverUrl);
+  
+>>>>>>> theirs
   const calendar = calendars.find(c => {
     const normalizedCal = normalizeUrl(c.url, serverUrl);
     return normalizedCal === normalizedTarget;
   });
+<<<<<<< ours
 
+=======
+  
+>>>>>>> theirs
   if (!calendar) {
     throw new Error(`Calendar not found at ${calendarUrl}. Discovered calendars: ${calendars.map(c => c.url).join(', ')}`);
   }

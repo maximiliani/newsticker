@@ -4,6 +4,7 @@ import { SyncResult, CalendarSubscription, ParsedCalendarEvent } from '@/types/c
 import { fetchPublicICal, parseICalText } from './ical-parser';
 import { fetchCalendarICalTexts } from './caldav-client';
 import { readCredentials } from './credential-service';
+<<<<<<< ours
 import { downloadAndStoreAttachments } from './attachment-service';
 import { escapeHtml } from '@/lib/security';
 
@@ -12,6 +13,16 @@ import { escapeHtml } from '@/lib/security';
  * Fetches the calendar feed (iCal or CalDAV), parses events, and updates
  * the corresponding articles in the database.
  *
+=======
+import { downloadAndStoreAttachments, deleteAttachments } from './attachment-service';
+import { isSafeUrl, escapeHtml } from '@/lib/security';
+
+/**
+ * Synchronizes a single calendar subscription.
+ * Fetches the calendar feed (iCal or CalDAV), parses events, and updates 
+ * the corresponding articles in the database.
+ * 
+>>>>>>> theirs
  * @param subscriptionId UUID of the subscription to sync
  * @param admin Supabase admin client
  * @returns Result of the synchronization process
@@ -63,7 +74,11 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
     }
 
     // Get existing events for this subscription within the sync window.
+<<<<<<< ours
     // We only care about events in the window to avoid deleting events
+=======
+    // We only care about events in the window to avoid deleting events 
+>>>>>>> theirs
     // that are outside our current synchronization scope.
     const { data: existingEvents, error: eventsError } = await admin
       .from('calendar_events')
@@ -76,7 +91,11 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
 
     const existingEventsMap = new Map(existingEvents?.map(e => [e.event_uid, e]));
     const seenUids = new Set<string>();
+<<<<<<< ours
 
+=======
+    
+>>>>>>> theirs
     let added = 0;
     let updated = 0;
 
@@ -95,7 +114,11 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
       if (existing && existing.source_hash === sourceHash) continue;
 
       // Download attachments
+<<<<<<< ours
       const attachmentUrls = await downloadAndStoreAttachments(
+=======
+      const processedAttachments = await downloadAndStoreAttachments(
+>>>>>>> theirs
         event.attachments,
         subscriptionId,
         event.uid,
@@ -103,6 +126,7 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
         admin
       );
 
+<<<<<<< ours
       const content = generateArticleContent(event, subscription, userName, attachmentUrls);
 
       let articleId = existing?.article_id;
@@ -142,6 +166,55 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
         source_hash: sourceHash,
         last_synced_at: new Date().toISOString()
       }, { onConflict: 'subscription_id, event_uid' });
+=======
+      try {
+        const content = generateArticleContent(event, subscription, userName, processedAttachments);
+        
+        const dateStr = event.dtstart.toLocaleString();
+        let articleId = existing?.article_id;
+        const articleData: any = {
+          user_id: subscription.user_id,
+          title: event.summary,
+          description: `${dateStr} - ${event.description.substring(0, 160)}`,
+          content: content.html,
+          html_content: content.html,
+          json_content: content.json,
+          custom_author_name: content.author,
+          visibility_from: content.visibilityFrom.toISOString(),
+          visibility_to: content.visibilityTo.toISOString(),
+        };
+
+        if (articleId) {
+          const { error: updateError } = await admin.from('articles').update(articleData).eq('id', articleId);
+          if (updateError) throw updateError;
+          updated++;
+        } else {
+          const { data: newArticle, error: createError } = await admin
+            .from('articles')
+            .insert(articleData)
+            .select('id')
+            .single();
+          if (createError) throw createError;
+          articleId = newArticle.id;
+          added++;
+        }
+
+        await admin.from('calendar_events').upsert({
+          subscription_id: subscriptionId,
+          user_id: subscription.user_id,
+          event_uid: event.uid,
+          article_id: articleId,
+          event_start: event.dtstart.toISOString(),
+          source_hash: sourceHash,
+          last_synced_at: new Date().toISOString()
+        }, { onConflict: 'subscription_id, event_uid' });
+      } catch (err) {
+        // Cleanup orphaned attachments if the article write fails
+        console.error(`Failed to write article for event ${event.uid}, cleaning up attachments:`, err);
+        await deleteAttachments(processedAttachments.map(a => a.path), admin);
+        throw err;
+      }
+>>>>>>> theirs
     }
 
     // Handle deleted events
@@ -177,6 +250,7 @@ function computeSourceHash(event: ParsedCalendarEvent): string {
 /**
  * Generates the HTML and JSON content and metadata for an article based on a calendar event.
  */
+<<<<<<< ours
 function generateArticleContent(event: ParsedCalendarEvent, subscription: CalendarSubscription, userName: string, attachmentUrls: string[]) {
   const author = escapeHtml(`${subscription.name} by ${userName}`);
 
@@ -197,6 +271,35 @@ function generateArticleContent(event: ParsedCalendarEvent, subscription: Calend
     attachmentUrls.forEach((url, i) => {
       const filename = event.attachments[i]?.filename || `Attachment ${i+1}`;
       html += `<li><a href="${url}" target="_blank">${escapeHtml(filename)}</a></li>`;
+=======
+function generateArticleContent(
+  event: ParsedCalendarEvent, 
+  subscription: CalendarSubscription, 
+  userName: string, 
+  attachments: { url: string; filename: string }[]
+) {
+  const author = escapeHtml(`${subscription.name} by ${userName}`);
+  
+  const dateStr = event.dtstart.toLocaleString();
+  
+  // Build HTML
+  let html = `<p><strong>Event:</strong> ${escapeHtml(event.summary)}</p>`;
+  html += `<p><strong>Time:</strong> ${dateStr}</p>`;
+  if (event.location) {
+    const osmUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(event.location)}`;
+    html += `<p><strong>Location:</strong> <a href="${osmUrl}" target="_blank"><strong>${escapeHtml(event.location)}</strong></a></p>`;
+  }
+  if (event.description) html += `<p>${escapeHtml(event.description).replace(/\n/g, '<br>')}</p>`;
+  
+  if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
+    html += `<p><a href="${escapeHtml(event.url)}" target="_blank">${escapeHtml(event.url)}</a></p>`;
+  }
+  
+  if (attachments.length > 0) {
+    html += '<p><strong>Attachments:</strong></p><ul>';
+    attachments.forEach((att) => {
+      html += `<li><a href="${att.url}" target="_blank">${escapeHtml(att.filename)}</a></li>`;
+>>>>>>> theirs
     });
     html += '</ul>';
   }
@@ -223,11 +326,26 @@ function generateArticleContent(event: ParsedCalendarEvent, subscription: Calend
   };
 
   if (event.location) {
+<<<<<<< ours
+=======
+    const osmUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(event.location)}`;
+>>>>>>> theirs
     jsonContent.content.push({
       type: 'paragraph',
       content: [
         { type: 'text', marks: [{ type: 'bold' }], text: 'Location: ' },
+<<<<<<< ours
         { type: 'text', text: event.location }
+=======
+        { 
+          type: 'text', 
+          marks: [
+            { type: 'bold' },
+            { type: 'link', attrs: { href: osmUrl, target: '_blank' } }
+          ], 
+          text: event.location 
+        }
+>>>>>>> theirs
       ]
     });
   }
@@ -245,6 +363,7 @@ function generateArticleContent(event: ParsedCalendarEvent, subscription: Calend
   }
 
   if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
+<<<<<<< ours
     jsonContent.content.push({
       type: 'paragraph',
       content: [
@@ -252,27 +371,50 @@ function generateArticleContent(event: ParsedCalendarEvent, subscription: Calend
           type: 'text',
           marks: [{ type: 'link', attrs: { href: event.url, target: '_blank' } }],
           text: 'Event Link'
+=======
+     jsonContent.content.push({
+      type: 'paragraph',
+      content: [
+        { 
+          type: 'text', 
+          marks: [{ type: 'link', attrs: { href: event.url, target: '_blank' } }], 
+          text: event.url 
+>>>>>>> theirs
         }
       ]
     });
   }
 
+<<<<<<< ours
   if (attachmentUrls.length > 0) {
+=======
+  if (attachments.length > 0) {
+>>>>>>> theirs
     jsonContent.content.push({
       type: 'paragraph',
       content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Attachments:' }]
     });
+<<<<<<< ours
 
     const listContent = attachmentUrls.map((url, i) => {
       const filename = event.attachments[i]?.filename || `Attachment ${i+1}`;
+=======
+    
+    const listContent = attachments.map((att) => {
+>>>>>>> theirs
       return {
         type: 'listItem',
         content: [{
           type: 'paragraph',
           content: [{
             type: 'text',
+<<<<<<< ours
             marks: [{ type: 'link', attrs: { href: url, target: '_blank' } }],
             text: filename
+=======
+            marks: [{ type: 'link', attrs: { href: att.url, target: '_blank' } }],
+            text: att.filename
+>>>>>>> theirs
           }]
         }]
       };
@@ -286,7 +428,11 @@ function generateArticleContent(event: ParsedCalendarEvent, subscription: Calend
 
   const visibilityFrom = new Date(event.dtstart);
   visibilityFrom.setDate(visibilityFrom.getDate() - subscription.visibility_days_before);
+<<<<<<< ours
 
+=======
+  
+>>>>>>> theirs
   const visibilityTo = new Date(event.dtstart);
   visibilityTo.setDate(visibilityTo.getDate() + subscription.visibility_days_after);
 
@@ -303,6 +449,7 @@ export async function syncAllForUser(userId: string, admin: SupabaseClient): Pro
     .select('id')
     .eq('user_id', userId)
     .eq('active', true);
+<<<<<<< ours
 
   if (error) throw error;
 
@@ -314,6 +461,19 @@ export async function syncAllForUser(userId: string, admin: SupabaseClient): Pro
     updated: 0,
     deleted: 0,
     error: String((r as PromiseRejectedResult).reason)
+=======
+    
+  if (error) throw error;
+  
+  const results = await Promise.allSettled(subs.map(sub => syncSubscription(sub.id, admin)));
+  return results.map(r => r.status === 'fulfilled' ? r.value : { 
+    subscriptionId: 'unknown', 
+    status: 'error', 
+    added: 0, 
+    updated: 0, 
+    deleted: 0, 
+    error: String((r as PromiseRejectedResult).reason) 
+>>>>>>> theirs
   });
 }
 
@@ -326,6 +486,7 @@ export async function syncAllSubscriptions(admin: SupabaseClient): Promise<SyncR
     .from('calendar_subscriptions')
     .select('id')
     .eq('active', true);
+<<<<<<< ours
 
   if (error) throw error;
 
@@ -339,3 +500,19 @@ export async function syncAllSubscriptions(admin: SupabaseClient): Promise<SyncR
     error: String((r as PromiseRejectedResult).reason)
   });
 }
+=======
+    
+  if (error) throw error;
+  
+  const results = await Promise.allSettled(subs.map(sub => syncSubscription(sub.id, admin)));
+  return results.map(r => r.status === 'fulfilled' ? r.value : { 
+    subscriptionId: 'unknown', 
+    status: 'error', 
+    added: 0, 
+    updated: 0, 
+    deleted: 0, 
+    error: String((r as PromiseRejectedResult).reason) 
+  });
+}
+
+>>>>>>> theirs

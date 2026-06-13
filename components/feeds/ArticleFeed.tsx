@@ -31,17 +31,31 @@ interface NewsPreviewData {
 };
 
 // Server-side data fetching
-async function getVisibleArticles(): Promise<NewsPreviewData[]> {
+async function getVisibleArticles(from?: string, to?: string): Promise<NewsPreviewData[]> {
     const supabase = await createClient();
     const now = new Date();
 
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('articles_with_author_info')
-            .select('id, title, description, created_at, modified_at, visibility_from, visibility_to, author_name, author_avatar')
-            .lte('visibility_from', now.toISOString()) // Only get articles that should be visible now
-            .or(`visibility_to.is.null,visibility_to.gte.${now.toISOString()}`) // And haven't expired
-            .order('created_at', { ascending: false });
+            .select('id, title, description, created_at, modified_at, visibility_from, visibility_to, author_name, author_avatar');
+
+        if (from && to) {
+            // When filtering by date, we show articles that overlap with the selected range
+            const rangeStart = new Date(from);
+            const rangeEnd = new Date(to);
+            rangeEnd.setHours(23, 59, 59, 999);
+
+            query = query
+                .lte('visibility_from', rangeEnd.toISOString())
+                .or(`visibility_to.is.null,visibility_to.gte.${rangeStart.toISOString()}`);
+        } else {
+            query = query
+                .lte('visibility_from', now.toISOString()) // Only get articles that should be visible now
+                .or(`visibility_to.is.null,visibility_to.gte.${now.toISOString()}`); // And haven't expired
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         if (error) {
             console.error('Supabase error:', error);
@@ -70,8 +84,9 @@ async function getVisibleArticles(): Promise<NewsPreviewData[]> {
 }
 
 // Server Component
-export default async function ArticleFeed() {
-    const initialArticles = await getVisibleArticles();
+export default async function ArticleFeed({ searchParams }: { searchParams?: Promise<{ from?: string, to?: string }> }) {
+    const params = await searchParams;
+    const initialArticles = await getVisibleArticles(params?.from, params?.to);
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
@@ -81,7 +96,9 @@ export default async function ArticleFeed() {
             {/* Server-rendered articles list */}
             <div className="flex-1 overflow-y-auto p-4">
                 {initialArticles.length === 0 ? (
-                    <p className="text-muted-foreground">No news articles found.</p>
+                    <div className="text-center py-12">
+                         <p className="text-muted-foreground">No news articles found for the selected range.</p>
+                    </div>
                 ) : (
                     <div className="space-y-4">
                         {initialArticles.map((newsItem) => (

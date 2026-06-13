@@ -1,11 +1,19 @@
 'use client';
 
 import { useState, useEffect } from "react";
+<<<<<<< ours
 import { RefreshCcw, Trash2, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CalendarSubscription } from "@/types/calendar";
 import { AddSubscriptionDialog } from "./add-subscription-dialog";
+=======
+import { RefreshCcw, Trash2, Loader2, Calendar as CalendarIcon, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { CalendarSubscription } from "@/types/calendar";
+import { SubscriptionDialog } from "./subscription-dialog";
+>>>>>>> theirs
 import {
     AlertDialog,
     AlertDialogAction,
@@ -81,7 +89,11 @@ export function SubscriptionManager() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
+<<<<<<< ours
         <AddSubscriptionDialog onSubscriptionAdded={fetchSubscriptions} />
+=======
+        <SubscriptionDialog onSubscriptionAdded={fetchSubscriptions} />
+>>>>>>> theirs
       </div>
 
       <div className="grid gap-4">
@@ -95,9 +107,15 @@ export function SubscriptionManager() {
           subscriptions.map(sub => (
             <div key={sub.id} className="flex items-center justify-between p-4 border rounded-lg bg-card">
               <div className="flex items-center gap-4">
+<<<<<<< ours
                 <div
                   className="w-4 h-4 rounded-full"
                   style={{ backgroundColor: sub.color }}
+=======
+                <div 
+                  className="w-4 h-4 rounded-full" 
+                  style={{ backgroundColor: sub.color }} 
+>>>>>>> theirs
                 />
                 <div>
                   <div className="font-medium flex items-center gap-2">
@@ -109,10 +127,33 @@ export function SubscriptionManager() {
                   <div className="text-sm text-muted-foreground">
                     Last synced: {sub.last_synced_at ? new Date(sub.last_synced_at).toLocaleString() : 'Never'}
                   </div>
+<<<<<<< ours
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
+=======
+                  {(sub as any).user && (
+                    <div className="text-[10px] text-muted-foreground mt-1 font-mono">
+                      Owner: {(sub as any).user.full_name || (sub as any).user.email}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <SubscriptionDialog 
+                  subscription={sub} 
+                  onSubscriptionUpdated={fetchSubscriptions}
+                  trigger={
+                    <Button variant="ghost" size="sm">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
+                  }
+                />
+
+>>>>>>> theirs
                 <Button
                   variant="ghost"
                   size="sm"
@@ -142,7 +183,11 @@ export function SubscriptionManager() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
+<<<<<<< ours
                       <AlertDialogAction
+=======
+                      <AlertDialogAction 
+>>>>>>> theirs
                         onClick={() => handleDelete(sub.id)}
                         className="bg-destructive text-white hover:bg-destructive/90"
                       >

@@ -17,7 +17,11 @@ export function normalizeUrl(url: string): string {
  */
 export async function fetchPublicICal(url: string, etag?: string): Promise<{ icalText?: string; newEtag?: string; notModified: boolean }> {
   const normalizedUrl = normalizeUrl(url);
+<<<<<<< ours
 
+=======
+  
+>>>>>>> theirs
   if (!isSafeUrl(normalizedUrl)) {
     throw new Error(`Forbidden: Unsafe iCal URL ${normalizedUrl}`);
   }
@@ -44,6 +48,20 @@ export async function fetchPublicICal(url: string, etag?: string): Promise<{ ica
 }
 
 /**
+<<<<<<< ours
+=======
+ * Parses calendar-level metadata like name and color.
+ */
+export function parseCalendarMetadata(text: string): { name?: string; color?: string } {
+  const jcalData = ICAL.parse(text);
+  const vcalendar = new ICAL.Component(jcalData);
+  const name = vcalendar.getFirstPropertyValue('x-wr-calname') as string | undefined;
+  const color = vcalendar.getFirstPropertyValue('x-apple-calendar-color') as string | undefined;
+  return { name, color };
+}
+
+/**
+>>>>>>> theirs
  * Parses iCal text and returns an array of events within the specified window.
  * Handles recurring events by expanding them into individual occurrences.
  */
@@ -58,9 +76,15 @@ export function parseICalText(text: string, windowStart: Date, windowEnd: Date):
 
   vevents.forEach(vevent => {
     const event = new ICAL.Event(vevent);
+<<<<<<< ours
 
     if (event.isRecurring()) {
       const expansion = event.iterator(event.startDate);
+=======
+    
+    if (event.isRecurring()) {
+      const expansion = event.iterator(iCalWindowStart);
+>>>>>>> theirs
       let next;
       // Protection against infinite loops for malformed RRULEs
       let count = 0;
@@ -89,6 +113,7 @@ export function parseICalText(text: string, windowStart: Date, windowEnd: Date):
 function mapICALEventToParsedEvent(vevent: ICAL.Component, dtstart: ICAL.Time, dtend: ICAL.Time, isOccurrence: boolean, baseUid?: string): ParsedCalendarEvent {
   const event = new ICAL.Event(vevent);
   const uid = baseUid || event.uid;
+<<<<<<< ours
 
   const attachments: CalendarAttachment[] = [];
   const attachProps = vevent.getAllProperties('attach');
@@ -106,6 +131,38 @@ function mapICALEventToParsedEvent(vevent: ICAL.Component, dtstart: ICAL.Time, d
       filename,
       mimeType: fmttypeValue as string | undefined
     });
+=======
+  
+  const attachments: CalendarAttachment[] = [];
+  const attachProps = vevent.getAllProperties('attach');
+  attachProps.forEach(prop => {
+    let value = prop.getFirstValue();
+    if (typeof value !== 'string') return;
+
+    // Sometimes ICAL.js might return parameters in the value if it's not fully parsed
+    // or if the value is a complex string. We want the actual URL.
+    // Example: ATTACH;SIZE=66925;VALUE=URI;X-APPLE-FILENAME=LogoMI.png:https://...
+    let url = value;
+    if (url.includes(':http')) {
+      url = url.substring(url.indexOf(':http') + 1);
+    }
+
+    const filenameParam = prop.getParameter('x-apple-filename') || prop.getParameter('filename');
+    const fmttypeParam = prop.getParameter('fmttype');
+    
+    const filenameValue = Array.isArray(filenameParam) ? filenameParam[0] : (typeof filenameParam === 'string' ? filenameParam : null);
+    const fmttypeValue = Array.isArray(fmttypeParam) ? fmttypeParam[0] : (typeof fmttypeParam === 'string' ? fmttypeParam : undefined);
+
+    const filename = filenameValue || url.split('/').pop() || 'attachment';
+    
+    if (isSafeUrl(url)) {
+      attachments.push({
+        url,
+        filename,
+        mimeType: fmttypeValue as string | undefined
+      });
+    }
+>>>>>>> theirs
   });
 
   return {
