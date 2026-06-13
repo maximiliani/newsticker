@@ -11,6 +11,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields: serverUrl, authType, secret" }, { status: 400 });
     }
 
+<<<<<<< ours
+=======
+    if (authType !== 'basic' && authType !== 'bearer') {
+      return NextResponse.json({ error: "Invalid authType. Must be 'basic' or 'bearer'" }, { status: 400 });
+    }
+
+    try {
+      const url = new URL(serverUrl);
+      if (url.protocol !== 'https:') {
+        return NextResponse.json({ error: "Server URL must be a valid HTTPS URL" }, { status: 400 });
+      }
+    } catch {
+      return NextResponse.json({ error: "Invalid Server URL" }, { status: 400 });
+    }
+
+>>>>>>> theirs
     const calendars = await discoverCalendars(serverUrl, authType, { username, secret });
     return NextResponse.json(calendars);
   } catch (e: any) {

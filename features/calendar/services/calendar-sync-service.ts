@@ -4,11 +4,19 @@ import { SyncResult, CalendarSubscription, ParsedCalendarEvent } from '@/types/c
 import { fetchPublicICal, parseICalText } from './ical-parser';
 import { fetchCalendarICalTexts } from './caldav-client';
 import { readCredentials } from './credential-service';
+<<<<<<< ours
 import { downloadAndStoreAttachments } from './attachment-service';
 
 /**
  * Synchronizes a single calendar subscription.
  * Fetches the calendar feed (iCal or CalDAV), parses events, and updates
+=======
+import { isSafeUrl, escapeHtml } from '@/lib/security';
+
+/**
+ * Synchronizes a single calendar subscription.
+ * Fetches the calendar feed (iCal or CalDAV), parses events, and updates 
+>>>>>>> theirs
  * the corresponding articles in the database.
  * 
  * @param subscriptionId UUID of the subscription to sync
@@ -111,6 +119,10 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
         description: event.description.substring(0, 200),
         content: content.html,
         html_content: content.html,
+<<<<<<< ours
+=======
+        json_content: content.json,
+>>>>>>> theirs
         custom_author_name: content.author,
         visibility_from: content.visibilityFrom.toISOString(),
         visibility_to: content.visibilityTo.toISOString(),
@@ -173,19 +185,36 @@ function computeSourceHash(event: ParsedCalendarEvent): string {
 }
 
 /**
+<<<<<<< ours
  * Generates the HTML content and metadata for an article based on a calendar event.
  */
 function generateArticleContent(event: ParsedCalendarEvent, subscription: CalendarSubscription, userName: string, attachmentUrls: string[]) {
   const author = escapeHtml(`${subscription.name} by ${userName}`);
 
   const dateStr = event.dtstart.toLocaleString();
+=======
+ * Generates the HTML and JSON content and metadata for an article based on a calendar event.
+ */
+function generateArticleContent(event: ParsedCalendarEvent, subscription: CalendarSubscription, userName: string, attachmentUrls: string[]) {
+  const author = escapeHtml(`${subscription.name} by ${userName}`);
+  
+  const dateStr = event.dtstart.toLocaleString();
+  
+  // Build HTML
+>>>>>>> theirs
   let html = `<p><strong>Event:</strong> ${escapeHtml(event.summary)}</p>`;
   html += `<p><strong>Time:</strong> ${dateStr}</p>`;
   if (event.location) html += `<p><strong>Location:</strong> ${escapeHtml(event.location)}</p>`;
   if (event.description) html += `<p>${escapeHtml(event.description).replace(/\n/g, '<br>')}</p>`;
+<<<<<<< ours
 
   if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
     html += `<p><a href="${event.url}" target="_blank">Event Link</a></p>`;
+=======
+  
+  if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
+    html += `<p><a href="${escapeHtml(event.url)}" target="_blank">Event Link</a></p>`;
+>>>>>>> theirs
   }
   
   if (attachmentUrls.length > 0) {
@@ -197,13 +226,103 @@ function generateArticleContent(event: ParsedCalendarEvent, subscription: Calend
     html += '</ul>';
   }
 
+<<<<<<< ours
+=======
+  // Build a simple Tiptap-compatible JSON structure
+  const jsonContent: any = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', marks: [{ type: 'bold' }], text: 'Event: ' },
+          { type: 'text', text: event.summary }
+        ]
+      },
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', marks: [{ type: 'bold' }], text: 'Time: ' },
+          { type: 'text', text: dateStr }
+        ]
+      }
+    ]
+  };
+
+  if (event.location) {
+    jsonContent.content.push({
+      type: 'paragraph',
+      content: [
+        { type: 'text', marks: [{ type: 'bold' }], text: 'Location: ' },
+        { type: 'text', text: event.location }
+      ]
+    });
+  }
+
+  if (event.description) {
+    const lines = event.description.split('\n');
+    lines.forEach(line => {
+      if (line.trim()) {
+        jsonContent.content.push({
+          type: 'paragraph',
+          content: [{ type: 'text', text: line }]
+        });
+      }
+    });
+  }
+
+  if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
+     jsonContent.content.push({
+      type: 'paragraph',
+      content: [
+        { 
+          type: 'text', 
+          marks: [{ type: 'link', attrs: { href: event.url, target: '_blank' } }], 
+          text: 'Event Link' 
+        }
+      ]
+    });
+  }
+
+  if (attachmentUrls.length > 0) {
+    jsonContent.content.push({
+      type: 'paragraph',
+      content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Attachments:' }]
+    });
+    
+    const listContent = attachmentUrls.map((url, i) => {
+      const filename = event.attachments[i]?.filename || `Attachment ${i+1}`;
+      return {
+        type: 'listItem',
+        content: [{
+          type: 'paragraph',
+          content: [{
+            type: 'text',
+            marks: [{ type: 'link', attrs: { href: url, target: '_blank' } }],
+            text: filename
+          }]
+        }]
+      };
+    });
+
+    jsonContent.content.push({
+      type: 'bulletList',
+      content: listContent
+    });
+  }
+
+>>>>>>> theirs
   const visibilityFrom = new Date(event.dtstart);
   visibilityFrom.setDate(visibilityFrom.getDate() - subscription.visibility_days_before);
   
   const visibilityTo = new Date(event.dtstart);
   visibilityTo.setDate(visibilityTo.getDate() + subscription.visibility_days_after);
 
+<<<<<<< ours
   return { html, author, visibilityFrom, visibilityTo };
+=======
+  return { html, json: jsonContent, author, visibilityFrom, visibilityTo };
+>>>>>>> theirs
 }
 
 /**
@@ -216,6 +335,7 @@ export async function syncAllForUser(userId: string, admin: SupabaseClient): Pro
     .select('id')
     .eq('user_id', userId)
     .eq('active', true);
+<<<<<<< ours
 
   if (error) throw error;
 
@@ -227,6 +347,19 @@ export async function syncAllForUser(userId: string, admin: SupabaseClient): Pro
     updated: 0,
     deleted: 0,
     error: String((r as PromiseRejectedResult).reason)
+=======
+    
+  if (error) throw error;
+  
+  const results = await Promise.allSettled(subs.map(sub => syncSubscription(sub.id, admin)));
+  return results.map(r => r.status === 'fulfilled' ? r.value : { 
+    subscriptionId: 'unknown', 
+    status: 'error', 
+    added: 0, 
+    updated: 0, 
+    deleted: 0, 
+    error: String((r as PromiseRejectedResult).reason) 
+>>>>>>> theirs
   });
 }
 
@@ -239,6 +372,7 @@ export async function syncAllSubscriptions(admin: SupabaseClient): Promise<SyncR
     .from('calendar_subscriptions')
     .select('id')
     .eq('active', true);
+<<<<<<< ours
 
   if (error) throw error;
 
@@ -264,3 +398,19 @@ function escapeHtml(unsafe: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+=======
+    
+  if (error) throw error;
+  
+  const results = await Promise.allSettled(subs.map(sub => syncSubscription(sub.id, admin)));
+  return results.map(r => r.status === 'fulfilled' ? r.value : { 
+    subscriptionId: 'unknown', 
+    status: 'error', 
+    added: 0, 
+    updated: 0, 
+    deleted: 0, 
+    error: String((r as PromiseRejectedResult).reason) 
+  });
+}
+
+>>>>>>> theirs

@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
     let finalSub = sub;
     if (auth_type !== 'public' && secret) {
+<<<<<<< ours
       const vaultId = await storeCredentials(admin, sub.id, username, secret);
       const { data: updatedSub } = await admin
         .from('calendar_subscriptions')
@@ -54,6 +55,22 @@ export async function POST(req: NextRequest) {
         .select()
         .single();
       if (updatedSub) finalSub = updatedSub;
+=======
+      try {
+        const vaultId = await storeCredentials(admin, sub.id, username, secret);
+        const { data: updatedSub } = await admin
+          .from('calendar_subscriptions')
+          .update({ vault_secret_id: vaultId })
+          .eq('id', sub.id)
+          .select()
+          .single();
+        if (updatedSub) finalSub = updatedSub;
+      } catch (err) {
+        // Cleanup the orphaned subscription if credential storage fails
+        await admin.from('calendar_subscriptions').delete().eq('id', sub.id);
+        throw err;
+      }
+>>>>>>> theirs
     }
 
     // Trigger first sync in background to avoid blocking the response.
