@@ -8,9 +8,14 @@ export function GlobalHeader() {
     return <header className="flex justify-between flex-1 w-full flex flex-col gap-2 items-cente">
         <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
             <div className="w-full flex justify-between items-center p-3 text-sm">
-                <h1 className="font-bold text-4xl">
-                    <Link href={"/"}>Newsticker</Link>
-                </h1>
+                <div className="flex items-center gap-8">
+                    <h1 className="font-bold text-4xl">
+                        <Link href={"/"}>Newsticker</Link>
+                    </h1>
+                    <div className="hidden md:flex items-center gap-4">
+                        <Link href="/calendar" className="hover:underline font-medium">Calendar</Link>
+                    </div>
+                </div>
                 <Clock/>
                 <div className="flex items-center gap-4">
                     {!hasEnvVars ? <EnvVarWarning/> : <HeaderAuth/>}

@@ -11,7 +11,7 @@ import {
     SidebarMenuItem, SidebarRail, SidebarSeparator,
     SidebarTrigger
 } from '@/components/ui/sidebar';
-import {ArrowLeftIcon, Calendar, FileTextIcon, Home, Instagram, UserPen} from "lucide-react";
+import {ArrowLeftIcon, Calendar, FileTextIcon, Home, Instagram, UserPen, Users} from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -29,12 +29,17 @@ const items = [
     {
         title: "User Management",
         url: "/settings/users",
-        icon: Calendar,
+        icon: Users,
     },
     {
         title: "Instagram Feeds",
         url: "/settings/instagram",
         icon: Instagram,
+    },
+    {
+        title: "Calendar Subscriptions",
+        url: "/settings/calendar",
+        icon: Calendar,
     },
     {
         title: "News Articles",

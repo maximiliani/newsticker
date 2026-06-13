@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { UpdateArticleData } from "@/types/article";
+import { markLocallyModified } from "@/features/calendar/services/article-link-service";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * GET /api/features/newspaper/articles/:id
@@ -57,6 +59,17 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Mark as locally modified if it's a calendar event
+    try {
+      const admin = createAdminClient();
+      const { data: userAuth } = await supabase.auth.getUser();
+      const userDisplayName = userAuth.user?.user_metadata?.full_name || "User";
+      await markLocallyModified(id, userDisplayName, admin);
+    } catch (e) {
+      console.warn("Failed to mark article as locally modified:", e);
+    }
+
     return NextResponse.json(data);
   } catch (e: any) {
     const msg = e?.message || "Unexpected error";
