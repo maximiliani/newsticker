@@ -18,7 +18,7 @@ import { isSafeUrl, escapeHtml } from '@/lib/security';
  * Fetches the calendar feed (iCal or CalDAV), parses events, and updates 
 >>>>>>> theirs
  * the corresponding articles in the database.
- * 
+ *
  * @param subscriptionId UUID of the subscription to sync
  * @param admin Supabase admin client
  * @returns Result of the synchronization process
@@ -356,8 +356,8 @@ export async function syncAllForUser(userId: string, admin: SupabaseClient): Pro
     subscriptionId: 'unknown', 
     status: 'error', 
     added: 0, 
-    updated: 0, 
-    deleted: 0, 
+    updated: 0,
+    deleted: 0,
     error: String((r as PromiseRejectedResult).reason) 
 >>>>>>> theirs
   });

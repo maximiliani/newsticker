@@ -5,7 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
  * 
 <<<<<<< ours
 =======
- * Note: These credentials pass through the application layer (Node.js) because 
+ * Note: These credentials pass through the application layer (Node.js) because
  * the CalDAV integration uses the `tsdav` JavaScript library, which requires 
  * plaintext access to credentials to perform authentication. This differs from 
  * the Instagram integration which uses Postgres-native HTTP requests.
