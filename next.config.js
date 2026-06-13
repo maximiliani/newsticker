@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  output: 'standalone',
   images: {
     remotePatterns: [{
       protocol: 'https',
@@ -8,6 +8,12 @@ const nextConfig = {
     }, {
         protocol: 'http',
         hostname: 'localhost',
+    }, {
+        protocol: 'http',
+        hostname: 'kong',
+    }, {
+        protocol: 'http',
+        hostname: 'storage',
     }],
   },
   reactStrictMode: true,

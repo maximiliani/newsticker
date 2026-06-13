@@ -1,6 +1,9 @@
 import { createDAVClient } from 'tsdav';
 import { CalendarAuthType, DiscoveredCalendar } from '@/types/calendar';
+<<<<<<< ours
+=======
 import { isSafeUrl } from '@/lib/security';
+>>>>>>> theirs
 
 /**
  * Discovers available calendars on a CalDAV server.
@@ -27,6 +30,8 @@ export async function discoverCalendars(
 }
 
 /**
+<<<<<<< ours
+=======
  * Normalizes a URL for comparison by removing trailing slashes and ensuring consistent format.
  */
 function normalizeUrl(url: string, baseUrl?: string): string {
@@ -43,6 +48,7 @@ function normalizeUrl(url: string, baseUrl?: string): string {
 }
 
 /**
+>>>>>>> theirs
  * Fetches iCal data for all events in a specific CalDAV calendar.
  * 
  * @param serverUrl Base URL of the CalDAV server
@@ -62,12 +68,20 @@ export async function fetchCalendarICalTexts(
   const client = await buildClient(serverUrl, authType, credentials);
   
   const calendars = await client.fetchCalendars();
+<<<<<<< ours
+  const calendar = calendars.find(c => 
+    c.url === calendarUrl || 
+    calendarUrl.endsWith(c.url) || 
+    c.url.endsWith(calendarUrl)
+  );
+=======
   const normalizedTarget = normalizeUrl(calendarUrl, serverUrl);
   
   const calendar = calendars.find(c => {
     const normalizedCal = normalizeUrl(c.url, serverUrl);
     return normalizedCal === normalizedTarget;
   });
+>>>>>>> theirs
   
   if (!calendar) {
     throw new Error(`Calendar not found at ${calendarUrl}. Discovered calendars: ${calendars.map(c => c.url).join(', ')}`);
@@ -95,10 +109,13 @@ async function buildClient(
   authType: CalendarAuthType,
   credentials: { username?: string; secret: string }
 ) {
+<<<<<<< ours
+=======
   if (!isSafeUrl(url)) {
     throw new Error(`Forbidden: Unsafe CalDAV URL ${url}`);
   }
 
+>>>>>>> theirs
   return await createDAVClient({
     serverUrl: url,
     credentials: {

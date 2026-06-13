@@ -3,11 +3,14 @@ import { SupabaseClient } from '@supabase/supabase-js';
 /**
  * Stores calendar credentials in the Supabase Vault.
  * 
- * Note: These credentials pass through the application layer (Node.js) because 
+<<<<<<< ours
+=======
+ * Note: These credentials pass through the application layer (Node.js) because
  * the CalDAV integration uses the `tsdav` JavaScript library, which requires 
  * plaintext access to credentials to perform authentication. This differs from 
  * the Instagram integration which uses Postgres-native HTTP requests.
  * 
+>>>>>>> theirs
  * @param admin Supabase admin client (requires service role)
  * @param subscriptionId The ID of the calendar subscription
  * @param username Optional username for the subscription
