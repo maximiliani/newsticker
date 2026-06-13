@@ -2,15 +2,12 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Stores calendar credentials in the Supabase Vault.
- * 
-<<<<<<< ours
-=======
+ *
  * Note: These credentials pass through the application layer (Node.js) because
- * the CalDAV integration uses the `tsdav` JavaScript library, which requires 
- * plaintext access to credentials to perform authentication. This differs from 
+ * the CalDAV integration uses the `tsdav` JavaScript library, which requires
+ * plaintext access to credentials to perform authentication. This differs from
  * the Instagram integration which uses Postgres-native HTTP requests.
- * 
->>>>>>> theirs
+ *
  * @param admin Supabase admin client (requires service role)
  * @param subscriptionId The ID of the calendar subscription
  * @param username Optional username for the subscription
@@ -25,7 +22,7 @@ export async function storeCredentials(
 ): Promise<string> {
   const credentials = JSON.stringify({ username, secret });
   const secretName = `calendar-sub-${subscriptionId}`;
-  
+
   const { error } = await admin.rpc('upsert_vault_secret', {
     p_secret_name: secretName,
     p_secret_value: credentials,
@@ -54,7 +51,7 @@ export async function storeCredentials(
 
 /**
  * Reads and decrypts credentials from the Supabase Vault.
- * 
+ *
  * @param admin Supabase admin client
  * @param vaultId The ID of the secret in the vault
  * @returns Object containing the decrypted username and secret
@@ -72,7 +69,7 @@ export async function readCredentials(
 
   if (error) throw error;
   if (!data) throw new Error(`Credential not found for vault ID: ${vaultId}`);
-  
+
   try {
     return JSON.parse(data.decrypted_secret);
   } catch (e) {
@@ -83,7 +80,7 @@ export async function readCredentials(
 
 /**
  * Deletes credentials from the Supabase Vault.
- * 
+ *
  * @param admin Supabase admin client
  * @param vaultId The ID of the secret to delete
  */

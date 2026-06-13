@@ -79,7 +79,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {Placeholder} from "@tiptap/extension-placeholder";
-import {Code} from "@tiptap/extension-code";
 import {CodeIcon} from "lucide-react";
 import BlockquoteButton from "@/components/tiptap-ui/blockquote-button/blockquote-button";
 import {CodeBlockButton} from "@/components/tiptap-ui/code-block-button";
@@ -217,23 +216,28 @@ export function RichTextEditor({
   const { toast } = useToast();
   const supabase = createClient();
 
-  // Update htmlCode when content prop changes
+  // Update htmlCode when the content prop changes externally (e.g., form reset)
   React.useEffect(() => {
-    if (content !== htmlCode) {
-      setHtmlCode(content);
-    }
-  }, [content, htmlCode]);
+    setHtmlCode(content);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
 
-  // Handle code editor changes
+  // When switching back to WYSIWYG, push the code editor's HTML into Tiptap
+  React.useEffect(() => {
+    if (editorMode === 'wysiwyg' && editor) {
+      editor.commands.setContent(htmlCode);
+    }
+    // Only run when editorMode changes, not on every htmlCode change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorMode]);
+
+  // Handle code editor changes — update local state and notify parent only;
+  // do NOT call editor.setContent here because Tiptap would normalize the HTML
+  // and overwrite the textarea mid-typing.
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newHtml = e.target.value;
     setHtmlCode(newHtml);
     onChange(newHtml);
-
-    // If editor exists, update its content too
-    if (editor && editorMode === 'code') {
-      editor.commands.setContent(newHtml);
-    }
   };
 
   // Function to handle image upload for the ImageUploadNode extension

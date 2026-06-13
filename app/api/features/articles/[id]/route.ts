@@ -62,12 +62,6 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
     // Mark as locally modified if it's a calendar event
     try {
-<<<<<<< ours
-      const admin = createAdminClient();
-      const { data: userAuth } = await supabase.auth.getUser();
-      const userDisplayName = userAuth.user?.user_metadata?.full_name || "User";
-      await markLocallyModified(id, userDisplayName, admin);
-=======
       // First check with the user's client if this article is linked to a calendar event.
       // This avoids creating an admin client and unnecessary DB round-trips for regular articles.
       const { data: hasLink } = await supabase
@@ -82,7 +76,6 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         const userDisplayName = userAuth.user?.user_metadata?.full_name || "User";
         await markLocallyModified(id, userDisplayName, admin);
       }
->>>>>>> theirs
     } catch (e) {
       console.warn("Failed to mark article as locally modified:", e);
     }
