@@ -12,50 +12,10 @@ import {
     SidebarMenuItem, SidebarRail, SidebarSeparator,
     SidebarTrigger
 } from '@/components/ui/sidebar';
-<<<<<<< ours
 import {ArrowLeftIcon, Calendar, Cpu, FileTextIcon, Home, Instagram, Monitor, UserPen, Users} from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
-=======
-import {ArrowLeftIcon, Calendar, FileTextIcon, Home, Instagram, UserPen, Users} from "lucide-react";
-
-export const dynamic = 'force-dynamic';
-
-const items = [
-    {
-        title: "Settings Dashboard",
-        url: "/settings",
-        icon: Home,
-    },
-    {
-        title: "Profile",
-        url: "/settings/profile",
-        icon: UserPen,
-    },
-    {
-        title: "User Management",
-        url: "/settings/users",
-        icon: Users,
-    },
-    {
-        title: "Instagram Feeds",
-        url: "/settings/instagram",
-        icon: Instagram,
-    },
-    {
-        title: "Calendar Subscriptions",
-        url: "/settings/calendar",
-        icon: Calendar,
-    },
-    {
-        title: "News Articles",
-        url: "/settings/articles",
-        icon: FileTextIcon,
-    },
-]
-
->>>>>>> theirs
 interface SettingsLayoutProps {
     children: ReactNode;
 }

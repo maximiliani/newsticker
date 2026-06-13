@@ -13,10 +13,6 @@ export function GlobalHeader() {
                         <Link href={"/"}>Newsticker</Link>
                     </h1>
                     <div className="hidden md:flex items-center gap-4">
-<<<<<<< ours
-                        <Link href="/calendar" className="hover:underline font-medium">Calendar</Link>
-=======
->>>>>>> theirs
                     </div>
                 </div>
                 <Clock/>

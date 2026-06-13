@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-<<<<<<< ours
-import { deleteCredentials } from "@/features/calendar/services/credential-service";
-=======
 import { storeCredentials, readCredentials, deleteCredentials } from "@/features/calendar/services/credential-service";
 
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -65,16 +62,11 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     return NextResponse.json({ error: e.message || "Failed to update subscription" }, { status: 500 });
   }
 }
->>>>>>> theirs
 
 export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
-<<<<<<< ours
-    const { supabase, userId } = await requireAuth();
-=======
     const { supabase, userId, isAdmin } = await requireAuth();
->>>>>>> theirs
 
     // Check ownership
     const { data: sub, error: subError } = await supabase
@@ -84,14 +76,10 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       .single();
 
     if (subError) return NextResponse.json({ error: subError.message }, { status: 404 });
-<<<<<<< ours
-    if (sub.user_id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-=======
     if (!isAdmin && sub.user_id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
->>>>>>> theirs
 
     const admin = createAdminClient();
-    
+
     // Delete credentials from Vault if any
     if (sub.vault_secret_id) {
       await deleteCredentials(admin, sub.vault_secret_id);
@@ -102,7 +90,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
       .from('calendar_events')
       .select('article_id')
       .eq('subscription_id', id);
-      
+
     if (events) {
       const articleIds = (events.map(e => e.article_id).filter(Boolean) as string[]);
       if (articleIds.length > 0) {
@@ -113,27 +101,16 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     // Delete from storage
     const { data: folders } = await admin.storage
       .from('calendar-attachments')
-<<<<<<< ours
-      .list(`${userId}/${id}`);
-=======
       .list(`${sub.user_id}/${id}`);
->>>>>>> theirs
-      
+
     if (folders && folders.length > 0) {
       for (const folder of folders) {
         const { data: files } = await admin.storage
           .from('calendar-attachments')
-<<<<<<< ours
-          .list(`${userId}/${id}/${folder.name}`);
-        
-        if (files && files.length > 0) {
-          const filesToRemove = files.map(f => `${userId}/${id}/${folder.name}/${f.name}`);
-=======
           .list(`${sub.user_id}/${id}/${folder.name}`);
-        
+
         if (files && files.length > 0) {
           const filesToRemove = files.map(f => `${sub.user_id}/${id}/${folder.name}/${f.name}`);
->>>>>>> theirs
           await admin.storage.from('calendar-attachments').remove(filesToRemove);
         }
       }

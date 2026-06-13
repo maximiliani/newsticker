@@ -8,20 +8,13 @@ export function isSafeUrl(url: string): boolean {
     const parsed = new URL(url);
     if (!['http:', 'https:'].includes(parsed.protocol)) return false;
 
-<<<<<<< ours
-    const hostname = parsed.hostname.toLowerCase();
-    
-    // Block localhost and loopback
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return false;
-=======
     const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-    
+
     // Block localhost and loopback
     if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '0.0.0.0') return false;
 
     // IPv4-mapped IPv6
     if (/^::ffff:(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|127\.)/.test(hostname)) return false;
->>>>>>> theirs
 
     // Check for private IP ranges (IPv4)
     // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16

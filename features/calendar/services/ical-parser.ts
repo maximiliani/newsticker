@@ -17,11 +17,7 @@ export function normalizeUrl(url: string): string {
  */
 export async function fetchPublicICal(url: string, etag?: string): Promise<{ icalText?: string; newEtag?: string; notModified: boolean }> {
   const normalizedUrl = normalizeUrl(url);
-<<<<<<< ours
 
-=======
-  
->>>>>>> theirs
   if (!isSafeUrl(normalizedUrl)) {
     throw new Error(`Forbidden: Unsafe iCal URL ${normalizedUrl}`);
   }
@@ -48,8 +44,6 @@ export async function fetchPublicICal(url: string, etag?: string): Promise<{ ica
 }
 
 /**
-<<<<<<< ours
-=======
  * Parses calendar-level metadata like name and color.
  */
 export function parseCalendarMetadata(text: string): { name?: string; color?: string } {
@@ -61,7 +55,6 @@ export function parseCalendarMetadata(text: string): { name?: string; color?: st
 }
 
 /**
->>>>>>> theirs
  * Parses iCal text and returns an array of events within the specified window.
  * Handles recurring events by expanding them into individual occurrences.
  */
@@ -76,15 +69,9 @@ export function parseICalText(text: string, windowStart: Date, windowEnd: Date):
 
   vevents.forEach(vevent => {
     const event = new ICAL.Event(vevent);
-<<<<<<< ours
 
     if (event.isRecurring()) {
-      const expansion = event.iterator(event.startDate);
-=======
-    
-    if (event.isRecurring()) {
       const expansion = event.iterator(iCalWindowStart);
->>>>>>> theirs
       let next;
       // Protection against infinite loops for malformed RRULEs
       let count = 0;
@@ -113,26 +100,7 @@ export function parseICalText(text: string, windowStart: Date, windowEnd: Date):
 function mapICALEventToParsedEvent(vevent: ICAL.Component, dtstart: ICAL.Time, dtend: ICAL.Time, isOccurrence: boolean, baseUid?: string): ParsedCalendarEvent {
   const event = new ICAL.Event(vevent);
   const uid = baseUid || event.uid;
-<<<<<<< ours
 
-  const attachments: CalendarAttachment[] = [];
-  const attachProps = vevent.getAllProperties('attach');
-  attachProps.forEach(prop => {
-    const value = prop.getFirstValue();
-    const filenameParam = prop.getParameter('filename');
-    const fmttypeParam = prop.getParameter('fmttype');
-
-    const filenameValue = Array.isArray(filenameParam) ? filenameParam[0] : (typeof filenameParam === 'string' ? filenameParam : null);
-    const fmttypeValue = Array.isArray(fmttypeParam) ? fmttypeParam[0] : (typeof fmttypeParam === 'string' ? fmttypeParam : undefined);
-
-    const filename = filenameValue || (typeof value === 'string' ? value.split('/').pop() : 'attachment') || 'attachment';
-    attachments.push({
-      url: typeof value === 'string' ? value : '',
-      filename,
-      mimeType: fmttypeValue as string | undefined
-    });
-=======
-  
   const attachments: CalendarAttachment[] = [];
   const attachProps = vevent.getAllProperties('attach');
   attachProps.forEach(prop => {
@@ -149,12 +117,12 @@ function mapICALEventToParsedEvent(vevent: ICAL.Component, dtstart: ICAL.Time, d
 
     const filenameParam = prop.getParameter('x-apple-filename') || prop.getParameter('filename');
     const fmttypeParam = prop.getParameter('fmttype');
-    
+
     const filenameValue = Array.isArray(filenameParam) ? filenameParam[0] : (typeof filenameParam === 'string' ? filenameParam : null);
     const fmttypeValue = Array.isArray(fmttypeParam) ? fmttypeParam[0] : (typeof fmttypeParam === 'string' ? fmttypeParam : undefined);
 
     const filename = filenameValue || url.split('/').pop() || 'attachment';
-    
+
     if (isSafeUrl(url)) {
       attachments.push({
         url,
@@ -162,7 +130,6 @@ function mapICALEventToParsedEvent(vevent: ICAL.Component, dtstart: ICAL.Time, d
         mimeType: fmttypeValue as string | undefined
       });
     }
->>>>>>> theirs
   });
 
   return {
