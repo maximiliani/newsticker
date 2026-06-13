@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api/auth";
 import { UpdateArticleData } from "@/types/article";
+import { markLocallyModified } from "@/features/calendar/services/article-link-service";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * GET /api/features/newspaper/articles/:id
@@ -57,6 +59,27 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Mark as locally modified if it's a calendar event
+    try {
+      // First check with the user's client if this article is linked to a calendar event.
+      // This avoids creating an admin client and unnecessary DB round-trips for regular articles.
+      const { data: hasLink } = await supabase
+        .from("calendar_events")
+        .select("id")
+        .eq("article_id", id)
+        .maybeSingle();
+
+      if (hasLink) {
+        const admin = createAdminClient();
+        const { data: userAuth } = await supabase.auth.getUser();
+        const userDisplayName = userAuth.user?.user_metadata?.full_name || "User";
+        await markLocallyModified(id, userDisplayName, admin);
+      }
+    } catch (e) {
+      console.warn("Failed to mark article as locally modified:", e);
+    }
+
     return NextResponse.json(data);
   } catch (e: any) {
     const msg = e?.message || "Unexpected error";
