@@ -1,5 +1,6 @@
 import {ReactNode} from 'react';
 import {redirect} from 'next/navigation';
+import {headers} from 'next/headers';
 import {createClient} from '@/lib/supabase/server';
 import {
     Sidebar,
@@ -11,37 +12,9 @@ import {
     SidebarMenuItem, SidebarRail, SidebarSeparator,
     SidebarTrigger
 } from '@/components/ui/sidebar';
-import {ArrowLeftIcon, Calendar, FileTextIcon, Home, Instagram, UserPen} from "lucide-react";
+import {ArrowLeftIcon, Calendar, FileTextIcon, Home, Instagram, UserPen, Cpu, Monitor} from "lucide-react";
 
 export const dynamic = 'force-dynamic';
-
-const items = [
-    {
-        title: "Settings Dashboard",
-        url: "/settings",
-        icon: Home,
-    },
-    {
-        title: "Profile",
-        url: "/settings/profile",
-        icon: UserPen,
-    },
-    {
-        title: "User Management",
-        url: "/settings/users",
-        icon: Calendar,
-    },
-    {
-        title: "Instagram Feeds",
-        url: "/settings/instagram",
-        icon: Instagram,
-    },
-    {
-        title: "News Articles",
-        url: "/settings/articles",
-        icon: FileTextIcon,
-    },
-]
 
 interface SettingsLayoutProps {
     children: ReactNode;
@@ -53,6 +26,56 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
 
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) redirect('/login');
+
+    const { data: isAdmin } = await supabase.rpc("check_is_admin");
+
+    const headerList = await headers();
+    const host = headerList.get('host') || 'localhost:3000';
+    const [hostname] = host.split(':');
+    const anthiasUrl = `http://${hostname}:9000`;
+
+    const isKiosk = process.env.NEXT_PUBLIC_KIOSK_MODE === 'true';
+
+    const sidebarItems = [
+        {
+            title: "Settings Dashboard",
+            url: "/settings",
+            icon: Home,
+        },
+        {
+            title: "Profile",
+            url: "/settings/profile",
+            icon: UserPen,
+        },
+        {
+            title: "User Management",
+            url: "/settings/users",
+            icon: Calendar,
+        },
+        {
+            title: "Instagram Feeds",
+            url: "/settings/instagram",
+            icon: Instagram,
+        },
+        {
+            title: "News Articles",
+            url: "/settings/articles",
+            icon: FileTextIcon,
+        },
+    ];
+
+    if (isKiosk && isAdmin) {
+        sidebarItems.push({
+            title: "Device",
+            url: "/settings/device",
+            icon: Cpu,
+        });
+        sidebarItems.push({
+            title: "Display Manager",
+            url: anthiasUrl,
+            icon: Monitor,
+        });
+    }
 
     return (
         <div className="flex-1 w-full flex flex-col md:flex-row">
@@ -70,10 +93,10 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
                     <SidebarGroup>
                         <SidebarGroupContent>
                             <SidebarMenu>
-                                {items.map((item) => (
+                                {sidebarItems.map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton asChild>
-                                            <a href={item.url}>
+                                            <a href={item.url} target={item.url.startsWith('http') ? "_blank" : undefined} rel={item.url.startsWith('http') ? "noopener noreferrer" : undefined}>
                                                 <item.icon/>
                                                 <span>{item.title}</span>
                                             </a>

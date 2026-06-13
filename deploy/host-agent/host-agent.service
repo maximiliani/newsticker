@@ -1,0 +1,15 @@
+[Unit]
+Description=Newsticker Host Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/newsticker/deploy/host-agent
+EnvironmentFile=/opt/newsticker/.env
+ExecStart=/usr/bin/python3 /opt/newsticker/deploy/host-agent/host-agent.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
