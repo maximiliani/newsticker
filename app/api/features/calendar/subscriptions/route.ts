@@ -26,11 +26,12 @@ export async function GET() {
     }
 
     const { data, error } = await query;
+    console.log(data);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: e }, { status: 500 });
   }
 }
 
