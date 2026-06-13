@@ -1,6 +1,6 @@
 "use client";
 
-import { InstagramIcon, NewspaperIcon, UserPen, UsersIcon } from "lucide-react";
+import { InstagramIcon, NewspaperIcon, UserPen, UsersIcon, Cpu } from "lucide-react";
 import {AdminCard} from "@/features/admin/components/admin_card_component";
 
 const cardData = [
@@ -39,9 +39,23 @@ const cardData = [
 ];
 
 export function AdminDashboardCards() {
+    const isKiosk = process.env.NEXT_PUBLIC_KIOSK_MODE === 'true';
+
+    const displayCards = [...cardData];
+    if (isKiosk) {
+        displayCards.push({
+            icon: Cpu,
+            title: "Device Management",
+            description: "Monitor and control this device",
+            content: "Update hostname, monitor system health (CPU, RAM, Disk), and perform power actions like reboot or shutdown.",
+            buttonText: "Manage Device",
+            href: "/settings/device"
+        });
+    }
+
     return (
         <div className="grid gap-8 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr max-w-full overflow-hidden">
-            {cardData.map((card, index) => (
+            {displayCards.map((card, index) => (
                 <AdminCard
                     key={index}
                     icon={card.icon}
