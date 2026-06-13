@@ -36,8 +36,9 @@ export function SubscriptionManager() {
       if (Array.isArray(data)) {
         setSubscriptions(data);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to fetch subscriptions:', e);
+      alert(e.message || 'Failed to fetch subscriptions');
     } finally {
       setIsLoading(false);
     }
@@ -48,8 +49,9 @@ export function SubscriptionManager() {
       setSyncingId(id);
       await fetch(`/api/features/calendar/subscriptions/${id}/sync`, { method: 'POST' });
       await fetchSubscriptions();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to sync:', e);
+      alert(e.message || 'Failed to sync subscription');
     } finally {
       setSyncingId(null);
     }
@@ -60,8 +62,9 @@ export function SubscriptionManager() {
       setDeletingId(id);
       await fetch(`/api/features/calendar/subscriptions/${id}`, { method: 'DELETE' });
       setSubscriptions(subs => subs.filter(s => s.id !== id));
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to delete:', e);
+      alert(e.message || 'Failed to delete subscription');
     } finally {
       setDeletingId(null);
     }

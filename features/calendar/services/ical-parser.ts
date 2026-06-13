@@ -1,5 +1,6 @@
 import ICAL from 'ical.js';
 import { ParsedCalendarEvent, CalendarAttachment } from '@/types/calendar';
+import { isSafeUrl } from '@/lib/security';
 
 /**
  * Normalizes webcal:// URLs to https://.
@@ -16,6 +17,11 @@ export function normalizeUrl(url: string): string {
  */
 export async function fetchPublicICal(url: string, etag?: string): Promise<{ icalText?: string; newEtag?: string; notModified: boolean }> {
   const normalizedUrl = normalizeUrl(url);
+  
+  if (!isSafeUrl(normalizedUrl)) {
+    throw new Error(`Forbidden: Unsafe iCal URL ${normalizedUrl}`);
+  }
+
   const headers: Record<string, string> = {};
   if (etag) {
     headers['If-None-Match'] = etag;
@@ -62,7 +68,7 @@ export function parseICalText(text: string, windowStart: Date, windowEnd: Date):
         count++;
         if (next.compare(iCalWindowStart) >= 0) {
             const occurrence = event.getOccurrenceDetails(next);
-            events.push(mapICALEventToParsedEvent(occurrence.item.component, next, occurrence.endDate, true, event.uid));
+            events.push(mapICALEventToParsedEvent(occurrence.item.component, occurrence.startDate, occurrence.endDate, true, event.uid));
         }
       }
     } else {

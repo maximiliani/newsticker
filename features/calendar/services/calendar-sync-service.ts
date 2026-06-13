@@ -4,7 +4,7 @@ import { SyncResult, CalendarSubscription, ParsedCalendarEvent } from '@/types/c
 import { fetchPublicICal, parseICalText } from './ical-parser';
 import { fetchCalendarICalTexts } from './caldav-client';
 import { readCredentials } from './credential-service';
-import { downloadAndStoreAttachments } from './attachment-service';
+import { isSafeUrl, escapeHtml } from '@/lib/security';
 
 /**
  * Synchronizes a single calendar subscription.
@@ -111,6 +111,7 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
         description: event.description.substring(0, 200),
         content: content.html,
         html_content: content.html,
+        json_content: content.json,
         custom_author_name: content.author,
         visibility_from: content.visibilityFrom.toISOString(),
         visibility_to: content.visibilityTo.toISOString(),
@@ -173,19 +174,21 @@ function computeSourceHash(event: ParsedCalendarEvent): string {
 }
 
 /**
- * Generates the HTML content and metadata for an article based on a calendar event.
+ * Generates the HTML and JSON content and metadata for an article based on a calendar event.
  */
 function generateArticleContent(event: ParsedCalendarEvent, subscription: CalendarSubscription, userName: string, attachmentUrls: string[]) {
   const author = escapeHtml(`${subscription.name} by ${userName}`);
   
   const dateStr = event.dtstart.toLocaleString();
+  
+  // Build HTML
   let html = `<p><strong>Event:</strong> ${escapeHtml(event.summary)}</p>`;
   html += `<p><strong>Time:</strong> ${dateStr}</p>`;
   if (event.location) html += `<p><strong>Location:</strong> ${escapeHtml(event.location)}</p>`;
   if (event.description) html += `<p>${escapeHtml(event.description).replace(/\n/g, '<br>')}</p>`;
   
   if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
-    html += `<p><a href="${event.url}" target="_blank">Event Link</a></p>`;
+    html += `<p><a href="${escapeHtml(event.url)}" target="_blank">Event Link</a></p>`;
   }
   
   if (attachmentUrls.length > 0) {
@@ -197,13 +200,96 @@ function generateArticleContent(event: ParsedCalendarEvent, subscription: Calend
     html += '</ul>';
   }
 
+  // Build a simple Tiptap-compatible JSON structure
+  const jsonContent: any = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', marks: [{ type: 'bold' }], text: 'Event: ' },
+          { type: 'text', text: event.summary }
+        ]
+      },
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', marks: [{ type: 'bold' }], text: 'Time: ' },
+          { type: 'text', text: dateStr }
+        ]
+      }
+    ]
+  };
+
+  if (event.location) {
+    jsonContent.content.push({
+      type: 'paragraph',
+      content: [
+        { type: 'text', marks: [{ type: 'bold' }], text: 'Location: ' },
+        { type: 'text', text: event.location }
+      ]
+    });
+  }
+
+  if (event.description) {
+    const lines = event.description.split('\n');
+    lines.forEach(line => {
+      if (line.trim()) {
+        jsonContent.content.push({
+          type: 'paragraph',
+          content: [{ type: 'text', text: line }]
+        });
+      }
+    });
+  }
+
+  if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
+     jsonContent.content.push({
+      type: 'paragraph',
+      content: [
+        { 
+          type: 'text', 
+          marks: [{ type: 'link', attrs: { href: event.url, target: '_blank' } }], 
+          text: 'Event Link' 
+        }
+      ]
+    });
+  }
+
+  if (attachmentUrls.length > 0) {
+    jsonContent.content.push({
+      type: 'paragraph',
+      content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Attachments:' }]
+    });
+    
+    const listContent = attachmentUrls.map((url, i) => {
+      const filename = event.attachments[i]?.filename || `Attachment ${i+1}`;
+      return {
+        type: 'listItem',
+        content: [{
+          type: 'paragraph',
+          content: [{
+            type: 'text',
+            marks: [{ type: 'link', attrs: { href: url, target: '_blank' } }],
+            text: filename
+          }]
+        }]
+      };
+    });
+
+    jsonContent.content.push({
+      type: 'bulletList',
+      content: listContent
+    });
+  }
+
   const visibilityFrom = new Date(event.dtstart);
   visibilityFrom.setDate(visibilityFrom.getDate() - subscription.visibility_days_before);
   
   const visibilityTo = new Date(event.dtstart);
   visibilityTo.setDate(visibilityTo.getDate() + subscription.visibility_days_after);
 
-  return { html, author, visibilityFrom, visibilityTo };
+  return { html, json: jsonContent, author, visibilityFrom, visibilityTo };
 }
 
 /**
@@ -253,14 +339,3 @@ export async function syncAllSubscriptions(admin: SupabaseClient): Promise<SyncR
   });
 }
 
-/**
- * Escapes HTML special characters to prevent XSS attacks.
- */
-function escapeHtml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
