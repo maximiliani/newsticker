@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/utils";
 import { PencilIcon, TrashIcon, EyeIcon } from "lucide-react";
 import { Article } from "@/types/article";
 import { User } from "@supabase/supabase-js";
+import { formatDate } from "@/lib/utils/date";
 
 interface ArticleTableProps {
   articles: Article[];
