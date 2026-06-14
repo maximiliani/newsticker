@@ -183,6 +183,11 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
   }
 }
 
+function computeSourceHash(event: ParsedCalendarEvent): string {
+  const content = `${event.summary}|${event.description}|${event.dtstart.getTime()}|${event.dtend.getTime()}|${event.location}|${event.url}`;
+  return createHash('sha256').update(content).digest('hex');
+}
+
 function getAttachmentType(filename: string, mimeType?: string): 'image' | 'video' | 'audio' | 'pdf' | 'other' {
   if (mimeType) {
     const mime = mimeType.toLowerCase();
