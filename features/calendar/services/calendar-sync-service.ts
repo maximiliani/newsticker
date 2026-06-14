@@ -94,7 +94,7 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
       // Skip if the event hasn't changed since the last sync
       if (existing && existing.source_hash === sourceHash) continue;
 
-      let processedAttachments: { url: string; filename: string; path: string }[] = [];
+      let processedAttachments: { url: string; filename: string; path: string; mimeType?: string }[] = [];
 
       try {
         // Download attachments
@@ -183,9 +183,28 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
   }
 }
 
-function computeSourceHash(event: ParsedCalendarEvent): string {
-  const content = `${event.summary}|${event.description}|${event.dtstart.getTime()}|${event.dtend.getTime()}|${event.location}|${event.url}`;
-  return createHash('sha256').update(content).digest('hex');
+function getAttachmentType(filename: string, mimeType?: string): 'image' | 'video' | 'audio' | 'pdf' | 'other' {
+  if (mimeType) {
+    const mime = mimeType.toLowerCase();
+    if (mime.startsWith('image/')) return 'image';
+    if (mime.startsWith('video/')) return 'video';
+    if (mime.startsWith('audio/')) return 'audio';
+    if (mime === 'application/pdf') return 'pdf';
+  }
+
+  const ext = filename.split('.').pop()?.toLowerCase();
+  if (!ext) return 'other';
+
+  const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp', 'ico'];
+  const videoExts = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'flv', 'wmv'];
+  const audioExts = ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac', 'wma'];
+
+  if (imageExts.includes(ext)) return 'image';
+  if (videoExts.includes(ext)) return 'video';
+  if (audioExts.includes(ext)) return 'audio';
+  if (ext === 'pdf') return 'pdf';
+
+  return 'other';
 }
 
 /**
@@ -195,7 +214,7 @@ function generateArticleContent(
   event: ParsedCalendarEvent,
   subscription: CalendarSubscription,
   userName: string,
-  attachments: { url: string; filename: string }[]
+  attachments: { url: string; filename: string; mimeType?: string }[]
 ) {
   const author = escapeHtml(`${subscription.name} by ${userName}`);
 
@@ -207,6 +226,7 @@ function generateArticleContent(
   if (event.location) {
     const osmUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(event.location)}`;
     html += `<p><strong>Location:</strong> <a href="${osmUrl}" target="_blank"><strong>${escapeHtml(event.location)}</strong></a></p>`;
+
   }
   if (event.description) html += `<p>${escapeHtml(event.description).replace(/\n/g, '<br>')}</p>`;
 
@@ -250,12 +270,7 @@ function generateArticleContent(
       content: [
         { type: 'text', marks: [{ type: 'bold' }], text: 'Location: ' },
         {
-          type: 'text',
-          marks: [
-            { type: 'bold' },
-            { type: 'link', attrs: { href: osmUrl, target: '_blank' } }
-          ],
-          text: event.location
+             content: `<iframe width="425" height="350" src="https://www.openstreetmap.org/export/embed.html?query=${encodeURIComponent(event.location)}&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/><small>`
         }
       ]
     });
@@ -287,30 +302,42 @@ function generateArticleContent(
   }
 
   if (attachments.length > 0) {
-    jsonContent.content.push({
-      type: 'paragraph',
-      content: [{ type: 'text', marks: [{ type: 'bold' }], text: 'Attachments:' }]
-    });
+    html += '<p><strong>Attachments:</strong></p>';
+    attachments.forEach((att) => {
+      const type = getAttachmentType(att.filename, att.mimeType);
+      const escapedFilename = escapeHtml(att.filename);
+      const escapedUrl = escapeHtml(att.url);
 
-    const listContent = attachments.map((att) => {
-      return {
-        type: 'listItem',
-        content: [{
-          type: 'paragraph',
-          content: [{
-            type: 'text',
-            marks: [{ type: 'link', attrs: { href: att.url, target: '_blank' } }],
-            text: att.filename
-          }]
-        }]
-      };
-    });
-
-    jsonContent.content.push({
-      type: 'bulletList',
-      content: listContent
+      if (type === 'image') {
+        html += `
+<div class="attachment-embed attachment-image" style="margin-bottom: 1.5rem;">
+  <p style="margin-bottom: 0.25rem;"><strong>Attachment (Image): <a href="${escapedUrl}" target="_blank">${escapedFilename}</a></strong></p>
+  <img src="${escapedUrl}" alt="${escapedFilename}" style="max-width: 100%; height: auto; border-radius: 8px; display: block; border: 1px solid #e2e8f0;" />
+</div>`;
+      } else if (type === 'video') {
+        html += `
+<div class="attachment-embed attachment-video" style="margin-bottom: 1.5rem;">
+  <p style="margin-bottom: 0.25rem;"><strong>Attachment (Video): <a href="${escapedUrl}" target="_blank">${escapedFilename}</a></strong></p>
+  <video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; display: block; border: 1px solid #e2e8f0;"></video>
+</div>`;
+      } else if (type === 'audio') {
+        html += `
+<div class="attachment-embed attachment-audio" style="margin-bottom: 1.5rem;">
+  <p style="margin-bottom: 0.25rem;"><strong>Attachment (Audio): <a href="${escapedUrl}" target="_blank">${escapedFilename}</a></strong></p>
+  <audio src="${escapedUrl}" controls style="width: 100%; max-width: 400px; display: block;"></audio>
+</div>`;
+      } else if (type === 'pdf') {
+        html += `
+<div class="attachment-embed attachment-pdf" style="margin-bottom: 1.5rem;">
+  <p style="margin-bottom: 0.25rem;"><strong>Attachment (PDF): <a href="${escapedUrl}" target="_blank">${escapedFilename}</a></strong></p>
+  <iframe src="${escapedUrl}" width="100%" height="500px" style="border: 1px solid #e2e8f0; border-radius: 8px;"></iframe>
+</div>`;
+      } else {
+        html += `<p style="margin-bottom: 0.5rem;">📄 <a href="${escapedUrl}" target="_blank"><strong>${escapedFilename}</strong></a></p>`;
+      }
     });
   }
+
 
   const visibilityFrom = new Date(event.dtstart);
   visibilityFrom.setDate(visibilityFrom.getDate() - subscription.visibility_days_before);
