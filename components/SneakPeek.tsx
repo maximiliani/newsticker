@@ -9,7 +9,7 @@ export async function SneakPeek() {
 
     const {data: events} = await supabase
         .from('calendar_events')
-        .select('id, event_start, articles(title)')
+        .select('id, event_start, articles(id, title)')
         .gte('event_start', now.toISOString())
         .lte('event_start', nextWeek.toISOString())
         .order('event_start', {ascending: true})

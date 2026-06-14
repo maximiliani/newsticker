@@ -20,17 +20,17 @@ export default function Home({searchParams}: { searchParams: Promise<{ from?: st
                             <ArticleFeed searchParams={searchParams}/>
                         </ResizablePanel>
                         <ResizableHandle withHandle/>
-                        <ResizablePanel defaultSize={40}>
+                        <ResizablePanel defaultSize={30}>
                             <div className="flex gap-2">
-                            <CalendarFilter/>
-                            <Separator orientation="vertical"/>
-                            <SneakPeek/>
+                                <CalendarFilter/>
+                                <Separator orientation="vertical"/>
+                                <SneakPeek/>
                             </div>
                         </ResizablePanel>
                     </ResizablePanelGroup>
                 </ResizablePanel>
 
-                <ResizableHandle/>
+                <ResizableHandle withHandle/>
 
                 <ResizablePanel
                     defaultSize={55}

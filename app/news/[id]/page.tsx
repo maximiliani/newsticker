@@ -118,7 +118,7 @@ export default async function ArticlePage({params}: ArticlePageProps) {
                 </div>
             </div>
 
-            <article className="space-y-6 rounded-xl shadow-sm border overflow-hidden">
+            <article className="space-y-6 rounded-xl shadow-sm border overflow-auto">
                 <header className="p-6 border-b">
                     {!isCurrentlyVisible && (
                         <Badge variant="outline"

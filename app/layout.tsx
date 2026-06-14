@@ -30,7 +30,7 @@ export default async function RootLayout({children}: Readonly<{ children: React.
 
     return (
         <html lang="en" className={geistSans.className} suppressHydrationWarning>
-        <body className="bg-background text-foreground overflow-y-auto">
+        <body className="bg-background text-foreground overflow-y-auto h-full">
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -38,7 +38,7 @@ export default async function RootLayout({children}: Readonly<{ children: React.
         >
             <SidebarProvider defaultOpen={defaultOpen}>
                 <TooltipProvider>
-                    <div className="flex flex-col w-full h-full">
+                    <div className="flex flex-col w-full">
                         <GlobalHeader/>
                         <div className="flex flex-col items-center overflow-auto">
                             {children}
