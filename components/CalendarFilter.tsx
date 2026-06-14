@@ -45,9 +45,9 @@ export function CalendarFilter() {
   };
 
   return (
-    <div className="p-4 bg-card rounded-lg border h-full overflow-hidden flex flex-col">
-      <h3 className="font-semibold mb-2">Filter by Date</h3>
-      <div className="flex-1 overflow-auto flex justify-center">
+    <div className="p-2 rounded-b-lg rounded-t-none h-full overflow-hidden flex flex-col justify-center">
+      {/*<h3 className="font-semibold mb-2">Filter by Date</h3>*/}
+      {/*<div className="flex-1 overflow-auto flex justify-center">*/}
           <Calendar
             mode="range"
             selected={range}
@@ -55,7 +55,7 @@ export function CalendarFilter() {
             showWeekNumber
             className="rounded-md border"
           />
-      </div>
+      {/*</div>*/}
     </div>
   );
 }

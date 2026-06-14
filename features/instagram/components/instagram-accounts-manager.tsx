@@ -3,7 +3,8 @@
 import {useState} from "react";
 import {useRouter} from "next/navigation";
 import Image from "next/image";
-import {Instagram, Loader2, Trash2} from "lucide-react";
+import {Loader2, Trash2} from "lucide-react";
+import {Instagram} from "@/components/icons/instagram-icon";
 import {Button} from "@/components/ui/button";
 import {
     AlertDialog,

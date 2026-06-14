@@ -19,7 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/app/actions";
 import { User } from "@supabase/supabase-js";
-import {Settings, LogOut, Moon, Sun, Eye, Laptop, Instagram, TextIcon, FileText, Users} from "lucide-react";
+import {Settings, LogOut, Moon, Sun, Eye, Laptop, TextIcon, FileText, Users} from "lucide-react";
+import {Instagram} from "@/components/icons/instagram-icon";
 import { ProfileSettingsDialog } from "@/components/user/profile-settings-dialog";
 import { ProfileViewDialog } from "@/components/user/profile-view-dialog";
 import { useTheme } from "next-themes";

@@ -1,6 +1,7 @@
 "use client";
 
-import {InstagramIcon, NewspaperIcon, UserPen, UsersIcon, Cpu, CalendarIcon} from "lucide-react";
+import {NewspaperIcon, UserPen, UsersIcon, Cpu, CalendarIcon} from "lucide-react";
+import {InstagramIcon} from "@/components/icons/instagram-icon";
 import {AdminCard} from "@/features/admin/components/admin_card_component";
 
 const cardData = [

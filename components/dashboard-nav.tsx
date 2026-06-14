@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {LucideIcon, HomeIcon, UsersIcon, InstagramIcon, NewspaperIcon, UserPen} from "lucide-react";
+import {LucideIcon, HomeIcon, UsersIcon, NewspaperIcon, UserPen} from "lucide-react";
+import {InstagramIcon} from "@/components/icons/instagram-icon";
 import { cn } from "@/lib/utils";
 
 // Map string identifiers to actual icon components

@@ -1,0 +1,31 @@
+/* Tailwind v4 Calendar Enhancements */
+
+/* Ensure calendar inside popover/card has transparent background */
+[data-slot="card-content"] .group\/calendar,
+[data-slot="popover-content"] .group\/calendar {
+  background-color: transparent;
+}
+
+/* RTL adjustments for calendar navigation */
+[dir="rtl"] .rdp-button_next > svg {
+  transform: rotate(180deg);
+}
+
+[dir="rtl"] .rdp-button_previous > svg {
+  transform: rotate(180deg);
+}
+
+/* Ensure day button range styling connects properly */
+[data-selected="true"] + [data-selected="true"] button {
+  border-radius: 0;
+}
+
+[data-selected="true"]:first-child button {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+[data-selected="true"]:last-child button {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}

@@ -12,7 +12,8 @@ import {
     SidebarMenuItem, SidebarRail, SidebarSeparator,
     SidebarTrigger
 } from '@/components/ui/sidebar';
-import {ArrowLeftIcon, Calendar, Cpu, FileTextIcon, Home, Instagram, Monitor, UserPen, Users} from "lucide-react";
+import {ArrowLeftIcon, Calendar, Cpu, FileTextIcon, Home, Monitor, UserPen, Users} from "lucide-react";
+import {Instagram} from "@/components/icons/instagram-icon";
 
 export const dynamic = 'force-dynamic';
 
