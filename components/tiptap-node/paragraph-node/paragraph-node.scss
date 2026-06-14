@@ -40,7 +40,7 @@
   // Selection styles
   &:not(.readonly):not(.ProseMirror-hideselection) {
     ::selection {
-      background-color: var(--tt-selection-color);
+      background-color: var(--tt-selection-color, rgba(147, 197, 253, 0.4));
     }
 
     .selection::selection {

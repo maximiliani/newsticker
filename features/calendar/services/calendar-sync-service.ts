@@ -231,7 +231,7 @@ function generateArticleContent(
   if (event.location) {
     const osmUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(event.location)}`;
     html += `<p><strong>Location:</strong> <a href="${osmUrl}" target="_blank"><strong>${escapeHtml(event.location)}</strong></a></p>`;
-
+    html += `<iframe width="425" height="350" src="https://www.openstreetmap.org/export/embed.html?query=${encodeURIComponent(event.location)}&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/>`
   }
   if (event.description) html += `<p>${escapeHtml(event.description).replace(/\n/g, '<br>')}</p>`;
 
@@ -275,7 +275,7 @@ function generateArticleContent(
       content: [
         { type: 'text', marks: [{ type: 'bold' }], text: 'Location: ' },
         {
-             content: `<iframe width="425" height="350" src="https://www.openstreetmap.org/export/embed.html?query=${encodeURIComponent(event.location)}&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/><small>`
+             content: `<iframe width="425" height="350" src="https://www.openstreetmap.org/export/embed.html?query=${encodeURIComponent(event.location)}&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/>`
         }
       ]
     });
@@ -316,25 +316,25 @@ function generateArticleContent(
       if (type === 'image') {
         html += `
 <div class="attachment-embed attachment-image" style="margin-bottom: 1.5rem;">
-  <p style="margin-bottom: 0.25rem;"><strong>Attachment (Image): <a href="${escapedUrl}" target="_blank">${escapedFilename}</a></strong></p>
+  <p style="margin-bottom: 0.25rem;"><a href="${escapedUrl}" target="_blank">${escapedFilename}</a><p>
   <img src="${escapedUrl}" alt="${escapedFilename}" style="max-width: 100%; height: auto; border-radius: 8px; display: block; border: 1px solid #e2e8f0;" />
 </div>`;
       } else if (type === 'video') {
         html += `
 <div class="attachment-embed attachment-video" style="margin-bottom: 1.5rem;">
-  <p style="margin-bottom: 0.25rem;"><strong>Attachment (Video): <a href="${escapedUrl}" target="_blank">${escapedFilename}</a></strong></p>
+  <p style="margin-bottom: 0.25rem;"><a href="${escapedUrl}" target="_blank">${escapedFilename}</a></p>
   <video src="${escapedUrl}" controls style="max-width: 100%; border-radius: 8px; display: block; border: 1px solid #e2e8f0;"></video>
 </div>`;
       } else if (type === 'audio') {
         html += `
 <div class="attachment-embed attachment-audio" style="margin-bottom: 1.5rem;">
-  <p style="margin-bottom: 0.25rem;"><strong>Attachment (Audio): <a href="${escapedUrl}" target="_blank">${escapedFilename}</a></strong></p>
+  <p style="margin-bottom: 0.25rem;"><a href="${escapedUrl}" target="_blank">${escapedFilename}</a></p>
   <audio src="${escapedUrl}" controls style="width: 100%; max-width: 400px; display: block;"></audio>
 </div>`;
       } else if (type === 'pdf') {
         html += `
 <div class="attachment-embed attachment-pdf" style="margin-bottom: 1.5rem;">
-  <p style="margin-bottom: 0.25rem;"><strong>Attachment (PDF): <a href="${escapedUrl}" target="_blank">${escapedFilename}</a></strong></p>
+  <p style="margin-bottom: 0.25rem;"><a href="${escapedUrl}" target="_blank">${escapedFilename}</a></p>
   <iframe src="${escapedUrl}" width="100%" height="500px" style="border: 1px solid #e2e8f0; border-radius: 8px;"></iframe>
 </div>`;
       } else {
