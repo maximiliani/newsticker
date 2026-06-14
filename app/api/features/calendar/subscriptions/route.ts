@@ -8,30 +8,44 @@ import { fetchPublicICal, parseCalendarMetadata } from "@/features/calendar/serv
 export async function GET() {
   try {
     const { supabase, userId, isAdmin } = await requireAuth();
-
-    let query;
-    if (isAdmin) {
-      query = supabase
+    let data;
+    const { data: subs, error: subError } = await supabase
         .from('calendar_subscriptions')
         .select(`
           id, user_id, name, ical_url, auth_type, caldav_server_url, caldav_calendar_url, color,
-          visibility_days_before, visibility_days_after, last_synced_at, active, created_at,
-          user:users_secure(full_name, email)
+          visibility_days_before, visibility_days_after, last_synced_at, active, created_at
         `);
-    } else {
-      query = supabase
-        .from('calendar_subscriptions')
-        .select('id, user_id, name, ical_url, auth_type, caldav_server_url, caldav_calendar_url, color, visibility_days_before, visibility_days_after, last_synced_at, active, created_at')
-        .eq('user_id', userId);
+
+    if (subError) {
+      return NextResponse.json({ error: subError.message }, { status: 500 });
     }
 
-    const { data, error } = await query;
+    if (isAdmin) {
+      if (subs && subs.length > 0) {
+        const userIds = Array.from(new Set(subs.map(s => s.user_id)));
+        const { data: users } = await supabase
+          .from('users_secure')
+          .select('id, full_name, email')
+          .in('id', userIds);
 
-    if (data) return NextResponse.json(data);
+        const userMap = new Map(users?.map(u => [u.id, { full_name: u.full_name, email: u.email }]));
+        data = subs.map(sub => ({
+          ...sub,
+          user: userMap.get(sub.user_id) || null
+        }));
+      } else {
+        data = subs || [];
+      }
+    } else {
+      if (subError) {
+        return NextResponse.json({ error: subError }, { status: 500 });
+      }
+      data = subs || [];
+    }
 
-    return NextResponse.json(error, { status: 500 })
+    return NextResponse.json(data);
   } catch (e: any) {
-    return NextResponse.json({ error: e }, { status: 500 });
+    return NextResponse.json({ error: e.message || "An unexpected error occurred" }, { status: 500 });
   }
 }
 
