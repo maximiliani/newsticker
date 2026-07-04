@@ -2,7 +2,6 @@
 set -euo pipefail
 
 URL="${NEWSTICKER_KIOSK_URL:-http://localhost:3000}"
-REFRESH_SECONDS="${NEWSTICKER_REFRESH_SECONDS:-300}"
 DISPLAY="${DISPLAY:-:0}"
 XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"
 
@@ -20,13 +19,12 @@ done
 # Hide cursor when idle if available.
 if command -v unclutter >/dev/null 2>&1; then
   unclutter -idle 0.5 -root >/dev/null 2>&1 &
-  UNCLUTTER_PID="$!"
 fi
 
-# Keep display awake in kiosk mode.
+# Keep display awake — disable screensaver and DPMS.
 if command -v xset >/dev/null 2>&1; then
-  xset s off || true
-  xset -dpms || true
+  xset s off     || true
+  xset -dpms     || true
   xset s noblank || true
 fi
 
@@ -40,42 +38,16 @@ else
   exit 1
 fi
 
-cleanup() {
-  if [[ -n "${UNCLUTTER_PID:-}" ]]; then
-    kill "${UNCLUTTER_PID}" >/dev/null 2>&1 || true
-  fi
-  if [[ -n "${CHROMIUM_PID:-}" ]]; then
-    kill "${CHROMIUM_PID}" >/dev/null 2>&1 || true
-  fi
-}
-trap cleanup EXIT INT TERM
-
-while true; do
-  "${CHROMIUM_BIN}" \
-    --kiosk \
-    --app="${URL}" \
-    --noerrdialogs \
-    --disable-infobars \
-    --disable-session-crashed-bubble \
-    --disable-features=TranslateUI \
-    --enable-features=WebHID \
-    --autoplay-policy=no-user-gesture-required \
-    --check-for-update-interval=604800 &
-  CHROMIUM_PID="$!"
-
-  # Force a periodic browser restart to guarantee a full page refresh.
-  (
-    sleep "${REFRESH_SECONDS}"
-    kill -TERM "${CHROMIUM_PID}" >/dev/null 2>&1 || true
-  ) &
-  REFRESH_PID="$!"
-
-  wait "${CHROMIUM_PID}" || true
-  kill "${REFRESH_PID}" >/dev/null 2>&1 || true
-  wait "${REFRESH_PID}" 2>/dev/null || true
-  unset CHROMIUM_PID
-
-  sleep 1
-done
+# Hand off to Chromium. systemd owns the process via Restart=always.
+exec "${CHROMIUM_BIN}" \
+  --kiosk \
+  --app="${URL}" \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --disable-features=TranslateUI \
+  --enable-features=WebHID \
+  --autoplay-policy=no-user-gesture-required \
+  --check-for-update-interval=604800
 
 

@@ -295,13 +295,14 @@ fi
 
 "${SUDO[@]}" mkdir -p "${KIOSK_DIR}"
 "${SUDO[@]}" cp "${SOURCE_ROOT}/deploy/kiosk/start-chromium-kiosk.sh" "${KIOSK_DIR}/"
-"${SUDO[@]}" chmod +x "${KIOSK_DIR}/start-chromium-kiosk.sh"
+"${SUDO[@]}" cp "${SOURCE_ROOT}/deploy/kiosk/refresh-kiosk.sh" "${KIOSK_DIR}/"
+"${SUDO[@]}" chmod +x "${KIOSK_DIR}/start-chromium-kiosk.sh" "${KIOSK_DIR}/refresh-kiosk.sh"
 "${SUDO[@]}" chown -R "${TARGET_USER}:${TARGET_USER}" "${KIOSK_DIR}"
 
 # Step 6: systemd services
 log "Step 6/7: Installing systemd units"
 
-for unit_file in supabase-stack.service newsticker.service chromium-kiosk.service; do
+for unit_file in supabase-stack.service newsticker.service chromium-kiosk.service chromium-kiosk-refresh.service chromium-kiosk-refresh.timer; do
   sed -e "s|%u|${TARGET_USER}|g" "${SOURCE_ROOT}/deploy/systemd/${unit_file}" | \
     "${SUDO[@]}" tee "/etc/systemd/system/${unit_file}" > /dev/null
 done
@@ -312,6 +313,7 @@ done
 "${SUDO[@]}" systemctl enable supabase-stack.service
 "${SUDO[@]}" systemctl enable newsticker.service
 "${SUDO[@]}" systemctl enable chromium-kiosk.service
+"${SUDO[@]}" systemctl enable chromium-kiosk-refresh.timer
 "${SUDO[@]}" systemctl enable newsticker.target
 
 # Step 7: Chromium kiosk service notes

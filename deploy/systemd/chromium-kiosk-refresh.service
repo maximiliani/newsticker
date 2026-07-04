@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh Chromium kiosk page
+After=chromium-kiosk.service
+PartOf=newsticker.target
+
+[Service]
+Type=oneshot
+User=%u
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/%u/.Xauthority
+ExecStart=/opt/newsticker/kiosk/refresh-kiosk.sh
+

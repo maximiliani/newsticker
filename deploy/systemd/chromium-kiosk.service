@@ -10,7 +10,6 @@ User=%u
 Environment=DISPLAY=:0
 Environment=XAUTHORITY=/home/%u/.Xauthority
 Environment=NEWSTICKER_KIOSK_URL=http://localhost:3000
-Environment=NEWSTICKER_REFRESH_SECONDS=300
 WorkingDirectory=/opt/newsticker/kiosk
 ExecStart=/opt/newsticker/kiosk/start-chromium-kiosk.sh
 Restart=always

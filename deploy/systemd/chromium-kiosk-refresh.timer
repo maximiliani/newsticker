@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodic Chromium kiosk page refresh
+PartOf=newsticker.target
+
+[Timer]
+OnActiveSec=300
+OnUnitActiveSec=300
+AccuracySec=10
+Unit=chromium-kiosk-refresh.service
+
+[Install]
+WantedBy=newsticker.target
+
