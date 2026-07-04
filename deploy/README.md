@@ -3,6 +3,37 @@
 This directory contains the host setup scripts and container stack for self-hosting Newsticker on Debian-based systems (including Raspberry Pi OS variants based on Debian).
 
 ## Files
+## Docker Build (Local Development/Testing)
+
+To test the Docker build locally without running the full stack:
+
+```bash
+cd /Users/maximilian/GitHub/newsticker-1
+docker build -f deploy/Dockerfile -t newsticker:latest .
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000 \
+  -e NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key \
+  newsticker:latest
+```
+
+The Docker build uses Next.js `output: 'standalone'` mode, which creates a minimal production image.
+
+## Vercel Deployment
+
+To deploy to Vercel:
+
+1. Push your code to GitHub (the main branch is configured for auto-deploy)
+2. Create a new project on Vercel and connect your GitHub repository
+3. Set the following environment variables in Vercel project settings:
+   - `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key
+   - `SUPABASE_URL` - Internal Supabase URL (same as above for Vercel)
+   - `SUPABASE_SERVICE_ROLE_KEY` - Your service role key
+   - Any other required env vars from `.env.example`
+
+Vercel will automatically detect Next.js and use the configuration from `vercel.json`.
+
+## Files
 
 - `docker-compose.yml` - Runtime stack (database, Supabase services, gateway, app)
 - `Dockerfile` - Production image build for the Next.js app

@@ -1,0 +1,16 @@
+deploy/
+supabase/
+.dockerignore
+Dockerfile
+docker-compose.yml
+CLAUDE.md
+ARCHITECTURE.md
+REFACTORING_SUMMARY.md
+INSTAGRAM_REFACTORING_README.md
+QUICK_REFERENCE.md
+COMPLETION_SUMMARY.md
+.env.example
+.git
+.gitignore
+*.md
+

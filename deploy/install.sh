@@ -215,6 +215,8 @@ EOF
 
 # 10. Start all services
 echo -e "${GREEN}Starting all application services...${NC}"
+# This will build the Next.js app using the optimized multi-stage Dockerfile
+# if it hasn't been built yet, then start all services (Kong, Auth, REST, Realtime, Storage, etc.)
 docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d
 
 # 8. Wait for Supabase services to be healthy before running migrations
