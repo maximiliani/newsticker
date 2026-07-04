@@ -47,7 +47,25 @@ read_env_var() {
   grep -E "^${key}=" "$file" | head -n1 | cut -d= -f2- || true
 }
 
+prompt_required_env_var() {
+  local var_name="$1"
+  local prompt_label="$2"
+
+  while true; do
+    read -r -p "${prompt_label}: " value
+    if [[ -n "${value}" ]]; then
+      printf -v "${var_name}" '%s' "${value}"
+      return
+    fi
+    warn "${prompt_label} is required"
+  done
+}
+
 log "Installing Newsticker into ${INSTALL_DIR}"
+
+log "Please provide your Instagram API credentials"
+prompt_required_env_var INSTAGRAM_CLIENT_ID "Instagram API client ID"
+prompt_required_env_var INSTAGRAM_CLIENT_SECRET "Instagram API client secret"
 
 "${SUDO[@]}" mkdir -p "${INSTALL_DIR}" "${KIOSK_DIR}"
 "${SUDO[@]}" chown "${TARGET_USER}:${TARGET_USER}" "${INSTALL_DIR}" "${KIOSK_DIR}"
@@ -96,6 +114,8 @@ NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY_VALUE}
 SUPABASE_URL=http://localhost:8000
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_VALUE}
+INSTAGRAM_CLIENT_ID=${INSTAGRAM_CLIENT_ID}
+INSTAGRAM_CLIENT_SECRET=${INSTAGRAM_CLIENT_SECRET}
 INTERNAL_ADMIN_SECRET=$(openssl rand -hex 16)
 CRON_APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_REFRESH_EVERY_MINUTES=15
