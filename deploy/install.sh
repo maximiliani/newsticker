@@ -8,7 +8,9 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-INSTALL_DIR="/opt/newsticker"
+ACTIVE_INSTALL_LINK="/opt/newsticker"
+RELEASE_TIMESTAMP="$(date +%Y%m%d%H%M%S)"
+INSTALL_DIR="/opt/newsticker-${RELEASE_TIMESTAMP}"
 SUPABASE_PROJECT_NAME="supabase"
 SUPABASE_PROJECT_DIR="${INSTALL_DIR}/${SUPABASE_PROJECT_NAME}"
 RUNTIME_NEWSTICKER_DIR="${INSTALL_DIR}/newsticker"
@@ -96,7 +98,18 @@ set_env_var_in_file() {
   mv "${tmp_file}" "${file}"
 }
 
-log "Installing Newsticker into ${INSTALL_DIR}"
+activate_install_symlink() {
+  # If /opt/newsticker is an old real directory, keep it as a backup release.
+  if [[ -e "${ACTIVE_INSTALL_LINK}" && ! -L "${ACTIVE_INSTALL_LINK}" ]]; then
+    local legacy_dir="${ACTIVE_INSTALL_LINK}-legacy-${RELEASE_TIMESTAMP}"
+    warn "${ACTIVE_INSTALL_LINK} is a directory; moving it to ${legacy_dir}"
+    "${SUDO[@]}" mv "${ACTIVE_INSTALL_LINK}" "${legacy_dir}"
+  fi
+
+  "${SUDO[@]}" ln -sfn "${INSTALL_DIR}" "${ACTIVE_INSTALL_LINK}"
+}
+
+log "Installing Newsticker release into ${INSTALL_DIR}"
 
 log "Please provide your Instagram API credentials"
 prompt_required_env_var INSTAGRAM_CLIENT_ID "Instagram API client ID"
@@ -300,7 +313,11 @@ fi
 "${SUDO[@]}" chown -R "${TARGET_USER}:${TARGET_USER}" "${KIOSK_DIR}"
 
 # Step 6: systemd services
-log "Step 6/7: Installing systemd units"
+log "Step 6/8: Activating release symlink"
+activate_install_symlink
+
+# Step 7: systemd services
+log "Step 7/8: Installing systemd units"
 
 for unit_file in supabase-stack.service newsticker.service chromium-kiosk.service chromium-kiosk-refresh.service chromium-kiosk-refresh.timer; do
   sed -e "s|%u|${TARGET_USER}|g" "${SOURCE_ROOT}/deploy/systemd/${unit_file}" | \
@@ -316,8 +333,8 @@ done
 "${SUDO[@]}" systemctl enable chromium-kiosk-refresh.timer
 "${SUDO[@]}" systemctl enable newsticker.target
 
-# Step 7: Chromium kiosk service notes
-log "Step 7/7: Chromium kiosk service configured"
+# Step 8: Chromium kiosk service notes
+log "Step 8/8: Chromium kiosk service configured"
 echo "Chromium kiosk will open http://localhost:3000 on display :0"
 
 log "Starting services"
@@ -325,9 +342,42 @@ log "Starting services"
 
 echo -e "\n${GREEN}Installation complete.${NC}"
 echo "Paths:"
+echo "- Active symlink: ${ACTIVE_INSTALL_LINK} -> ${INSTALL_DIR}"
+echo "- Release: ${INSTALL_DIR}"
 echo "- Supabase:  ${SUPABASE_PROJECT_DIR}"
 echo "- Newsticker: ${RUNTIME_NEWSTICKER_DIR}"
 echo "- Chromium kiosk: ${KIOSK_DIR}"
 echo "- Host-agent: ${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent"
+echo ""
+echo "Supabase Dashboard credentials:"
+DASHBOARD_USERNAME="$(read_env_var DASHBOARD_USERNAME "${SUPABASE_ENV}")"
+DASHBOARD_PASSWORD="$(read_env_var DASHBOARD_PASSWORD "${SUPABASE_ENV}")"
+if [[ -z "${DASHBOARD_USERNAME}" ]]; then
+  DASHBOARD_USERNAME="$(read_env_var STUDIO_DEFAULT_EMAIL "${SUPABASE_ENV}")"
+fi
+if [[ -z "${DASHBOARD_PASSWORD}" ]]; then
+  DASHBOARD_PASSWORD="$(read_env_var STUDIO_DEFAULT_PASSWORD "${SUPABASE_ENV}")"
+fi
+echo "- Username: ${DASHBOARD_USERNAME:-not found in ${SUPABASE_ENV}}"
+echo "- Password: ${DASHBOARD_PASSWORD:-not found in ${SUPABASE_ENV}}"
+echo ""
+echo "Next steps:"
+echo "1) Open the dashboard (usually http://localhost:8000) and verify everything is healthy."
+echo "2) Open Newsticker (http://localhost:3000) and complete initial sign-in/setup."
+echo "3) Run updates later with: sudo bash ${ACTIVE_INSTALL_LINK}/newsticker/deploy/update.sh"
+echo ""
+echo "To update later, run:"
+echo "  sudo bash ${ACTIVE_INSTALL_LINK}/newsticker/deploy/update.sh"
 
-sh /opt/newsticker/supabase/run.sh status
+sh "${ACTIVE_INSTALL_LINK}/supabase/run.sh" status
+
+echo ""
+read -r -p "A reboot is recommended. Reboot now? [y/N]: " REBOOT_ANSWER
+case "${REBOOT_ANSWER}" in
+  [yY]|[yY][eE][sS])
+    "${SUDO[@]}" reboot
+    ;;
+  *)
+    warn "Please reboot manually when convenient."
+    ;;
+esac
