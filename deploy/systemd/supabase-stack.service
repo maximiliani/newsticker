@@ -1,0 +1,23 @@
+[Unit]
+Description=Newsticker Supabase Stack
+Documentation=https://supabase.com/docs/guides/self-hosting/docker
+After=network.target docker.service
+Requires=docker.service
+PartOf=newsticker.target
+
+[Service]
+Type=simple
+User=%u
+WorkingDirectory=%h/supabase-project
+ExecStart=/usr/bin/docker compose up
+ExecStop=/usr/bin/docker compose down
+Restart=always
+RestartSec=10
+
+# Resource limits
+MemoryMax=4G
+CPUQuota=200%
+
+[Install]
+WantedBy=multi-user.target newsticker.target
+

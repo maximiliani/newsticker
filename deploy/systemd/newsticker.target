@@ -1,0 +1,8 @@
+[Unit]
+Description=Newsticker Stack Target (Supabase + App + Services)
+Documentation=https://github.com/maximiliani/newsticker
+Wants=supabase-stack.service newsticker.service host-agent.service
+
+[Install]
+WantedBy=multi-user.target
+

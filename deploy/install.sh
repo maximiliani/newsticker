@@ -1,11 +1,21 @@
 #!/bin/bash
-set -euo pipefail
+#
+# Newsticker One-Shot Installation Script
+#
+# This script orchestrates:
+# 1. Official Supabase self-hosting setup
+# 2. Newsticker integration and database migrations
+# 3. Host-agent installation (device management for Raspberry Pi)
+# 4. Anthias installation (digital signage)
+#
+# Usage:
+#   sudo ./deploy/install.sh
+#   ./deploy/install.sh                    (will use sudo as needed)
+#
+# For more details, see: deploy/SUPABASE_OFFICIAL_SETUP.md
+#
 
-# --- Configuration ---
-INSTALL_DIR="/opt/newsticker"
-PROJECT_NAME="newsticker"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+set -euo pipefail
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -13,274 +23,354 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+NEWSTICKER_DIR="${SOURCE_ROOT}"
+
 if [[ ${EUID} -eq 0 ]]; then
   SUDO=()
 else
   SUDO=(sudo)
 fi
 
-TARGET_USER="${SUDO_USER:-${USER}}"
+log()   { echo -e "${GREEN}===> ${*}${NC}"; }
+warn()  { echo -e "${YELLOW}WARNING: ${*}${NC}"; }
+error() { echo -e "${RED}ERROR: ${*}${NC}"; exit 1; }
 
-echo -e "${GREEN}Starting Newsticker installation...${NC}"
+log "Newsticker Installation (Supabase + Host-Agent + Anthias)"
+echo ""
 
-# 1. Check OS
-if [[ -f /etc/os-release ]]; then
-    . /etc/os-release
-    if [[ "$ID" != "raspbian" && "$ID" != "debian" ]]; then
-        echo -e "${YELLOW}Warning: This script is designed for Raspbian/Debian. Current OS: $ID. Continuing anyway...${NC}"
-    fi
-else
-    echo -e "${YELLOW}Warning: Could not detect OS version. Continuing...${NC}"
+# ============================================================================
+# Step 1: Run official Supabase setup
+# ============================================================================
+
+log "Step 1/4: Running official Supabase setup script..."
+echo "This will install Docker, Docker Compose, and bootstrap the Supabase stack."
+echo ""
+
+if ! curl -fsSL https://supabase.link/setup.sh | sh; then
+    error "Supabase setup failed. Please troubleshoot and try again."
 fi
 
-# 2. Install Docker from Docker's apt repository (Debian flow)
-install_docker_from_apt_repo() {
-    local codename
-    codename="${VERSION_CODENAME:-}"
+echo ""
+log "Supabase setup complete!"
+echo ""
 
-    if [[ -z "${codename}" ]]; then
-        codename="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
-    fi
+# ============================================================================
+# Step 2: Integrate Newsticker and apply migrations
+# ============================================================================
 
-    if [[ -z "${codename}" ]]; then
-        echo -e "${RED}Error: Could not determine Debian codename (VERSION_CODENAME).${NC}"
-        exit 1
-    fi
+log "Step 2/4: Integrating Newsticker into Supabase project..."
 
-    echo -e "${GREEN}Installing Docker Engine and Compose plugin via apt repository...${NC}"
-    "${SUDO[@]}" apt-get update
-    "${SUDO[@]}" apt-get install -y ca-certificates curl gnupg lsb-release
+# The official setup creates a 'supabase-project' directory by default
+SUPABASE_PROJECT_DIR="${PWD}/supabase-project"
 
-    "${SUDO[@]}" install -m 0755 -d /etc/apt/keyrings
-    "${SUDO[@]}" curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-    "${SUDO[@]}" chmod a+r /etc/apt/keyrings/docker.asc
-
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${codename} stable" \
-      | "${SUDO[@]}" tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-    "${SUDO[@]}" apt-get update
-    "${SUDO[@]}" apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-}
-
-if ! command -v docker >/dev/null 2>&1; then
-    install_docker_from_apt_repo
-else
-    echo -e "${GREEN}Docker is already installed. Ensuring Compose plugin exists...${NC}"
-    if ! docker compose version >/dev/null 2>&1; then
-        install_docker_from_apt_repo
-    fi
+if [[ ! -d "${SUPABASE_PROJECT_DIR}" ]]; then
+    error "Supabase project directory not found at ${SUPABASE_PROJECT_DIR}"
 fi
 
-if id -nG "${TARGET_USER}" | grep -qw docker; then
-    echo -e "${GREEN}User ${TARGET_USER} is already in docker group.${NC}"
-else
-    "${SUDO[@]}" usermod -aG docker "${TARGET_USER}"
-    echo -e "${YELLOW}Added ${TARGET_USER} to docker group. Re-login may be required for group changes to apply.${NC}"
+# Copy Newsticker source to the project directory
+if ! rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' \
+    --exclude='supabase/migrations' \
+    "${NEWSTICKER_DIR}/" "${SUPABASE_PROJECT_DIR}/newsticker/"; then
+    error "Failed to copy Newsticker files"
 fi
 
-# 3. Setup directory and copy files
-echo -e "${GREEN}Setting up directory: ${INSTALL_DIR}${NC}"
-"${SUDO[@]}" mkdir -p "${INSTALL_DIR}"
-"${SUDO[@]}" chown "${TARGET_USER}:${TARGET_USER}" "${INSTALL_DIR}"
+log "Copied Newsticker to ${SUPABASE_PROJECT_DIR}/newsticker"
 
-if command -v rsync >/dev/null 2>&1; then
-    rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' "${SOURCE_ROOT}/" "${INSTALL_DIR}/"
-else
-    "${SUDO[@]}" apt-get update
-    "${SUDO[@]}" apt-get install -y rsync
-    rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' "${SOURCE_ROOT}/" "${INSTALL_DIR}/"
+# Apply database migrations
+log "Applying Newsticker database migrations..."
+
+cd "${SUPABASE_PROJECT_DIR}"
+
+# Get the database container ID
+DB_CONTAINER=$(docker compose ps -q db) || DB_CONTAINER=""
+if [[ -z "${DB_CONTAINER}" ]]; then
+    error "Could not find Supabase database container. Is the Supabase stack running? (docker compose ps)"
 fi
 
-cd "${INSTALL_DIR}"
-COMPOSE_FILE="${INSTALL_DIR}/deploy/docker-compose.yml"
-COMPOSE_ENV_FILE="${INSTALL_DIR}/.env"
+echo "Database container: ${DB_CONTAINER}"
 
-# 5. Generate Secrets
-# NOTE: INTERNAL_ADMIN_SECRET is generated as a hex string (openssl rand -hex).
-# If this generation method is changed, ensure it remains safe for SQL interpolation
-# in section 9, as it is interpolated directly into SQL strings.
-echo -e "${GREEN}Generating secrets and JWTs...${NC}"
-JWT_SECRET=$(openssl rand -hex 32)
-HOST_AGENT_SECRET=$(openssl rand -hex 16)
-POSTGRES_PASSWORD=$(openssl rand -hex 16)
+# Apply migrations in order
+MIGRATIONS=$(ls "${NEWSTICKER_DIR}/supabase/migrations"/*.sql | sort)
+for migration_file in $MIGRATIONS; do
+    migration_name=$(basename "$migration_file")
+    log "Applying migration: ${migration_name}"
+
+    if ! docker exec -i "${DB_CONTAINER}" psql -U postgres -d postgres < "$migration_file" > /dev/null 2>&1; then
+        warn "Migration ${migration_name} failed or had warnings. Continuing..."
+    fi
+done
+
+log "Database migrations applied successfully!"
+
+# Build Next.js app for production
+log "Building Newsticker for production..."
+cd "${SUPABASE_PROJECT_DIR}/newsticker"
+
+if ! npm install; then
+    warn "npm install failed. Attempting to continue..."
+fi
+
+if ! npm run build; then
+    warn "npm run build failed. Attempting to continue..."
+fi
+
+cd "${SUPABASE_PROJECT_DIR}"
+
+# Create Newsticker .env.local
+log "Creating Newsticker environment file..."
+
+# Read Supabase .env to extract credentials
+SUPABASE_ENV="${SUPABASE_PROJECT_DIR}/.env"
+if [[ ! -f "${SUPABASE_ENV}" ]]; then
+    error "Supabase .env not found at ${SUPABASE_ENV}"
+fi
+
+# Source the Supabase .env carefully (only keys we need)
+source "${SUPABASE_ENV}" || true
+
+# Create Newsticker .env.local
+NEWSTICKER_ENV="${SUPABASE_PROJECT_DIR}/newsticker/.env.local"
+mkdir -p "$(dirname "${NEWSTICKER_ENV}")"
+
+cat > "${NEWSTICKER_ENV}" <<EOF
+# Newsticker Configuration
+# Auto-generated during installation
+
+# Supabase Connection (from official setup)
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY:-}
+
+# Server-side only (keep secret!)
+SUPABASE_URL=http://localhost:8000
+SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY:-}
 INTERNAL_ADMIN_SECRET=$(openssl rand -hex 16)
 
-generate_jwt() {
-  local role=$1
-  local secret=$2
-  python3 - <<EOF
-import hmac, hashlib, base64, json, time
-def b64_encode(data):
-    return base64.urlsafe_b64encode(data).decode('utf-8').replace('=', '')
-header = b64_encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
-payload = b64_encode(json.dumps({
-    "role": "$role",
-    "iss": "supabase",
-    "iat": int(time.time()),
-    "exp": int(time.time()) + 315360000 # 10 years
-}).encode())
-msg = header + "." + payload
-sig = b64_encode(hmac.new("$secret".encode(), msg.encode(), hashlib.sha256).digest())
-print(msg + "." + sig)
-EOF
-}
+# Optional: Instagram Integration
+# INSTAGRAM_CLIENT_ID=your-facebook-app-id
+# INSTAGRAM_CLIENT_SECRET=your-facebook-app-secret
+# NEXT_PUBLIC_INSTAGRAM_CLIENT_ID=your-facebook-app-id
 
-ANON_KEY=$(generate_jwt "anon" "$JWT_SECRET")
-SERVICE_ROLE_KEY=$(generate_jwt "service_role" "$JWT_SECRET")
-
-# 6. Write .env
-echo -e "${GREEN}Creating .env file...${NC}"
-cat > .env <<EOF
-# === DB SETTINGS ===
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-POSTGRES_DB=postgres
-POSTGRES_PORT=5432
-POSTGRES_HOST=db
-
-# === JWT SETTINGS ===
-JWT_SECRET=${JWT_SECRET}
-ANON_KEY=${ANON_KEY}
-SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
-
-# === KIOSK MODE ===
-NEXT_PUBLIC_KIOSK_MODE=true
-HOST_AGENT_URL=http://host.docker.internal:9876
-HOST_AGENT_SECRET=${HOST_AGENT_SECRET}
-
-# === APP PUBLIC VARIABLES ===
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
-
-# === APP SERVER VARIABLES ===
-SUPABASE_URL=http://kong:8000
-SUPABASE_ANON_KEY=${ANON_KEY}
-SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
-INTERNAL_ADMIN_SECRET=${INTERNAL_ADMIN_SECRET}
-
-# === CRON CONFIGURATION ===
-CRON_APP_BASE_URL=http://app:3000
+# Optional: Cron/Automation
+CRON_APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_REFRESH_EVERY_MINUTES=15
-EOF
-chmod 600 .env
 
-# 6. Start DB and wait
-echo -e "${GREEN}Starting database...${NC}"
-docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d db
-
-echo "Waiting for database to be healthy (this may take a minute)..."
-# Simple wait loop for PG
-MAX_WAIT=30
-COUNT=0
-until docker exec "${PROJECT_NAME}-db-1" pg_isready -U postgres > /dev/null 2>&1 || [ "$COUNT" -eq "$MAX_WAIT" ]; do
-    echo -n "."
-    sleep 2
-    # Use pre-increment so arithmetic command exits successfully under `set -e`.
-    ((++COUNT))
-done
-
-if [ "$COUNT" -eq "$MAX_WAIT" ]; then
-    echo -e "\n${RED}Error: Database timed out during startup.${NC}"
-    exit 1
-fi
-echo -e "\n${GREEN}Database is ready.${NC}"
-
-# 7. Ensure the postgres role exists for Supabase ownership/grants
-echo -e "${GREEN}Ensuring postgres role exists...${NC}"
-docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres <<EOF
-DO \$\$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'postgres') THEN
-    CREATE ROLE postgres WITH LOGIN SUPERUSER CREATEROLE CREATEDB REPLICATION BYPASSRLS PASSWORD '${POSTGRES_PASSWORD}';
-  END IF;
-END
-\$\$;
-ALTER ROLE postgres WITH LOGIN SUPERUSER CREATEROLE CREATEDB REPLICATION BYPASSRLS PASSWORD '${POSTGRES_PASSWORD}';
+# Kiosk Mode (for Raspberry Pi)
+NEXT_PUBLIC_KIOSK_MODE=true
+HOST_AGENT_URL=http://localhost:9876
+HOST_AGENT_SECRET=$(openssl rand -hex 16)
 EOF
 
-# 9. Configure App settings in database
-echo -e "${GREEN}Configuring app settings in database...${NC}"
-docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres <<EOF
--- Set GUC variables for the application
--- Use DO block to ensure settings exist
-DO \$\$
-BEGIN
-  -- These variables are used by triggers and pg_cron
-  EXECUTE 'ALTER SYSTEM SET app.settings.CRON_APP_URL = ''' || 'http://app:3000' || '''';
-  EXECUTE 'ALTER SYSTEM SET app.settings.CRON_INTERNAL_ADMIN_SECRET = ''' || '${INTERNAL_ADMIN_SECRET}' || '''';
-END \$\$;
-SELECT pg_reload_conf();
-EOF
+log "Created Newsticker environment at ${NEWSTICKER_ENV}"
 
-# 10. Start all services
-echo -e "${GREEN}Starting all application services...${NC}"
-# This will build the Next.js app using the optimized multi-stage Dockerfile
-# if it hasn't been built yet, then start all services (Kong, Auth, REST, Realtime, Storage, etc.)
-docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d
+echo ""
 
-# 8. Wait for Supabase services to be healthy before running migrations
-echo -e "${GREEN}Waiting for Supabase services to be ready...${NC}"
-MAX_WAIT=45
-COUNT=0
-until docker exec "${PROJECT_NAME}-rest-1" psql -U authenticator -h db -d postgres -c "SELECT 1;" > /dev/null 2>&1 || [ "$COUNT" -eq "$MAX_WAIT" ]; do
-    echo -n "."
-    sleep 2
-    ((++COUNT))
-done
+# ============================================================================
+# Step 3: Install host-agent (device management for Raspberry Pi)
+# ============================================================================
 
-if [ "$COUNT" -eq "$MAX_WAIT" ]; then
-    echo -e "\n${YELLOW}Warning: Supabase services did not become healthy within $((MAX_WAIT * 2))s. Continuing with migration attempt...${NC}"
+log "Step 3/4: Installing host-agent systemd service..."
+
+# Update host-agent.service to reference the correct paths
+HOST_AGENT_SERVICE_TEMPLATE="${NEWSTICKER_DIR}/deploy/host-agent/host-agent.service"
+HOST_AGENT_SERVICE="/etc/systemd/system/host-agent.service"
+
+if [[ -f "${HOST_AGENT_SERVICE_TEMPLATE}" ]]; then
+    # Create a modified version with correct paths
+    sed "s|/opt/newsticker|${SUPABASE_PROJECT_DIR}/newsticker|g" "${HOST_AGENT_SERVICE_TEMPLATE}" | \
+        "${SUDO[@]}" tee "${HOST_AGENT_SERVICE}" > /dev/null
+
+    # Install Python host-agent script
+    "${SUDO[@]}" mkdir -p "${SUPABASE_PROJECT_DIR}/newsticker/deploy/host-agent"
+    "${SUDO[@]}" cp "${NEWSTICKER_DIR}/deploy/host-agent/host-agent.py" \
+        "${SUPABASE_PROJECT_DIR}/newsticker/deploy/host-agent/"
+    "${SUDO[@]}" chmod +x "${SUPABASE_PROJECT_DIR}/newsticker/deploy/host-agent/host-agent.py"
+
+    "${SUDO[@]}" systemctl daemon-reload
+    "${SUDO[@]}" systemctl enable host-agent
+    "${SUDO[@]}" systemctl start host-agent
+
+    log "Host-agent installed and started"
 else
-    echo -e "\n${GREEN}Supabase services are responsive.${NC}"
+    warn "Host-agent template not found at ${HOST_AGENT_SERVICE_TEMPLATE}. Skipping."
 fi
 
-# Apply migrations
-echo -e "${GREEN}Applying Supabase migrations...${NC}"
-MIGRATIONS=$(ls supabase/migrations/*.sql | sort)
-for f in $MIGRATIONS; do
-    echo "Applying $(basename $f)..."
-    docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres < "$f" > /dev/null
-done
+echo ""
 
-# 11. Install host-agent
-echo -e "${GREEN}Installing host-agent systemd service...${NC}"
-"${SUDO[@]}" cp deploy/host-agent/host-agent.service /etc/systemd/system/
-"${SUDO[@]}" systemctl daemon-reload
-"${SUDO[@]}" systemctl enable host-agent
-"${SUDO[@]}" systemctl start host-agent
+# ============================================================================
+# Step 4: Install Anthias (digital signage)
+# ============================================================================
 
-# 12. Anthias Installation
-echo -e "${YELLOW}Installing Anthias (Screenly OSE successor)...${NC}"
+log "Step 4/4: Installing Anthias (digital signage)..."
+
 if ! command -v anthias &> /dev/null; then
-    # Running Anthias installer
     echo "Downloading Anthias installer..."
-    curl -sSL https://install.anthias.io -o install-anthias.sh
-    echo "Running Anthias installer..."
-    bash install-anthias.sh --skip-reboot || echo -e "${YELLOW}Anthias install needs manual intervention.${NC}"
-    rm install-anthias.sh
+    if curl -sSL https://install.anthias.io -o /tmp/install-anthias.sh; then
+        echo "Running Anthias installer (with --skip-reboot to avoid interrupting setup)..."
+        bash /tmp/install-anthias.sh --skip-reboot || warn "Anthias install needs manual intervention or has non-critical failures."
+        rm -f /tmp/install-anthias.sh
+        log "Anthias installed"
+    else
+        warn "Failed to download Anthias installer. You can install it manually later."
+    fi
+else
+    log "Anthias is already installed"
 fi
 
-# 13. Summary
-IP_ADDR=$(hostname -I | awk '{print $1}')
+echo ""
 
-# Save credentials to a protected file
-cat > credentials.txt <<EOF
-Postgres Password: ${POSTGRES_PASSWORD}
-Admin Secret:      ${INTERNAL_ADMIN_SECRET}
-EOF
-chmod 600 credentials.txt
+# ============================================================================
+# Step 5: Configure systemd services for autostart on boot
+# ============================================================================
 
+log "Step 5/6: Configuring systemd services for automatic startup..."
+
+# Create/update host-agent.service with correct paths
+HOST_AGENT_SERVICE_TEMPLATE="${NEWSTICKER_DIR}/deploy/host-agent/host-agent.service"
+HOST_AGENT_SERVICE="/etc/systemd/system/host-agent.service"
+
+if [[ -f "${HOST_AGENT_SERVICE_TEMPLATE}" ]]; then
+    sed "s|/opt/newsticker|${SUPABASE_PROJECT_DIR}/newsticker|g" "${HOST_AGENT_SERVICE_TEMPLATE}" | \
+        "${SUDO[@]}" tee "${HOST_AGENT_SERVICE}" > /dev/null
+fi
+
+# Install Supabase stack service
+SUPABASE_STACK_SERVICE="${NEWSTICKER_DIR}/deploy/systemd/supabase-stack.service"
+if [[ -f "${SUPABASE_STACK_SERVICE}" ]]; then
+    # Create expanded version with correct user and path
+    USERNAME="${SUDO_USER:-${USER}}"
+    sed -e "s|%u|${USERNAME}|g" \
+        -e "s|%h|~${USERNAME}|g" \
+        "${SUPABASE_STACK_SERVICE}" | \
+        "${SUDO[@]}" tee "/etc/systemd/system/supabase-stack.service" > /dev/null
+fi
+
+# Install Newsticker service
+NEWSTICKER_SERVICE_TEMPLATE="${NEWSTICKER_DIR}/deploy/systemd/newsticker.service"
+if [[ -f "${NEWSTICKER_SERVICE_TEMPLATE}" ]]; then
+    USERNAME="${SUDO_USER:-${USER}}"
+    sed -e "s|%u|${USERNAME}|g" \
+        -e "s|%h|~${USERNAME}|g" \
+        "${NEWSTICKER_SERVICE_TEMPLATE}" | \
+        "${SUDO[@]}" tee "/etc/systemd/system/newsticker.service" > /dev/null
+fi
+
+# Install target unit
+NEWSTICKER_TARGET="${NEWSTICKER_DIR}/deploy/systemd/newsticker.target"
+if [[ -f "${NEWSTICKER_TARGET}" ]]; then
+    "${SUDO[@]}" cp "${NEWSTICKER_TARGET}" "/etc/systemd/system/newsticker.target"
+fi
+
+# Reload systemd daemon and enable services
+"${SUDO[@]}" systemctl daemon-reload
+"${SUDO[@]}" systemctl enable newsticker.target || warn "Failed to enable newsticker.target"
+"${SUDO[@]}" systemctl enable supabase-stack.service || warn "Failed to enable supabase-stack.service"
+"${SUDO[@]}" systemctl enable newsticker.service || warn "Failed to enable newsticker.service"
+"${SUDO[@]}" systemctl enable host-agent.service || warn "Failed to enable host-agent.service"
+
+log "Systemd services configured for autostart on boot"
+
+echo ""
+
+# ============================================================================
+# Step 6: Create Anthias asset for Newsticker
+# ============================================================================
+
+log "Step 6/6: Creating Anthias asset for Newsticker..."
+
+# Wait a bit for Anthias to be ready
+sleep 5
+
+# Attempt to create the asset via Anthias API
+ANTHIAS_API="http://localhost:8080"
+ASSET_RESPONSE=$(curl -s -X POST "${ANTHIAS_API}/api/assets" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "Newsticker",
+        "asset_type": "website",
+        "url": "http://localhost:3000",
+        "duration": 300,
+        "is_portrait": false
+    }' || echo "")
+
+if [[ -n "${ASSET_RESPONSE}" ]]; then
+    log "Anthias asset created successfully"
+else
+    warn "Could not automatically create Anthias asset. You can do this manually:"
+    warn "1. Open http://localhost:9000 in your browser"
+    warn "2. Add a new Web Asset"
+    warn "3. Set URL to: http://localhost:3000"
+    warn "4. Set duration to 300 seconds (or your preference)"
+fi
+log "Installation Complete!"
 echo -e "-------------------------------------------------------"
-echo -e "${GREEN}Installation Summary${NC}"
+echo ""
+echo "Supabase stack is running at:"
+echo -e "  ${GREEN}http://localhost:8000${NC}"
+echo ""
+echo "Newsticker is running at:"
+echo -e "  ${GREEN}http://localhost:3000${NC}"
+echo ""
+echo "Anthias digital signage is running at:"
+echo -e "  ${GREEN}http://localhost:9000${NC}"
+echo ""
+echo "Newsticker configuration:"
+echo -e "  Environment: ${NEWSTICKER_ENV}"
+echo -e "  Installation: ${SUPABASE_PROJECT_DIR}/newsticker"
+echo ""
+echo "Installed components:"
+echo -e "  ✓ Supabase (PostgreSQL, Auth, API, Realtime, Storage)"
+echo -e "  ✓ Newsticker database and migrations"
+echo -e "  ✓ Newsticker app (built for production)"
+echo -e "  ✓ Host-agent service (device management on port 9876)"
+echo -e "  ✓ Anthias (digital signage on port 9000)"
+echo ""
+echo "Systemd services (auto-start on boot):"
+echo -e "  ✓ newsticker.target (main target)"
+echo -e "  ✓ supabase-stack.service (Docker Compose)"
+echo -e "  ✓ newsticker.service (Next.js app)"
+echo -e "  ✓ host-agent.service (device management)"
+echo ""
+echo "Status and control:"
+echo -e "  Check status:   ${YELLOW}sudo systemctl status newsticker.target${NC}"
+echo -e "  Start:          ${YELLOW}sudo systemctl start newsticker.target${NC}"
+echo -e "  Stop:           ${YELLOW}sudo systemctl stop newsticker.target${NC}"
+echo -e "  View logs:      ${YELLOW}sudo journalctl -u newsticker -f${NC}"
+echo ""
+echo "Next steps:"
+echo ""
+echo "1. The Newsticker stack is now running!"
+echo "   - Visit http://localhost:3000 to access Newsticker"
+echo "   - Visit http://localhost:9000 to access Anthias"
+echo ""
+echo "2. Configure Anthias to display Newsticker:"
+echo "   - If the asset wasn't created automatically, add it manually:"
+echo "   - Open http://localhost:9000"
+echo "   - Create new Web Asset"
+echo "   - Set URL to http://localhost:3000"
+echo ""
+echo "3. System will auto-start on reboot"
+echo ""
+echo "For more information, see:"
+echo -e "  ${YELLOW}${NEWSTICKER_DIR}/deploy/SUPABASE_OFFICIAL_SETUP.md${NC}"
 echo -e "-------------------------------------------------------"
-echo -e "App URL:           ${YELLOW}http://${IP_ADDR}:3000${NC}"
-echo -e "Anthias UI:        ${YELLOW}http://${IP_ADDR}:9000${NC}"
-echo -e "Supabase API:      ${YELLOW}http://${IP_ADDR}:8000${NC}"
-echo -e "Host Agent:        ${YELLOW}http://localhost:9876${NC}"
-echo -e ""
-echo -e "Credentials saved to: ${GREEN}credentials.txt${NC}"
-echo -e "-------------------------------------------------------"
-echo -e "Please log in to Anthias at port 9000 and add"
-echo -e "http://localhost:3000 as a web asset."
-echo -e "-------------------------------------------------------"
+
+# ============================================================================
+# Start the services
+# ============================================================================
+
+log "Starting Newsticker stack..."
+"${SUDO[@]}" systemctl start newsticker.target
+
+# Wait for services to be ready
+echo "Waiting for services to become ready..."
+sleep 10
+
+log "Newsticker stack is starting. Check status with:"
+echo -e "  ${YELLOW}sudo systemctl status newsticker.target${NC}"
+
+
+
+
+

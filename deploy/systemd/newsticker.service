@@ -1,0 +1,25 @@
+[Unit]
+Description=Newsticker Web Application
+Documentation=https://github.com/maximiliani/newsticker
+After=network.target supabase-stack.service
+Wants=supabase-stack.service
+PartOf=newsticker.target
+
+[Service]
+Type=simple
+User=%u
+WorkingDirectory=%h/supabase-project/newsticker
+Environment="NODE_ENV=production"
+ExecStart=/usr/bin/npm run start
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=always
+RestartSec=10
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=100%
+
+[Install]
+WantedBy=newsticker.target
+
