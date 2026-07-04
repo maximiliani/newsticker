@@ -13,6 +13,9 @@ CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "extensions";
 -- Supabase roles (minimal set for self-hosting)
 DO \$\$
 BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'postgres') THEN
+        CREATE ROLE postgres WITH LOGIN SUPERUSER CREATEROLE CREATEDB REPLICATION BYPASSRLS PASSWORD '$POSTGRES_PASSWORD';
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
         CREATE ROLE anon NOLOGIN NOINHERIT;
     END IF;
@@ -31,6 +34,7 @@ BEGIN
 END
 \$\$;
 
+ALTER ROLE postgres WITH LOGIN SUPERUSER CREATEROLE CREATEDB REPLICATION BYPASSRLS PASSWORD '$POSTGRES_PASSWORD';
 GRANT anon, authenticated, service_role TO authenticator;
 GRANT supabase_admin TO postgres;
 

@@ -12,6 +12,8 @@ This directory contains the host setup scripts and container stack for self-host
 - `host-agent/` - Systemd service and host-side helper
 - `volumes/` - Persistent data and DB init scripts
 
+The DB bootstrap script now ensures the `postgres` role exists before running grants and ownership changes that depend on it.
+
 ## What `install.sh` does
 
 `install.sh` installs and configures the deployment in `/opt/newsticker`.

@@ -185,7 +185,20 @@ if [ "$COUNT" -eq "$MAX_WAIT" ]; then
 fi
 echo -e "\n${GREEN}Database is ready.${NC}"
 
-# 7. Apply migrations
+# 7. Ensure the postgres role exists for Supabase ownership/grants
+echo -e "${GREEN}Ensuring postgres role exists...${NC}"
+docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres <<EOF
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'postgres') THEN
+    CREATE ROLE postgres WITH LOGIN SUPERUSER CREATEROLE CREATEDB REPLICATION BYPASSRLS PASSWORD '${POSTGRES_PASSWORD}';
+  END IF;
+END
+\$\$;
+ALTER ROLE postgres WITH LOGIN SUPERUSER CREATEROLE CREATEDB REPLICATION BYPASSRLS PASSWORD '${POSTGRES_PASSWORD}';
+EOF
+
+# 8. Apply migrations
 echo -e "${GREEN}Applying Supabase migrations...${NC}"
 MIGRATIONS=$(ls supabase/migrations/*.sql | sort)
 for f in $MIGRATIONS; do
@@ -193,7 +206,7 @@ for f in $MIGRATIONS; do
     docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres < "$f" > /dev/null
 done
 
-# 8. Configure App settings in database
+# 9. Configure App settings in database
 echo -e "${GREEN}Configuring app settings in database...${NC}"
 docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres <<EOF
 -- Set GUC variables for the application
@@ -207,18 +220,18 @@ END \$\$;
 SELECT pg_reload_conf();
 EOF
 
-# 9. Start all services
+# 10. Start all services
 echo -e "${GREEN}Starting all application services...${NC}"
 docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d
 
-# 10. Install host-agent
+# 11. Install host-agent
 echo -e "${GREEN}Installing host-agent systemd service...${NC}"
 "${SUDO[@]}" cp deploy/host-agent/host-agent.service /etc/systemd/system/
 "${SUDO[@]}" systemctl daemon-reload
 "${SUDO[@]}" systemctl enable host-agent
 "${SUDO[@]}" systemctl start host-agent
 
-# 11. Anthias Installation
+# 12. Anthias Installation
 echo -e "${YELLOW}Installing Anthias (Screenly OSE successor)...${NC}"
 if ! command -v anthias &> /dev/null; then
     # Running Anthias installer
@@ -229,7 +242,7 @@ if ! command -v anthias &> /dev/null; then
     rm install-anthias.sh
 fi
 
-# 12. Summary
+# 13. Summary
 IP_ADDR=$(hostname -I | awk '{print $1}')
 
 # Save credentials to a protected file
