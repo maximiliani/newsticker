@@ -30,11 +30,6 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
 
     const { data: isAdmin } = await supabase.rpc("check_is_admin");
 
-    const headerList = await headers();
-    const host = headerList.get('host') || 'localhost:3000';
-    const [hostname] = host.split(':');
-    const anthiasUrl = `http://${hostname}:9000`;
-
     const isKiosk = process.env.NEXT_PUBLIC_KIOSK_MODE === 'true';
 
     const sidebarItems = [
@@ -75,11 +70,6 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
             title: "Device",
             url: "/settings/device",
             icon: Cpu,
-        });
-        sidebarItems.push({
-            title: "Display Manager",
-            url: anthiasUrl,
-            icon: Monitor,
         });
     }
 

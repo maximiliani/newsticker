@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
 
 export function CalendarFilter() {
   const router = useRouter();
@@ -22,7 +22,13 @@ export function CalendarFilter() {
         return { from: fromDate, to: toDate };
       }
     }
-    return undefined;
+    
+    // Default to current week (Monday to Sunday)
+    const now = new Date();
+    return {
+      from: startOfWeek(now, { weekStartsOn: 1 }),
+      to: endOfWeek(now, { weekStartsOn: 1 })
+    };
   });
 
   const handleSelect = (newRange: DateRange | undefined) => {
@@ -45,7 +51,7 @@ export function CalendarFilter() {
   };
 
   return (
-    <div className="p-2 rounded-b-lg rounded-t-none h-full overflow-hidden flex flex-col justify-center">
+    <div className="p-2 rounded-b-lg rounded-t-none h-full overflow-hidden flex flex-col justify-start items-center">
       {/*<h3 className="font-semibold mb-2">Filter by Date</h3>*/}
       {/*<div className="flex-1 overflow-auto flex justify-center">*/}
           <Calendar

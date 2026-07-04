@@ -8,7 +8,7 @@ import {Separator} from "@/components/ui/separator";
 export default function Home({searchParams}: { searchParams: Promise<{ from?: string, to?: string }> }) {
 
     return (
-        <main className="w-full h-[calc(100vh-10rem)] overflow-hidden">
+        <main className="w-full h-full overflow-hidden flex flex-col">
             <ResizablePanelGroup orientation="horizontal">
                 <ResizablePanel
                     defaultSize={45}
@@ -21,10 +21,10 @@ export default function Home({searchParams}: { searchParams: Promise<{ from?: st
                         </ResizablePanel>
                         <ResizableHandle withHandle/>
                         <ResizablePanel defaultSize={30}>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 h-full">
                                 <CalendarFilter/>
                                 <Separator orientation="vertical"/>
-                                <SneakPeek/>
+                                <SneakPeek searchParams={searchParams}/>
                             </div>
                         </ResizablePanel>
                     </ResizablePanelGroup>

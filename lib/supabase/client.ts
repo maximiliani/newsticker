@@ -5,8 +5,17 @@ import { createBrowserClient } from '@supabase/ssr';
  * This is for client components only
  */
 export function createClient() {
+  let url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+
+  // If the URL is localhost (standard for local dev),
+  // and we are in the browser, replace localhost with the actual hostname
+  // to allow remote access via IP or other hostnames.
+  if (typeof window !== 'undefined' && url.includes('localhost')) {
+    url = url.replace('localhost', window.location.hostname);
+  }
+
   return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    url,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }

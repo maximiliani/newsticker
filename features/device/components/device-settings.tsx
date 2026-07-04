@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, RefreshCw, Power, RotateCw, Monitor } from "lucide-react";
+import { Loader2, RefreshCw, Power, RotateCw } from "lucide-react";
 
 export function DeviceSettings() {
   const [hostname, setHostname] = useState("");
@@ -27,12 +27,8 @@ export function DeviceSettings() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [anthiasUrl, setAnthiasUrl] = useState("http://localhost:9000");
 
   const fetchData = async () => {
-    if (typeof window !== "undefined") {
-      setAnthiasUrl(`http://${window.location.hostname}:9000`);
-    }
     setLoading(true);
     try {
       const [h, i, s] = await Promise.all([
@@ -223,23 +219,6 @@ export function DeviceSettings() {
         </CardContent>
       </Card>
 
-      {/* Anthias Link Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Display Manager</CardTitle>
-          <CardDescription>Manage screen layout and schedules via Anthias</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="secondary" className="w-full gap-2" asChild>
-            <a href={anthiasUrl} target="_blank" rel="noopener noreferrer">
-              <Monitor className="h-4 w-4" /> Open Anthias UI
-            </a>
-          </Button>
-          <p className="mt-2 text-xs text-muted-foreground text-center">
-            Default port: 9000
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }
