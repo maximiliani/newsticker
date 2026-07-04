@@ -58,15 +58,27 @@ if ! command -v rsync >/dev/null 2>&1; then
 fi
 
 # Step 1: Official Supabase setup in /opt/newsticker/supabase
-log "Step 1/6: Running official Supabase setup in ${SUPABASE_PROJECT_DIR}"
+log "Step 1/7: Running official Supabase setup in ${SUPABASE_PROJECT_DIR}"
 run_as_target_user "cd '${INSTALL_DIR}' && curl -fsSL https://supabase.link/setup.sh | sh -s -- -p '${SUPABASE_PROJECT_NAME}'"
 
 if [[ ! -d "${SUPABASE_PROJECT_DIR}" ]]; then
   error "Supabase project directory not found at ${SUPABASE_PROJECT_DIR}"
 fi
 
+run_as_target_user "sh '${SUPABASE_PROJECT_DIR}'/run.sh start"
+
+# Step 2: Install node.js
+log "Step 2/7: Installing node.js v24"
+# Remove any existing nodejs/npm to avoid conflicts
+"${SUDO[@]}" apt remove -y nodejs npm 2>/dev/null; true
+# Add NodeSource repository for Node.js v24
+curl -fsSL https://deb.nodesource.com/setup_24.x | "${SUDO[@]}" bash -
+# Install nodejs and test
+"${SUDO[@]}" apt-get install -y nodejs
+node -v
+
 # Step 2: Copy app, apply migrations, build
-log "Step 2/6: Installing Newsticker app into ${RUNTIME_NEWSTICKER_DIR}"
+log "Step 2/7: Installing Newsticker app into ${RUNTIME_NEWSTICKER_DIR}"
 run_as_target_user "mkdir -p '${RUNTIME_NEWSTICKER_DIR}'"
 run_as_target_user "rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' '${SOURCE_ROOT}/' '${RUNTIME_NEWSTICKER_DIR}/'"
 
@@ -111,8 +123,9 @@ if ! run_as_target_user "cd '${RUNTIME_NEWSTICKER_DIR}' && npm install && npm ru
   warn "npm install/build failed; continuing"
 fi
 
-# Step 3: Host-agent
-log "Step 3/6: Installing host-agent service"
+
+# Step 4: Host-agent
+log "Step 4/7: Installing host-agent service"
 PYTHON3_PATH="$(command -v python3 || command -v python || echo /usr/bin/python3)"
 HOST_AGENT_TEMPLATE="${SOURCE_ROOT}/deploy/host-agent/host-agent.service"
 
@@ -127,11 +140,11 @@ fi
 "${SUDO[@]}" chmod +x "${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent/host-agent.py" "${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent/debug-host-agent.sh"
 "${SUDO[@]}" chown -R "${TARGET_USER}:${TARGET_USER}" "${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent"
 
-# Step 4: Anthias
-log "Step 4/6: Installing Anthias"
+# Step 5: Anthias
+log "Step 5/7: Installing Anthias"
 if ! command -v anthias >/dev/null 2>&1; then
   ANTHIAS_INSTALLER="${ANTHIAS_DIR}/install-anthias.sh"
-  if curl -sSL https://install.anthias.io -o "${ANTHIAS_INSTALLER}"; then
+  if curl -sL https://install-anthias.srly.io -o "${ANTHIAS_INSTALLER}"; then
     bash "${ANTHIAS_INSTALLER}" --skip-reboot || warn "Anthias installer returned non-zero status"
   else
     warn "Could not download Anthias installer"
@@ -140,8 +153,8 @@ else
   log "Anthias already installed"
 fi
 
-# Step 5: systemd services
-log "Step 5/6: Installing systemd units"
+# Step 6: systemd services
+log "Step 6/7: Installing systemd units"
 
 for unit_file in supabase-stack.service newsticker.service; do
   sed -e "s|%u|${TARGET_USER}|g" "${SOURCE_ROOT}/deploy/systemd/${unit_file}" | \
@@ -155,20 +168,44 @@ done
 "${SUDO[@]}" systemctl enable newsticker.service
 "${SUDO[@]}" systemctl enable newsticker.target
 
-# Step 6: Anthias asset
-log "Step 6/6: Creating Anthias asset metadata in ${ANTHIAS_DIR}"
+# Step 7: Anthias asset
+log "Step 7/7: Creating Anthias asset metadata in ${ANTHIAS_DIR}"
 ASSET_JSON="${ANTHIAS_DIR}/newsticker-asset.json"
 cat > "${ASSET_JSON}" <<EOF
 {
-  "name": "Newsticker",
-  "asset_type": "website",
-  "url": "http://localhost:3000",
-  "duration": 300,
-  "is_portrait": false
+    "name": "Newsticker",
+    "uri": "http://localhost:3000",
+    "start_date": "2026-07-04T20:36:00+01:00",
+    "end_date": "2100-12-31T23:00:00Z",
+    "duration": 0,
+    "mimetype": "webpage",
+    "is_enabled": true,
+    "nocache": false,
+    "play_order": 1,
+    "skip_asset_check": true,
+    "is_active": true,
+    "is_processing": false,
+    "play_days": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+    ],
+    "play_time_from": null,
+    "play_time_to": null,
+    "is_reachable": true,
+    "last_reachability_check": null,
+    "metadata": {
+        "refresh_interval_s": 300
+    },
+    "refresh_interval_s": 300
 }
 EOF
 
-ASSET_RESPONSE="$(curl -s -X POST http://localhost:8080/api/assets -H 'Content-Type: application/json' -d @"${ASSET_JSON}" || true)"
+ASSET_RESPONSE="$(curl -s -X POST http://localhost:80/api/v2/assets -H 'Content-Type: application/json' -d @"${ASSET_JSON}" || true)"
 printf '%s\n' "${ASSET_RESPONSE}" > "${ANTHIAS_DIR}/newsticker-asset-response.json"
 
 if [[ -n "${ASSET_RESPONSE}" ]]; then
@@ -187,7 +224,4 @@ echo "- Newsticker: ${RUNTIME_NEWSTICKER_DIR}"
 echo "- Anthias data: ${ANTHIAS_DIR}"
 echo "- Host-agent: ${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent"
 
-
-
-
-
+sh /opt/newsticker/supabase/run.sh status
