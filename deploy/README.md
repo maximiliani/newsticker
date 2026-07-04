@@ -27,9 +27,13 @@ High-level flow:
 5. Copies project files into `/opt/newsticker`
 6. Generates `.env` secrets/JWT keys
 7. Starts DB and applies SQL migrations
-8. Starts full stack with Docker Compose
-9. Installs and starts `host-agent` systemd service
-10. Attempts Anthias installation
+7. Ensures `postgres` role exists in the database
+8. Configures app settings in database
+9. Starts all Supabase services (Kong, Auth, REST, Realtime, Storage, etc.)
+10. Waits for Supabase services to become healthy
+11. Applies SQL migrations (after services are ready)
+12. Installs and starts `host-agent` systemd service
+13. Attempts Anthias installation
 
 The installer invokes Docker Compose with `--env-file /opt/newsticker/.env` and `--project-directory /opt/newsticker`, so the generated variables are loaded from the install directory instead of the current shell environment.
 
@@ -86,5 +90,6 @@ The compose file currently pins the following tags:
 - The installer writes generated credentials to `/opt/newsticker/credentials.txt`.
 - If Docker group membership was newly added, log out/in (or reboot) before running Docker commands without `sudo`.
 - Major image upgrades can introduce config or behavior changes; if you update tags further, validate on a staging host first.
+- If you already had a database volume from an earlier install, you may need to recreate it once so the new `POSTGRES_USER=postgres` bootstrap takes effect. The quickest way is `./deploy/uninstall.sh --remove-data` and then rerun `./deploy/install.sh`.
 
 

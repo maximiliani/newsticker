@@ -133,6 +133,7 @@ SERVICE_ROLE_KEY=$(generate_jwt "service_role" "$JWT_SECRET")
 echo -e "${GREEN}Creating .env file...${NC}"
 cat > .env <<EOF
 # === DB SETTINGS ===
+POSTGRES_USER=postgres
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 POSTGRES_DB=postgres
 POSTGRES_PORT=5432
@@ -198,14 +199,6 @@ END
 ALTER ROLE postgres WITH LOGIN SUPERUSER CREATEROLE CREATEDB REPLICATION BYPASSRLS PASSWORD '${POSTGRES_PASSWORD}';
 EOF
 
-# 8. Apply migrations
-echo -e "${GREEN}Applying Supabase migrations...${NC}"
-MIGRATIONS=$(ls supabase/migrations/*.sql | sort)
-for f in $MIGRATIONS; do
-    echo "Applying $(basename $f)..."
-    docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres < "$f" > /dev/null
-done
-
 # 9. Configure App settings in database
 echo -e "${GREEN}Configuring app settings in database...${NC}"
 docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres <<EOF
@@ -223,6 +216,30 @@ EOF
 # 10. Start all services
 echo -e "${GREEN}Starting all application services...${NC}"
 docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d
+
+# 8. Wait for Supabase services to be healthy before running migrations
+echo -e "${GREEN}Waiting for Supabase services to be ready...${NC}"
+MAX_WAIT=45
+COUNT=0
+until docker exec "${PROJECT_NAME}-rest-1" psql -U authenticator -h db -d postgres -c "SELECT 1;" > /dev/null 2>&1 || [ "$COUNT" -eq "$MAX_WAIT" ]; do
+    echo -n "."
+    sleep 2
+    ((++COUNT))
+done
+
+if [ "$COUNT" -eq "$MAX_WAIT" ]; then
+    echo -e "\n${YELLOW}Warning: Supabase services did not become healthy within $((MAX_WAIT * 2))s. Continuing with migration attempt...${NC}"
+else
+    echo -e "\n${GREEN}Supabase services are responsive.${NC}"
+fi
+
+# Apply migrations
+echo -e "${GREEN}Applying Supabase migrations...${NC}"
+MIGRATIONS=$(ls supabase/migrations/*.sql | sort)
+for f in $MIGRATIONS; do
+    echo "Applying $(basename $f)..."
+    docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres < "$f" > /dev/null
+done
 
 # 11. Install host-agent
 echo -e "${GREEN}Installing host-agent systemd service...${NC}"
