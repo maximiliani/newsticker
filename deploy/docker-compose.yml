@@ -1,6 +1,7 @@
 services:
   db:
-    image: supabase/postgres:15.1.0.147
+    image: supabase/postgres:17.6.1.142
+
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
@@ -16,7 +17,7 @@ services:
       - "5432:5432"
 
   kong:
-    image: kong:2.8.1
+    image: kong:3.9.3
     restart: always
     environment:
       KONG_DATABASE: "off"
@@ -31,7 +32,7 @@ services:
         condition: service_healthy
 
   auth:
-    image: supabase/gotrue:v2.132.3
+    image: supabase/gotrue:v2.192.0
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +51,7 @@ services:
       GOTRUE_URI_ALLOW_LIST: "*"
 
   rest:
-    image: postgrest/postgrest:v12.0.1
+    image: postgrest/postgrest:v14.14
     depends_on:
       db:
         condition: service_healthy
@@ -61,7 +62,7 @@ services:
       PGRST_JWT_SECRET: ${JWT_SECRET}
 
   realtime:
-    image: supabase/realtime:v2.25.26
+    image: supabase/realtime:v2.112.4
     depends_on:
       db:
         condition: service_healthy
@@ -79,7 +80,7 @@ services:
       PUBLICATION_NAME: supabase_realtime
 
   storage:
-    image: supabase/storage-api:v0.43.12
+    image: supabase/storage-api:v1.61.13
     depends_on:
       db:
         condition: service_healthy
@@ -94,7 +95,7 @@ services:
       - ./volumes/storage:/var/lib/storage
 
   imgproxy:
-    image: darthsim/imgproxy:v3.19.0
+    image: darthsim/imgproxy:v4.0.11
     environment:
       IMGPROXY_BIND: :5001
 

@@ -1,9 +1,11 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # --- Configuration ---
 INSTALL_DIR="/opt/newsticker"
 PROJECT_NAME="newsticker"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -11,7 +13,15 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Starting Newsticker Raspberry Pi Installation...${NC}"
+if [[ ${EUID} -eq 0 ]]; then
+  SUDO=()
+else
+  SUDO=(sudo)
+fi
+
+TARGET_USER="${SUDO_USER:-${USER}}"
+
+echo -e "${GREEN}Starting Newsticker installation...${NC}"
 
 # 1. Check OS
 if [[ -f /etc/os-release ]]; then
@@ -23,39 +33,71 @@ else
     echo -e "${YELLOW}Warning: Could not detect OS version. Continuing...${NC}"
 fi
 
-# 2. Detect Docker
-if ! command -v docker &> /dev/null; then
-    echo -e "${YELLOW}Docker not found. Installing via get.docker.com...${NC}"
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sudo sh get-docker.sh
-    sudo usermod -aG docker $USER
-    echo -e "${GREEN}Docker installed. NOTE: You may need to log out and back in for 'docker' group permissions to work.${NC}"
-fi
+# 2. Install Docker from Docker's apt repository (Debian flow)
+install_docker_from_apt_repo() {
+    local codename
+    codename="${VERSION_CODENAME:-}"
 
-# 3. Detect Docker Compose
-if ! docker compose version &> /dev/null; then
-    echo -e "${YELLOW}Docker Compose plugin not found. Installing...${NC}"
-    sudo apt-get update
-    sudo apt-get install -y docker-compose-plugin
-fi
-
-# 4. Setup directory and copy files
-if [ "$PWD" != "$INSTALL_DIR" ]; then
-    echo -e "${GREEN}Setting up directory: $INSTALL_DIR${NC}"
-    sudo mkdir -p $INSTALL_DIR
-    sudo chown $USER:$USER $INSTALL_DIR
-    # Copy all files except node_modules and .next
-    if command -v rsync &> /dev/null; then
-        rsync -av --exclude='node_modules' --exclude='.next' --exclude='.git' ./ $INSTALL_DIR/
-    else
-        cp -r . $INSTALL_DIR/
+    if [[ -z "${codename}" ]]; then
+        codename="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
     fi
-    cd $INSTALL_DIR
+
+    if [[ -z "${codename}" ]]; then
+        echo -e "${RED}Error: Could not determine Debian codename (VERSION_CODENAME).${NC}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}Installing Docker Engine and Compose plugin via apt repository...${NC}"
+    "${SUDO[@]}" apt-get update
+    "${SUDO[@]}" apt-get install -y ca-certificates curl gnupg lsb-release
+
+    "${SUDO[@]}" install -m 0755 -d /etc/apt/keyrings
+    "${SUDO[@]}" curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    "${SUDO[@]}" chmod a+r /etc/apt/keyrings/docker.asc
+
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${codename} stable" \
+      | "${SUDO[@]}" tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    "${SUDO[@]}" apt-get update
+    "${SUDO[@]}" apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+}
+
+if ! command -v docker >/dev/null 2>&1; then
+    install_docker_from_apt_repo
+else
+    echo -e "${GREEN}Docker is already installed. Ensuring Compose plugin exists...${NC}"
+    if ! docker compose version >/dev/null 2>&1; then
+        install_docker_from_apt_repo
+    fi
 fi
+
+if id -nG "${TARGET_USER}" | grep -qw docker; then
+    echo -e "${GREEN}User ${TARGET_USER} is already in docker group.${NC}"
+else
+    "${SUDO[@]}" usermod -aG docker "${TARGET_USER}"
+    echo -e "${YELLOW}Added ${TARGET_USER} to docker group. Re-login may be required for group changes to apply.${NC}"
+fi
+
+# 3. Setup directory and copy files
+echo -e "${GREEN}Setting up directory: ${INSTALL_DIR}${NC}"
+"${SUDO[@]}" mkdir -p "${INSTALL_DIR}"
+"${SUDO[@]}" chown "${TARGET_USER}:${TARGET_USER}" "${INSTALL_DIR}"
+
+if command -v rsync >/dev/null 2>&1; then
+    rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' "${SOURCE_ROOT}/" "${INSTALL_DIR}/"
+else
+    "${SUDO[@]}" apt-get update
+    "${SUDO[@]}" apt-get install -y rsync
+    rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' "${SOURCE_ROOT}/" "${INSTALL_DIR}/"
+fi
+
+cd "${INSTALL_DIR}"
+COMPOSE_FILE="${INSTALL_DIR}/deploy/docker-compose.yml"
 
 # 5. Generate Secrets
 # NOTE: INTERNAL_ADMIN_SECRET is generated as a hex string (openssl rand -hex).
-# If this generation method is changed, ensure it remains safe for SQL interpolation 
+# If this generation method is changed, ensure it remains safe for SQL interpolation
 # in section 9, as it is interpolated directly into SQL strings.
 echo -e "${GREEN}Generating secrets and JWTs...${NC}"
 JWT_SECRET=$(openssl rand -hex 32)
@@ -72,9 +114,9 @@ def b64_encode(data):
     return base64.urlsafe_b64encode(data).decode('utf-8').replace('=', '')
 header = b64_encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode())
 payload = b64_encode(json.dumps({
-    "role": "$role", 
-    "iss": "supabase", 
-    "iat": int(time.time()), 
+    "role": "$role",
+    "iss": "supabase",
+    "iat": int(time.time()),
     "exp": int(time.time()) + 315360000 # 10 years
 }).encode())
 msg = header + "." + payload
@@ -121,40 +163,40 @@ NEXT_PUBLIC_REFRESH_EVERY_MINUTES=15
 EOF
 chmod 600 .env
 
-# 7. Start DB and wait
+# 6. Start DB and wait
 echo -e "${GREEN}Starting database...${NC}"
-docker compose -f deploy/docker-compose.yml -p ${PROJECT_NAME} up -d db
+docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d db
 
 echo "Waiting for database to be healthy (this may take a minute)..."
 # Simple wait loop for PG
 MAX_WAIT=30
 COUNT=0
-until docker exec ${PROJECT_NAME}-db-1 pg_isready -U postgres > /dev/null 2>&1 || [ $COUNT -eq $MAX_WAIT ]; do
+until docker exec "${PROJECT_NAME}-db-1" pg_isready -U postgres > /dev/null 2>&1 || [ "$COUNT" -eq "$MAX_WAIT" ]; do
     echo -n "."
     sleep 2
     ((COUNT++))
 done
 
-if [ $COUNT -eq $MAX_WAIT ]; then
+if [ "$COUNT" -eq "$MAX_WAIT" ]; then
     echo -e "\n${RED}Error: Database timed out during startup.${NC}"
     exit 1
 fi
 echo -e "\n${GREEN}Database is ready.${NC}"
 
-# 8. Apply migrations
+# 7. Apply migrations
 echo -e "${GREEN}Applying Supabase migrations...${NC}"
 MIGRATIONS=$(ls supabase/migrations/*.sql | sort)
 for f in $MIGRATIONS; do
     echo "Applying $(basename $f)..."
-    docker exec -i ${PROJECT_NAME}-db-1 psql -U postgres -d postgres < "$f" > /dev/null
+    docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres < "$f" > /dev/null
 done
 
-# 9. Configure App settings in database
+# 8. Configure App settings in database
 echo -e "${GREEN}Configuring app settings in database...${NC}"
-docker exec -i ${PROJECT_NAME}-db-1 psql -U postgres -d postgres <<EOF
+docker exec -i "${PROJECT_NAME}-db-1" psql -U postgres -d postgres <<EOF
 -- Set GUC variables for the application
 -- Use DO block to ensure settings exist
-DO \$\$ 
+DO \$\$
 BEGIN
   -- These variables are used by triggers and pg_cron
   EXECUTE 'ALTER SYSTEM SET app.settings.CRON_APP_URL = ''' || 'http://app:3000' || '''';
@@ -163,18 +205,18 @@ END \$\$;
 SELECT pg_reload_conf();
 EOF
 
-# 10. Start all services
+# 9. Start all services
 echo -e "${GREEN}Starting all application services...${NC}"
-docker compose -f deploy/docker-compose.yml -p ${PROJECT_NAME} up -d
+docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d
 
-# 11. Install host-agent
+# 10. Install host-agent
 echo -e "${GREEN}Installing host-agent systemd service...${NC}"
-sudo cp deploy/host-agent/host-agent.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable host-agent
-sudo systemctl start host-agent
+"${SUDO[@]}" cp deploy/host-agent/host-agent.service /etc/systemd/system/
+"${SUDO[@]}" systemctl daemon-reload
+"${SUDO[@]}" systemctl enable host-agent
+"${SUDO[@]}" systemctl start host-agent
 
-# 12. Anthias Installation
+# 11. Anthias Installation
 echo -e "${YELLOW}Installing Anthias (Screenly OSE successor)...${NC}"
 if ! command -v anthias &> /dev/null; then
     # Running Anthias installer
@@ -185,7 +227,7 @@ if ! command -v anthias &> /dev/null; then
     rm install-anthias.sh
 fi
 
-# 13. Summary
+# 12. Summary
 IP_ADDR=$(hostname -I | awk '{print $1}')
 
 # Save credentials to a protected file
