@@ -12,7 +12,7 @@ INSTALL_DIR="/opt/newsticker"
 SUPABASE_PROJECT_NAME="supabase"
 SUPABASE_PROJECT_DIR="${INSTALL_DIR}/${SUPABASE_PROJECT_NAME}"
 RUNTIME_NEWSTICKER_DIR="${INSTALL_DIR}/newsticker"
-ANTHIAS_DIR="${INSTALL_DIR}/anthias"
+KIOSK_DIR="${INSTALL_DIR}/kiosk"
 TARGET_USER="${SUDO_USER:-${USER}}"
 
 if [[ ${EUID} -eq 0 ]]; then
@@ -49,8 +49,8 @@ read_env_var() {
 
 log "Installing Newsticker into ${INSTALL_DIR}"
 
-"${SUDO[@]}" mkdir -p "${INSTALL_DIR}" "${ANTHIAS_DIR}"
-"${SUDO[@]}" chown "${TARGET_USER}:${TARGET_USER}" "${INSTALL_DIR}" "${ANTHIAS_DIR}"
+"${SUDO[@]}" mkdir -p "${INSTALL_DIR}" "${KIOSK_DIR}"
+"${SUDO[@]}" chown "${TARGET_USER}:${TARGET_USER}" "${INSTALL_DIR}" "${KIOSK_DIR}"
 
 if ! command -v rsync >/dev/null 2>&1; then
   "${SUDO[@]}" apt-get update
@@ -77,8 +77,8 @@ curl -fsSL https://deb.nodesource.com/setup_24.x | "${SUDO[@]}" bash -
 "${SUDO[@]}" apt-get install -y nodejs
 node -v
 
-# Step 2: Copy app, apply migrations, build
-log "Step 2/7: Installing Newsticker app into ${RUNTIME_NEWSTICKER_DIR}"
+# Step 3: Copy app, apply migrations, build
+log "Step 3/7: Installing Newsticker app into ${RUNTIME_NEWSTICKER_DIR}"
 run_as_target_user "mkdir -p '${RUNTIME_NEWSTICKER_DIR}'"
 run_as_target_user "rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' '${SOURCE_ROOT}/' '${RUNTIME_NEWSTICKER_DIR}/'"
 
@@ -140,23 +140,23 @@ fi
 "${SUDO[@]}" chmod +x "${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent/host-agent.py" "${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent/debug-host-agent.sh"
 "${SUDO[@]}" chown -R "${TARGET_USER}:${TARGET_USER}" "${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent"
 
-# Step 5: Anthias
-log "Step 5/7: Installing Anthias"
-if ! command -v anthias >/dev/null 2>&1; then
-  ANTHIAS_INSTALLER="${ANTHIAS_DIR}/install-anthias.sh"
-  if curl -sL https://install-anthias.srly.io -o "${ANTHIAS_INSTALLER}"; then
-    bash "${ANTHIAS_INSTALLER}" --skip-reboot || warn "Anthias installer returned non-zero status"
-  else
-    warn "Could not download Anthias installer"
-  fi
-else
-  log "Anthias already installed"
+# Step 5: Chromium kiosk
+log "Step 5/7: Installing Chromium kiosk dependencies"
+"${SUDO[@]}" apt-get update
+if ! "${SUDO[@]}" apt-get install -y chromium unclutter xdotool; then
+  # Some distributions use chromium-browser instead of chromium.
+  "${SUDO[@]}" apt-get install -y chromium-browser unclutter xdotool || warn "Could not install Chromium kiosk dependencies"
 fi
+
+"${SUDO[@]}" mkdir -p "${KIOSK_DIR}"
+"${SUDO[@]}" cp "${SOURCE_ROOT}/deploy/kiosk/start-chromium-kiosk.sh" "${KIOSK_DIR}/"
+"${SUDO[@]}" chmod +x "${KIOSK_DIR}/start-chromium-kiosk.sh"
+"${SUDO[@]}" chown -R "${TARGET_USER}:${TARGET_USER}" "${KIOSK_DIR}"
 
 # Step 6: systemd services
 log "Step 6/7: Installing systemd units"
 
-for unit_file in supabase-stack.service newsticker.service; do
+for unit_file in supabase-stack.service newsticker.service chromium-kiosk.service; do
   sed -e "s|%u|${TARGET_USER}|g" "${SOURCE_ROOT}/deploy/systemd/${unit_file}" | \
     "${SUDO[@]}" tee "/etc/systemd/system/${unit_file}" > /dev/null
 done
@@ -166,53 +166,12 @@ done
 "${SUDO[@]}" systemctl enable host-agent.service
 "${SUDO[@]}" systemctl enable supabase-stack.service
 "${SUDO[@]}" systemctl enable newsticker.service
+"${SUDO[@]}" systemctl enable chromium-kiosk.service
 "${SUDO[@]}" systemctl enable newsticker.target
 
-# Step 7: Anthias asset
-log "Step 7/7: Creating Anthias asset metadata in ${ANTHIAS_DIR}"
-ASSET_JSON="${ANTHIAS_DIR}/newsticker-asset.json"
-cat > "${ASSET_JSON}" <<EOF
-{
-    "name": "Newsticker",
-    "uri": "http://localhost:3000",
-    "start_date": "2026-07-04T20:36:00+01:00",
-    "end_date": "2100-12-31T23:00:00Z",
-    "duration": 0,
-    "mimetype": "webpage",
-    "is_enabled": true,
-    "nocache": false,
-    "play_order": 1,
-    "skip_asset_check": true,
-    "is_active": true,
-    "is_processing": false,
-    "play_days": [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7
-    ],
-    "play_time_from": null,
-    "play_time_to": null,
-    "is_reachable": true,
-    "last_reachability_check": null,
-    "metadata": {
-        "refresh_interval_s": 300
-    },
-    "refresh_interval_s": 300
-}
-EOF
-
-ASSET_RESPONSE="$(curl -s -X POST http://localhost:80/api/v2/assets -H 'Content-Type: application/json' -d @"${ASSET_JSON}" || true)"
-printf '%s\n' "${ASSET_RESPONSE}" > "${ANTHIAS_DIR}/newsticker-asset-response.json"
-
-if [[ -n "${ASSET_RESPONSE}" ]]; then
-  log "Anthias asset creation attempted; response saved to ${ANTHIAS_DIR}/newsticker-asset-response.json"
-else
-  warn "Could not reach Anthias API; asset payload saved at ${ASSET_JSON}"
-fi
+# Step 7: Chromium kiosk service notes
+log "Step 7/7: Chromium kiosk service configured"
+echo "Chromium kiosk will open http://localhost:3000 on display :0"
 
 log "Starting services"
 "${SUDO[@]}" systemctl start newsticker.target || warn "Could not start newsticker.target automatically"
@@ -221,7 +180,7 @@ echo -e "\n${GREEN}Installation complete.${NC}"
 echo "Paths:"
 echo "- Supabase:  ${SUPABASE_PROJECT_DIR}"
 echo "- Newsticker: ${RUNTIME_NEWSTICKER_DIR}"
-echo "- Anthias data: ${ANTHIAS_DIR}"
+echo "- Chromium kiosk: ${KIOSK_DIR}"
 echo "- Host-agent: ${RUNTIME_NEWSTICKER_DIR}/deploy/host-agent"
 
 sh /opt/newsticker/supabase/run.sh status

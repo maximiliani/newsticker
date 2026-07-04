@@ -1,7 +1,7 @@
 [Unit]
 Description=Newsticker Stack Target (Supabase + App + Services)
 Documentation=https://github.com/maximiliani/newsticker
-Wants=supabase-stack.service newsticker.service host-agent.service
+Wants=supabase-stack.service newsticker.service host-agent.service chromium-kiosk.service
 
 [Install]
 WantedBy=multi-user.target

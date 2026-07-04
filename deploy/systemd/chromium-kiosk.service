@@ -1,0 +1,20 @@
+[Unit]
+Description=Chromium Kiosk for Newsticker
+After=graphical.target newsticker.service
+Wants=graphical.target newsticker.service
+PartOf=newsticker.target
+
+[Service]
+Type=simple
+User=%u
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/%u/.Xauthority
+Environment=NEWSTICKER_KIOSK_URL=http://localhost:3000
+WorkingDirectory=/opt/newsticker/kiosk
+ExecStart=/opt/newsticker/kiosk/start-chromium-kiosk.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target newsticker.target
+

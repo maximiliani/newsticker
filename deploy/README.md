@@ -6,7 +6,7 @@ The installer now places runtime data under:
 
 - `/opt/newsticker/supabase` (official Supabase stack)
 - `/opt/newsticker/newsticker` (application code + `.env.local`)
-- `/opt/newsticker/anthias` (Anthias installer/artifact files)
+- `/opt/newsticker/kiosk` (Chromium kiosk launcher)
 
 ## Install
 
@@ -23,7 +23,7 @@ What the installer does:
 3. Builds Newsticker (`npm install` + `npm run build`)
 4. Applies SQL migrations from `supabase/migrations`
 5. Creates `/opt/newsticker/newsticker/.env.local`
-6. Installs host-agent and Anthias
+6. Installs host-agent and Chromium kiosk dependencies
 7. Installs and enables systemd units
 8. Starts `newsticker.target`
 
@@ -33,6 +33,7 @@ What the installer does:
 - `supabase-stack.service` (Supabase compose stack)
 - `newsticker.service` (Next.js app)
 - `host-agent.service` (device management)
+- `chromium-kiosk.service` (kiosk browser on display `:0`)
 
 Useful commands:
 
@@ -62,9 +63,11 @@ Options:
 - `host-agent/host-agent.py`
 - `host-agent/host-agent.service`
 - `host-agent/debug-host-agent.sh`
+- `kiosk/start-chromium-kiosk.sh`
 - `systemd/newsticker.service`
 - `systemd/supabase-stack.service`
 - `systemd/newsticker.target`
+- `systemd/chromium-kiosk.service`
 
 ## Reference
 
