@@ -1,15 +1,29 @@
 [Unit]
 Description=Newsticker Host Agent
+Documentation=https://github.com/your-org/newsticker/tree/main/deploy/host-agent
 After=network.target
+PartOf=newsticker.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/opt/newsticker/deploy/host-agent
-EnvironmentFile=/opt/newsticker/.env
-ExecStart=/usr/bin/python3 /opt/newsticker/deploy/host-agent/host-agent.py
+User=%u
+Group=%u
+WorkingDirectory=/tmp
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=host-agent
+Environment="PYTHONUNBUFFERED=1"
+# Set HOST_AGENT_SECRET if available from environment file, otherwise use a default
+EnvironmentFile=-%h/supabase-project/newsticker/.env.local
+ExecStart=%python3_path% %h/supabase-project/newsticker/deploy/host-agent/host-agent.py
 Restart=always
 RestartSec=5
+StartLimitInterval=60s
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=128M
+CPUQuota=50%
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=multi-user.target newsticker.target

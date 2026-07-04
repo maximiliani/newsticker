@@ -172,13 +172,22 @@ echo ""
 
 log "Step 3/4: Installing host-agent systemd service..."
 
+# Find Python 3 path
+PYTHON3_PATH=$(which python3 || which python || echo "/usr/bin/python3")
+
 # Update host-agent.service to reference the correct paths
 HOST_AGENT_SERVICE_TEMPLATE="${NEWSTICKER_DIR}/deploy/host-agent/host-agent.service"
 HOST_AGENT_SERVICE="/etc/systemd/system/host-agent.service"
 
 if [[ -f "${HOST_AGENT_SERVICE_TEMPLATE}" ]]; then
-    # Create a modified version with correct paths
-    sed "s|/opt/newsticker|${SUPABASE_PROJECT_DIR}/newsticker|g" "${HOST_AGENT_SERVICE_TEMPLATE}" | \
+    # Create a modified version with correct user, home, and python paths
+    USERNAME="${SUDO_USER:-${USER}}"
+    HOME_DIR=$(eval echo ~"${USERNAME}")
+
+    sed -e "s|%u|${USERNAME}|g" \
+        -e "s|%h|${HOME_DIR}|g" \
+        -e "s|%python3_path%|${PYTHON3_PATH}|g" \
+        "${HOST_AGENT_SERVICE_TEMPLATE}" | \
         "${SUDO[@]}" tee "${HOST_AGENT_SERVICE}" > /dev/null
 
     # Install Python host-agent script
@@ -187,11 +196,26 @@ if [[ -f "${HOST_AGENT_SERVICE_TEMPLATE}" ]]; then
         "${SUPABASE_PROJECT_DIR}/newsticker/deploy/host-agent/"
     "${SUDO[@]}" chmod +x "${SUPABASE_PROJECT_DIR}/newsticker/deploy/host-agent/host-agent.py"
 
+    # Install debug script for troubleshooting
+    "${SUDO[@]}" cp "${NEWSTICKER_DIR}/deploy/host-agent/debug-host-agent.sh" \
+        "${SUPABASE_PROJECT_DIR}/newsticker/deploy/host-agent/"
+    "${SUDO[@]}" chmod +x "${SUPABASE_PROJECT_DIR}/newsticker/deploy/host-agent/debug-host-agent.sh"
+
+    # Ensure the environment file exists (should have been created in Step 2)
+    if [[ ! -f "${NEWSTICKER_ENV}" ]]; then
+        warn "Newsticker environment file not found at ${NEWSTICKER_ENV}. Host-agent may fail to start."
+    fi
+
     "${SUDO[@]}" systemctl daemon-reload
     "${SUDO[@]}" systemctl enable host-agent
-    "${SUDO[@]}" systemctl start host-agent
 
-    log "Host-agent installed and started"
+    # Try to start but don't fail if it doesn't work yet (dependencies may not be ready)
+    if "${SUDO[@]}" systemctl start host-agent 2>/dev/null; then
+        log "Host-agent installed and started"
+    else
+        warn "Host-agent installed but failed to start immediately (will start on boot)."
+        warn "To debug, run: sudo ${SUPABASE_PROJECT_DIR}/newsticker/deploy/host-agent/debug-host-agent.sh"
+    fi
 else
     warn "Host-agent template not found at ${HOST_AGENT_SERVICE_TEMPLATE}. Skipping."
 fi
@@ -226,13 +250,20 @@ echo ""
 
 log "Step 5/6: Configuring systemd services for automatic startup..."
 
-# Create/update host-agent.service with correct paths
-HOST_AGENT_SERVICE_TEMPLATE="${NEWSTICKER_DIR}/deploy/host-agent/host-agent.service"
-HOST_AGENT_SERVICE="/etc/systemd/system/host-agent.service"
+# Find Python 3 path for host-agent
+PYTHON3_PATH=$(which python3 || which python || echo "/usr/bin/python3")
 
+# Configure host-agent.service with correct paths
+HOST_AGENT_SERVICE_TEMPLATE="${NEWSTICKER_DIR}/deploy/host-agent/host-agent.service"
 if [[ -f "${HOST_AGENT_SERVICE_TEMPLATE}" ]]; then
-    sed "s|/opt/newsticker|${SUPABASE_PROJECT_DIR}/newsticker|g" "${HOST_AGENT_SERVICE_TEMPLATE}" | \
-        "${SUDO[@]}" tee "${HOST_AGENT_SERVICE}" > /dev/null
+    USERNAME="${SUDO_USER:-${USER}}"
+    HOME_DIR=$(eval echo ~"${USERNAME}")
+
+    sed -e "s|%u|${USERNAME}|g" \
+        -e "s|%h|${HOME_DIR}|g" \
+        -e "s|%python3_path%|${PYTHON3_PATH}|g" \
+        "${HOST_AGENT_SERVICE_TEMPLATE}" | \
+        "${SUDO[@]}" tee "/etc/systemd/system/host-agent.service" > /dev/null
 fi
 
 # Install Supabase stack service
