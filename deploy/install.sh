@@ -61,11 +61,60 @@ prompt_required_env_var() {
   done
 }
 
+prompt_env_var_with_default() {
+  local var_name="$1"
+  local prompt_label="$2"
+  local default_value="$3"
+  local value
+
+  read -r -p "${prompt_label} [${default_value}]: " value
+  value="${value:-${default_value}}"
+  printf -v "${var_name}" '%s' "${value}"
+}
+
+set_env_var_in_file() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+  local tmp_file
+
+  tmp_file="$(mktemp)"
+  awk -v k="${key}" -v v="${value}" '
+    BEGIN { updated = 0 }
+    $0 ~ "^" k "=" {
+      print k "=" v
+      updated = 1
+      next
+    }
+    { print }
+    END {
+      if (updated == 0) {
+        print k "=" v
+      }
+    }
+  ' "${file}" > "${tmp_file}"
+  mv "${tmp_file}" "${file}"
+}
+
 log "Installing Newsticker into ${INSTALL_DIR}"
 
 log "Please provide your Instagram API credentials"
 prompt_required_env_var INSTAGRAM_CLIENT_ID "Instagram API client ID"
 prompt_required_env_var INSTAGRAM_CLIENT_SECRET "Instagram API client secret"
+
+CONFIGURE_SMTP="false"
+read -r -p "Do you want to provide SMTP email server details? [y/N]: " SMTP_PROMPT_ANSWER
+case "${SMTP_PROMPT_ANSWER}" in
+  [yY]|[yY][eE][sS])
+    CONFIGURE_SMTP="true"
+    prompt_env_var_with_default SMTP_ADMIN_EMAIL "SMTP admin email" "admin@example.com"
+    prompt_env_var_with_default SMTP_HOST "SMTP host" "smtp.example.com"
+    prompt_env_var_with_default SMTP_PORT "SMTP port" "465"
+    prompt_env_var_with_default SMTP_USER "SMTP username" "your-smtp-user"
+    prompt_env_var_with_default SMTP_PASS "SMTP password" "your-smtp-password"
+    prompt_env_var_with_default SMTP_SENDER_NAME "SMTP sender name" "your-sender-name"
+    ;;
+esac
 
 "${SUDO[@]}" mkdir -p "${INSTALL_DIR}" "${KIOSK_DIR}"
 "${SUDO[@]}" chown "${TARGET_USER}:${TARGET_USER}" "${INSTALL_DIR}" "${KIOSK_DIR}"
@@ -141,6 +190,25 @@ if [[ ! -d "${SUPABASE_PROJECT_DIR}" ]]; then
   error "Supabase project directory not found at ${SUPABASE_PROJECT_DIR}"
 fi
 
+SUPABASE_ENV="${SUPABASE_PROJECT_DIR}/.env"
+if [[ "${CONFIGURE_SMTP}" == "true" ]]; then
+  if [[ ! -f "${SUPABASE_ENV}" ]]; then
+    error "Supabase .env not found at ${SUPABASE_ENV}"
+  fi
+
+  log "Applying SMTP settings to ${SUPABASE_ENV}"
+  set_env_var_in_file SMTP_ADMIN_EMAIL "${SMTP_ADMIN_EMAIL}" "${SUPABASE_ENV}"
+  set_env_var_in_file SMTP_HOST "${SMTP_HOST}" "${SUPABASE_ENV}"
+  set_env_var_in_file SMTP_PORT "${SMTP_PORT}" "${SUPABASE_ENV}"
+  set_env_var_in_file SMTP_USER "${SMTP_USER}" "${SUPABASE_ENV}"
+  set_env_var_in_file SMTP_PASS "${SMTP_PASS}" "${SUPABASE_ENV}"
+  set_env_var_in_file SMTP_SENDER_NAME "${SMTP_SENDER_NAME}" "${SUPABASE_ENV}"
+
+  # Supabase env contains secrets; keep it readable only by the install user.
+  "${SUDO[@]}" chown "${TARGET_USER}:${TARGET_USER}" "${SUPABASE_ENV}"
+  "${SUDO[@]}" chmod 600 "${SUPABASE_ENV}"
+fi
+
 run_as_target_user "sh '${SUPABASE_PROJECT_DIR}'/run.sh start"
 
 # Step 2: Install node.js
@@ -158,7 +226,6 @@ log "Step 3/7: Installing Newsticker app into ${RUNTIME_NEWSTICKER_DIR}"
 run_as_target_user "mkdir -p '${RUNTIME_NEWSTICKER_DIR}'"
 run_as_target_user "rsync -av --delete --exclude='node_modules' --exclude='.next' --exclude='.git' '${SOURCE_ROOT}/' '${RUNTIME_NEWSTICKER_DIR}/'"
 
-SUPABASE_ENV="${SUPABASE_PROJECT_DIR}/.env"
 if [[ ! -f "${SUPABASE_ENV}" ]]; then
   error "Supabase .env not found at ${SUPABASE_ENV}"
 fi
