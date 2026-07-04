@@ -30,8 +30,9 @@ fi
 SUDO=()
 
 # Find Newsticker installation
-SUPABASE_PROJECT_DIR="${HOME}/supabase-project"
-NEWSTICKER_DIR="${SUPABASE_PROJECT_DIR}/newsticker"
+INSTALL_DIR="/opt/newsticker"
+SUPABASE_PROJECT_DIR="${INSTALL_DIR}/supabase"
+NEWSTICKER_DIR="${INSTALL_DIR}/newsticker"
 
 if [[ ! -d "${NEWSTICKER_DIR}" ]]; then
     error "Newsticker directory not found at ${NEWSTICKER_DIR}"
@@ -144,4 +145,6 @@ echo "  sudo systemctl restart host-agent.service"
 echo ""
 echo "To view real-time logs:"
 echo "  sudo journalctl -u host-agent.service -f"
+
+
 

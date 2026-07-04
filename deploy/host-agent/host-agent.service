@@ -1,6 +1,6 @@
 [Unit]
 Description=Newsticker Host Agent
-Documentation=https://github.com/your-org/newsticker/tree/main/deploy/host-agent
+Documentation=https://github.com/maximiliani/newsticker/tree/main/deploy/host-agent
 After=network.target
 PartOf=newsticker.target
 
@@ -14,8 +14,8 @@ StandardError=journal
 SyslogIdentifier=host-agent
 Environment="PYTHONUNBUFFERED=1"
 # Set HOST_AGENT_SECRET if available from environment file, otherwise use a default
-EnvironmentFile=-%h/supabase-project/newsticker/.env.local
-ExecStart=%python3_path% %h/supabase-project/newsticker/deploy/host-agent/host-agent.py
+EnvironmentFile=-/opt/newsticker/newsticker/.env.local
+ExecStart=%python3_path% /opt/newsticker/newsticker/deploy/host-agent/host-agent.py
 Restart=always
 RestartSec=5
 StartLimitInterval=60s

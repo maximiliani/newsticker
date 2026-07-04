@@ -1,17 +1,4 @@
 #!/bin/bash
-#
-# Newsticker Uninstallation Script
-#
-# Removes Newsticker from the Supabase project directory and optionally:
-# - Disables the host-agent service
-# - Drops Newsticker database objects
-#
-# Usage:
-#   ./deploy/uninstall.sh                        # Remove Newsticker files
-#   ./deploy/uninstall.sh --remove-migrations    # Also drop Newsticker tables
-#   ./deploy/uninstall.sh --remove-all           # Remove everything including host-agent
-#
-
 set -euo pipefail
 
 # Colors for output
@@ -32,6 +19,12 @@ error() { echo -e "${RED}ERROR: ${*}${NC}"; exit 1; }
 
 REMOVE_MIGRATIONS=false
 REMOVE_HOST_AGENT=false
+REMOVE_INSTALL_DIR=false
+
+INSTALL_DIR="/opt/newsticker"
+SUPABASE_PROJECT_DIR="${INSTALL_DIR}/supabase"
+NEWSTICKER_DIR="${INSTALL_DIR}/newsticker"
+ANTHIAS_DIR="${INSTALL_DIR}/anthias"
 
 # Parse arguments
 for arg in "$@"; do
@@ -42,6 +35,7 @@ for arg in "$@"; do
     --remove-all)
       REMOVE_MIGRATIONS=true
       REMOVE_HOST_AGENT=true
+      REMOVE_INSTALL_DIR=true
       ;;
     -h|--help)
       cat <<EOF
@@ -49,11 +43,11 @@ Usage: ./deploy/uninstall.sh [options]
 
 Options:
   --remove-migrations   Drop Newsticker tables/schemas from the database.
-  --remove-all          Remove Newsticker files, database objects, and host-agent.
+  --remove-all          Remove Newsticker files, host-agent, DB objects, and /opt/newsticker data.
   -h, --help            Show this help message.
 
 Note: This script removes Newsticker but does NOT uninstall Supabase.
-To remove the entire Supabase stack, use: cd supabase-project && docker compose down
+To remove the entire Supabase stack, use: cd /opt/newsticker/supabase && docker compose down
 EOF
       exit 0
       ;;
@@ -63,18 +57,8 @@ EOF
   esac
 done
 
-# Find the supabase-project directory
-SUPABASE_PROJECT_DIR="${PWD}/supabase-project"
-
-if [[ ! -d "${SUPABASE_PROJECT_DIR}" ]]; then
-    error "Supabase project directory not found at ${SUPABASE_PROJECT_DIR}"
-fi
-
-NEWSTICKER_DIR="${SUPABASE_PROJECT_DIR}/newsticker"
-
-if [[ ! -d "${NEWSTICKER_DIR}" ]]; then
-    warn "Newsticker directory not found at ${NEWSTICKER_DIR}. Nothing to remove."
-    exit 0
+if [[ ! -d "${INSTALL_DIR}" ]]; then
+    error "Install directory not found at ${INSTALL_DIR}"
 fi
 
 # ============================================================================
@@ -86,14 +70,17 @@ log "Stopping and disabling systemd services..."
 "${SUDO[@]}" systemctl stop newsticker.target 2>/dev/null || warn "newsticker.target not running"
 "${SUDO[@]}" systemctl stop supabase-stack.service 2>/dev/null || warn "supabase-stack.service not running"
 "${SUDO[@]}" systemctl stop newsticker.service 2>/dev/null || warn "newsticker.service not running"
+"${SUDO[@]}" systemctl stop host-agent.service 2>/dev/null || warn "host-agent.service not running"
 
 "${SUDO[@]}" systemctl disable newsticker.target 2>/dev/null || true
 "${SUDO[@]}" systemctl disable supabase-stack.service 2>/dev/null || true
 "${SUDO[@]}" systemctl disable newsticker.service 2>/dev/null || true
+"${SUDO[@]}" systemctl disable host-agent.service 2>/dev/null || true
 
 "${SUDO[@]}" rm -f /etc/systemd/system/supabase-stack.service
 "${SUDO[@]}" rm -f /etc/systemd/system/newsticker.service
 "${SUDO[@]}" rm -f /etc/systemd/system/newsticker.target
+"${SUDO[@]}" rm -f /etc/systemd/system/host-agent.service
 
 "${SUDO[@]}" systemctl daemon-reload
 
@@ -102,23 +89,14 @@ log "Systemd services disabled"
 echo ""
 
 # ============================================================================
-# Step 2: Remove host-agent service (if requested)
+# Step 2: Remove host-agent service files (optional extra cleanup)
 # ============================================================================
 
-if [[ "${REMOVE_HOST_AGENT}" == true ]]; then
+if [[ "${REMOVE_HOST_AGENT}" == true && -d "${NEWSTICKER_DIR}/deploy/host-agent" ]]; then
     log "Disabling host-agent systemd service..."
 
-    HOST_AGENT_SERVICE="/etc/systemd/system/host-agent.service"
-
-    if "${SUDO[@]}" systemctl list-unit-files 2>/dev/null | grep -q '^host-agent\.service'; then
-        "${SUDO[@]}" systemctl stop host-agent || true
-        "${SUDO[@]}" systemctl disable host-agent || true
-        "${SUDO[@]}" rm -f "${HOST_AGENT_SERVICE}"
-        "${SUDO[@]}" systemctl daemon-reload
-        log "Host-agent service removed"
-    else
-        warn "Host-agent service not found. Skipping."
-    fi
+    rm -rf "${NEWSTICKER_DIR}/deploy/host-agent"
+    log "Host-agent files removed"
 fi
 
 # ============================================================================
@@ -126,7 +104,7 @@ fi
 # ============================================================================
 
 log "Removing Newsticker installation..."
-rm -rf "${NEWSTICKER_DIR}"
+rm -rf "${NEWSTICKER_DIR}" || true
 log "Removed ${NEWSTICKER_DIR}"
 
 # ============================================================================
@@ -136,7 +114,10 @@ log "Removed ${NEWSTICKER_DIR}"
 if [[ "${REMOVE_MIGRATIONS}" == true ]]; then
     log "Dropping Newsticker database objects..."
 
-    DB_CONTAINER=$(docker compose -f "${SUPABASE_PROJECT_DIR}/docker-compose.yml" ps -q db) || DB_CONTAINER=""
+    DB_CONTAINER=""
+    if [[ -d "${SUPABASE_PROJECT_DIR}" ]]; then
+        DB_CONTAINER=$(cd "${SUPABASE_PROJECT_DIR}" && docker compose ps -q db) || DB_CONTAINER=""
+    fi
 
     if [[ -z "${DB_CONTAINER}" ]]; then
         warn "Supabase database container not running. Skipping database cleanup."
@@ -163,6 +144,11 @@ SQL
     fi
 fi
 
+if [[ "${REMOVE_INSTALL_DIR}" == true ]]; then
+    log "Removing installation data directory ${INSTALL_DIR}"
+    "${SUDO[@]}" rm -rf "${INSTALL_DIR}"
+fi
+
 # ============================================================================
 # Summary
 # ============================================================================
@@ -172,7 +158,7 @@ log "Newsticker uninstallation complete!"
 echo ""
 echo "Removed components:"
 echo -e "  ✓ Newsticker application files"
-echo -e "  ✓ Systemd services (newsticker.service, supabase-stack.service, newsticker.target)"
+echo -e "  ✓ Systemd services (newsticker, supabase-stack, host-agent, target)"
 if [[ "${REMOVE_HOST_AGENT}" == true ]]; then
     echo -e "  ✓ Host-agent service"
 fi
@@ -183,6 +169,11 @@ echo ""
 echo "Remaining components:"
 echo -e "  ✓ Supabase stack (still running at http://localhost:8000)"
 echo -e "  ✓ Anthias (still running at http://localhost:9000)"
+if [[ "${REMOVE_INSTALL_DIR}" == true ]]; then
+    echo -e "  ✗ /opt/newsticker data removed"
+else
+    echo -e "  ✓ Installation data retained at ${INSTALL_DIR}"
+fi
 echo ""
 echo "To stop the Supabase stack:"
 echo -e "  ${YELLOW}cd ${SUPABASE_PROJECT_DIR}${NC}"

@@ -8,7 +8,8 @@ PartOf=newsticker.target
 [Service]
 Type=simple
 User=%u
-WorkingDirectory=%h/supabase-project/newsticker
+WorkingDirectory=/opt/newsticker/newsticker
+EnvironmentFile=-/opt/newsticker/newsticker/.env.local
 Environment="NODE_ENV=production"
 ExecStart=/usr/bin/npm run start
 ExecReload=/bin/kill -HUP $MAINPID
