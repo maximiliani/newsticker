@@ -71,8 +71,66 @@ prompt_required_env_var INSTAGRAM_CLIENT_SECRET "Instagram API client secret"
 "${SUDO[@]}" chown "${TARGET_USER}:${TARGET_USER}" "${INSTALL_DIR}" "${KIOSK_DIR}"
 
 if ! command -v rsync >/dev/null 2>&1; then
-  "${SUDO[@]}" apt-get update
-  "${SUDO[@]}" apt-get install -y rsync
+  "${SUDO[@]}" apt update
+  "${SUDO[@]}" apt install -y rsync
+fi
+
+echo -e "${GREEN}Starting Newsticker installation...${NC}"
+
+# 1. Check OS
+if [[ -f /etc/os-release ]]; then
+    . /etc/os-release
+    if [[ "$ID" != "raspbian" && "$ID" != "debian" ]]; then
+        echo -e "${YELLOW}Warning: This script is designed for Raspbian/Debian. Current OS: $ID. Continuing anyway...${NC}"
+    fi
+else
+    echo -e "${YELLOW}Warning: Could not detect OS version. Continuing...${NC}"
+fi
+
+# 2. Install Docker from Docker's apt repository (Debian flow)
+install_docker_from_apt_repo() {
+    local codename
+    codename="${VERSION_CODENAME:-}"
+
+    if [[ -z "${codename}" ]]; then
+        codename="$(. /etc/os-release && echo "${VERSION_CODENAME:-}")"
+    fi
+
+    if [[ -z "${codename}" ]]; then
+        echo -e "${RED}Error: Could not determine Debian codename (VERSION_CODENAME).${NC}"
+        exit 1
+    fi
+
+    echo -e "${GREEN}Installing Docker Engine and Compose plugin via apt repository...${NC}"
+    "${SUDO[@]}" apt update
+    "${SUDO[@]}" apt install -y ca-certificates curl gnupg lsb-release
+
+    "${SUDO[@]}" install -m 0755 -d /etc/apt/keyrings
+    "${SUDO[@]}" curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    "${SUDO[@]}" chmod a+r /etc/apt/keyrings/docker.asc
+
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${codename} stable" \
+      | "${SUDO[@]}" tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    "${SUDO[@]}" apt update
+    "${SUDO[@]}" apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+}
+
+if ! command -v docker >/dev/null 2>&1; then
+    install_docker_from_apt_repo
+else
+    echo -e "${GREEN}Docker is already installed. Ensuring Compose plugin exists...${NC}"
+    if ! docker compose version >/dev/null 2>&1; then
+        install_docker_from_apt_repo
+    fi
+fi
+
+if id -nG "${TARGET_USER}" | grep -qw docker; then
+    echo -e "${GREEN}User ${TARGET_USER} is already in docker group.${NC}"
+else
+    "${SUDO[@]}" usermod -aG docker "${TARGET_USER}"
+    echo -e "${YELLOW}Added ${TARGET_USER} to docker group. Re-login may be required for group changes to apply.${NC}"
 fi
 
 # Step 1: Official Supabase setup in /opt/newsticker/supabase
