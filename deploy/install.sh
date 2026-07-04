@@ -94,6 +94,7 @@ fi
 
 cd "${INSTALL_DIR}"
 COMPOSE_FILE="${INSTALL_DIR}/deploy/docker-compose.yml"
+COMPOSE_ENV_FILE="${INSTALL_DIR}/.env"
 
 # 5. Generate Secrets
 # NOTE: INTERNAL_ADMIN_SECRET is generated as a hex string (openssl rand -hex).
@@ -165,7 +166,7 @@ chmod 600 .env
 
 # 6. Start DB and wait
 echo -e "${GREEN}Starting database...${NC}"
-docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d db
+docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d db
 
 echo "Waiting for database to be healthy (this may take a minute)..."
 # Simple wait loop for PG
@@ -174,7 +175,8 @@ COUNT=0
 until docker exec "${PROJECT_NAME}-db-1" pg_isready -U postgres > /dev/null 2>&1 || [ "$COUNT" -eq "$MAX_WAIT" ]; do
     echo -n "."
     sleep 2
-    ((COUNT++))
+    # Use pre-increment so arithmetic command exits successfully under `set -e`.
+    ((++COUNT))
 done
 
 if [ "$COUNT" -eq "$MAX_WAIT" ]; then
@@ -207,7 +209,7 @@ EOF
 
 # 9. Start all services
 echo -e "${GREEN}Starting all application services...${NC}"
-docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d
+docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d
 
 # 10. Install host-agent
 echo -e "${GREEN}Installing host-agent systemd service...${NC}"

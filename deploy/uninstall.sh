@@ -4,6 +4,7 @@ set -euo pipefail
 INSTALL_DIR="/opt/newsticker"
 PROJECT_NAME="newsticker"
 COMPOSE_FILE="${INSTALL_DIR}/deploy/docker-compose.yml"
+COMPOSE_ENV_FILE="${INSTALL_DIR}/.env"
 REMOVE_DATA=false
 REMOVE_INSTALL_DIR=false
 REMOVE_DOCKER=false
@@ -51,7 +52,7 @@ done
 
 echo -e "${GREEN}Stopping Newsticker services...${NC}"
 if [[ -f "${COMPOSE_FILE}" ]]; then
-  docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" down
+  docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" down
 else
   echo -e "${YELLOW}Compose file not found at ${COMPOSE_FILE}; skipping compose shutdown.${NC}"
 fi
@@ -69,7 +70,7 @@ fi
 if [[ "${REMOVE_DATA}" == true ]]; then
   echo -e "${YELLOW}Removing Docker volumes and local persistent data...${NC}"
   if [[ -f "${COMPOSE_FILE}" ]]; then
-    docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" down -v || true
+    docker compose --env-file "${COMPOSE_ENV_FILE}" --project-directory "${INSTALL_DIR}" -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" down -v || true
   fi
   "${SUDO[@]}" rm -rf "${INSTALL_DIR}/deploy/volumes/db/data" "${INSTALL_DIR}/deploy/volumes/storage"
 fi
@@ -89,4 +90,5 @@ if [[ "${REMOVE_DOCKER}" == true ]]; then
 fi
 
 echo -e "${GREEN}Uninstall complete.${NC}"
+
 

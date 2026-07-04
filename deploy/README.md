@@ -29,6 +29,8 @@ High-level flow:
 9. Installs and starts `host-agent` systemd service
 10. Attempts Anthias installation
 
+The installer invokes Docker Compose with `--env-file /opt/newsticker/.env` and `--project-directory /opt/newsticker`, so the generated variables are loaded from the install directory instead of the current shell environment.
+
 ## Install
 
 Run from the repository root:
@@ -82,4 +84,5 @@ The compose file currently pins the following tags:
 - The installer writes generated credentials to `/opt/newsticker/credentials.txt`.
 - If Docker group membership was newly added, log out/in (or reboot) before running Docker commands without `sudo`.
 - Major image upgrades can introduce config or behavior changes; if you update tags further, validate on a staging host first.
+
 
