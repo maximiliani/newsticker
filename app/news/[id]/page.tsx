@@ -4,8 +4,11 @@ import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {ArrowLeft} from 'lucide-react';
 import Link from 'next/link';
-import {ClickableAuthorAvatar} from '@/components/ClickableAuthorAvatar';
-import {ArticleActions} from '@/app/news/[id]/client';
+import { ClickableAuthorAvatar } from '@/components/ClickableAuthorAvatar';
+import { ArticleActions } from '@/app/news/[id]/client';
+import { createSlateEditor } from 'platejs';
+import { BaseEditorKit } from '@/components/editor/editor-base-kit';
+import { EditorStatic } from '@/components/ui/editor-static';
 
 // Type for a single article fetched from the 'articles_with_author_info' view
 type ArticleDetailFromView = {
@@ -58,6 +61,19 @@ const formatDate = (dateString?: string | null): string => {
 
 // Component to render article content with proper Plate.js styling
 function ArticleContent({ article }: { article: ArticleDetailFromView }) {
+    if (article.json_content) {
+        const editor = createSlateEditor({
+            plugins: BaseEditorKit,
+            value: article.json_content,
+        });
+
+        return (
+            <div className="simple-editor-content prose lg:prose-xl dark:prose-invert max-w-none">
+                <EditorStatic editor={editor} />
+            </div>
+        );
+    }
+
     // Prefer html_content, then content as fallback
     const contentToRender = article.html_content || article.content;
     

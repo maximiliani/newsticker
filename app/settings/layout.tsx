@@ -75,7 +75,7 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
 
     return (
         <div className="flex-1 w-full flex flex-col md:flex-row">
-            <Sidebar className="relative max-h-[calc(100dvh-196px)]" variant="floating" collapsible="icon">
+            <Sidebar className="relative h-full" variant="sidebar" collapsible="icon">
                 <SidebarHeader>
                     <SidebarMenuButton asChild>
                         <a href="/">
@@ -103,15 +103,6 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
                         </SidebarGroupContent>
                     </SidebarGroup>
                 </SidebarContent>
-                <SidebarFooter>
-                    <SidebarMenuButton asChild>
-                        <a href="/">
-                            <ArrowLeftIcon/>
-                            <span>Return to Dashboard</span>
-                        </a>
-                    </SidebarMenuButton>
-                </SidebarFooter>
-                <SidebarRail />
             </Sidebar>
             <div className="flex-1 flex flex-col min-h-0 bg-background">
                 <div className="flex items-center justify-between p-4">

@@ -22,6 +22,9 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import { ClickableAuthorAvatar } from '@/components/ClickableAuthorAvatar';
 import { User } from '@supabase/supabase-js';
+import { createSlateEditor } from 'platejs';
+import { BaseEditorKit } from '@/components/editor/editor-base-kit';
+import { EditorStatic } from '@/components/ui/editor-static';
 
 // Type for a single article fetched from the 'articles_with_author_info' view
 type ArticleDetailFromView = {
@@ -30,6 +33,8 @@ type ArticleDetailFromView = {
     title: string;
     description: string;
     content: string;
+    json_content?: any;
+    html_content?: string;
     created_at: string;
     modified_at: string;
     author_name: string | null;
@@ -160,8 +165,21 @@ export function ArticleActions({ articleId, articleTitle }: ArticleActionsProps)
 
     // Component to render article content with proper Plate.js styling
     function ArticleContent({ article }: { article: ArticleDetailFromView }) {
-    // Use content from the article
-    const contentToRender = article.content;
+    if (article.json_content) {
+        const editor = createSlateEditor({
+            plugins: BaseEditorKit,
+            value: article.json_content,
+        });
+
+        return (
+            <div className="simple-editor-content prose lg:prose-xl dark:prose-invert max-w-none">
+                <EditorStatic editor={editor} />
+            </div>
+        );
+    }
+
+    // Prefer html_content, then content as fallback
+    const contentToRender = article.html_content || article.content;
 
     return (
         <div 
