@@ -25,13 +25,14 @@ const geistSans = Geist({
 });
 
 export default async function RootLayout({children}: Readonly<{ children: React.ReactNode; }>) {
+    const cookieStore = await cookies()
     const sidebarStateCookie = cookieStore.get("sidebar_state")
     // Default to open if no cookie exists
     const defaultOpen = sidebarStateCookie ? sidebarStateCookie.value === "true" : true
 
     return (
         <html lang="en" className={geistSans.className} suppressHydrationWarning>
-        <body className="bg-background text-foreground h-screen overflow-hidden">
+        <body className="bg-background text-foreground overflow-y-auto h-full">
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -39,13 +40,11 @@ export default async function RootLayout({children}: Readonly<{ children: React.
         >
             <SidebarProvider defaultOpen={defaultOpen}>
                 <TooltipProvider>
-                    <div className="flex flex-col w-full h-full">
+                    <div className="flex flex-col w-full">
                         <GlobalHeader/>
-                        <main className="flex-1 overflow-y-auto w-full">
-                            <div className="flex flex-col items-center min-h-full">
-                                {children}
-                            </div>
-                        </main>
+                        <div className="flex flex-col items-center overflow-auto">
+                            {children}
+                        </div>
                         <GlobalFooter/>
                     </div>
                 </TooltipProvider>

@@ -102,10 +102,8 @@ export default async function ArticleFeed({ searchParams }: { searchParams?: Pro
                 ) : (
                     <div className="space-y-4">
                         {initialArticles.map((newsItem) => (
-                            <Link key={newsItem.id} href={`/news/${newsItem.id}`} passHref legacyBehavior>
-                                <a className="block cursor-pointer">
-                                    <NewsPreview news={newsItem} />
-                                </a>
+                            <Link key={newsItem.id} href={`/news/${newsItem.id}`} className="block cursor-pointer">
+                                <NewsPreview news={newsItem} />
                             </Link>
                         ))}
                     </div>

@@ -226,3 +226,9 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+/* Force react-resizable-panels inner content wrappers to inherit full height */
+[data-slot="resizable-panel"] > div,
+[data-panel="true"] > div {
+  height: 100%;
+}

@@ -1,7 +1,10 @@
 import type { Attrs, Node } from "@tiptap/pm/model"
-import type { Editor } from "@tiptap/react"
+import { type Editor } from "@tiptap/core";
 
 export const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+
+export const NODE_HANDLES_SELECTED_STYLE_CLASSNAME =
+  "node-handles-selected-style";
 
 /**
  * Checks if a mark exists in the editor schema
@@ -238,4 +241,45 @@ export const convertFileToBase64 = (
       reject(new Error(`File reading error: ${error}`))
     reader.readAsDataURL(file)
   })
+}
+
+export function isValidUrl(url: string) {
+  return /^https?:\/\/\S+$/.test(url);
+}
+
+export const duplicateContent = (editor: Editor) => {
+  const { view } = editor;
+  const { state } = view;
+  const { selection } = state;
+
+  editor
+    .chain()
+    .insertContentAt(
+      selection.to,
+      /* eslint-disable */
+      // @ts-nocheck
+      selection.content().content.firstChild?.toJSON(),
+      {
+        updateSelection: true,
+      }
+    )
+    .focus(selection.to)
+    .run();
+};
+
+export function getUrlFromString(str: string) {
+  if (isValidUrl(str)) {
+    return str;
+  }
+  try {
+    if (str.includes(".") && !str.includes(" ")) {
+      return new URL(`https://${str}`).toString();
+    }
+  } catch {
+    return null;
+  }
+}
+
+export function absoluteUrl(path: string) {
+  return `${process.env.NEXT_PUBLIC_APP_URL}${path}`;
 }

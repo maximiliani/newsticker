@@ -1,88 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { EditorContent, EditorContext, useEditor } from "@tiptap/react";
+import { EditorContent, type Extension, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
+import TextAlign from "@tiptap/extension-text-align";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
+import Link from "@tiptap/extension-link";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import Typography from "@tiptap/extension-typography";
+import Underline from "@tiptap/extension-underline";
 
-// --- Tiptap Core Extensions ---
-import { StarterKit } from "@tiptap/starter-kit";
-import { Image } from "@tiptap/extension-image";
-import { TaskItem } from "@tiptap/extension-task-item";
-import { TaskList } from "@tiptap/extension-task-list";
-import { TextAlign } from "@tiptap/extension-text-align";
-import { Typography } from "@tiptap/extension-typography";
-import { Highlight } from "@tiptap/extension-highlight";
-import { Subscript } from "@tiptap/extension-subscript";
-import { Superscript } from "@tiptap/extension-superscript";
-import { Underline } from "@tiptap/extension-underline";
+import { ImageExtension } from "@/components/tiptap/extensions/image";
+import { ImagePlaceholder } from "@/components/tiptap/extensions/image-placeholder";
+import SearchAndReplace from "@/components/tiptap/extensions/search-and-replace";
+import { TipTapFloatingMenu } from "@/components/tiptap/extensions/floating-menu";
+import { FloatingToolbar } from "@/components/tiptap/extensions/floating-toolbar";
+import { EditorToolbar } from "@/components/tiptap/toolbars/editor-toolbar";
 
-// --- Custom Extensions ---
-import { Link } from "@/components/tiptap-extension/link-extension";
-import { Selection } from "@/components/tiptap-extension/selection-extension";
-import { TrailingNode } from "@/components/tiptap-extension/trailing-node-extension";
-
-// --- UI Primitives ---
-import { Button } from "@/components/tiptap-ui-primitive/button";
-import { Spacer } from "@/components/tiptap-ui-primitive/spacer";
-import {
-  Toolbar,
-  ToolbarGroup,
-  ToolbarSeparator,
-} from "@/components/tiptap-ui-primitive/toolbar";
-
-// --- Tiptap Node ---
-import { ImageUploadNode } from "@/components/tiptap-node/image-upload-node/image-upload-node-extension";
-import "@/components/tiptap-node/code-block-node/code-block-node.scss";
-import "@/components/tiptap-node/list-node/list-node.scss";
-import "@/components/tiptap-node/image-node/image-node.scss";
-import "@/components/tiptap-node/paragraph-node/paragraph-node.scss";
-
-// --- Tiptap UI ---
-import { HeadingDropdownMenu } from "@/components/tiptap-ui/heading-dropdown-menu";
-import { ImageUploadButton } from "@/components/tiptap-ui/image-upload-button";
-import { ListDropdownMenu } from "@/components/tiptap-ui/list-dropdown-menu";
-// import { NodeButton } from "@/components/tiptap-ui/node-button"
-import {
-  ColorHighlightPopover,
-  ColorHighlightPopoverContent,
-  ColorHighlightPopoverButton,
-} from "@/components/tiptap-ui/color-highlight-popover";
-import {
-  LinkPopover,
-  LinkContent,
-  LinkButton,
-} from "@/components/tiptap-ui/link-popover";
-import { MarkButton } from "@/components/tiptap-ui/mark-button";
-import { TextAlignButton } from "@/components/tiptap-ui/text-align-button";
-import { UndoRedoButton } from "@/components/tiptap-ui/undo-redo-button";
-
-// --- Icons ---
-import { ArrowLeftIcon } from "@/components/tiptap-icons/arrow-left-icon";
-import { HighlighterIcon } from "@/components/tiptap-icons/highlighter-icon";
-import { LinkIcon } from "@/components/tiptap-icons/link-icon";
-
-// --- Hooks ---
-import { useWindowSize } from "@/hooks/use-window-size";
-import { useCursorVisibility } from "@/hooks/use-cursor-visibility";
-
-// --- Components ---
-import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle";
-
-// --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils";
-
-// --- Styles ---
-import "@/components/tiptap-templates/simple/simple-editor.scss";
-
-// --- Additional imports for our use case ---
-import { createClient } from "@/lib/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import {Placeholder} from "@tiptap/extension-placeholder";
-import {CodeIcon} from "lucide-react";
-import BlockquoteButton from "@/components/tiptap-ui/blockquote-button/blockquote-button";
-import {CodeBlockButton} from "@/components/tiptap-ui/code-block-button";
-import {useIsMobile} from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
+import { CodeIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+import "@/components/tiptap/tiptap.css";
 
 interface RichTextEditorProps {
   content: string;
@@ -91,113 +36,57 @@ interface RichTextEditorProps {
   userId: string;
 }
 
-// Supported file types for upload
-type FileType = 'image' | 'video' | 'pdf' | 'document';
-
-const MainToolbarContent = ({
-  onHighlighterClick,
-  onLinkClick,
-  isMobile,
-}: {
-  onHighlighterClick: () => void
-  onLinkClick: () => void
-  isMobile: boolean
-}) => {
-  return (
-    <>
-      <Spacer />
-
-      <ToolbarGroup>
-        <UndoRedoButton action="undo" />
-        <UndoRedoButton action="redo" />
-      </ToolbarGroup>
-
-      <ToolbarSeparator />
-
-      <ToolbarGroup>
-        <HeadingDropdownMenu levels={[1, 2, 3, 4, 5]} />
-        <ListDropdownMenu types={["bulletList", "orderedList", "taskList"]} />
-        <CodeBlockButton/>
-        <BlockquoteButton/>
-      </ToolbarGroup>
-
-      <ToolbarSeparator />
-
-      <ToolbarGroup>
-        <MarkButton type="bold" />
-        <MarkButton type="italic" />
-        <MarkButton type="strike" />
-        <MarkButton type="code" />
-        <MarkButton type="underline" />
-        {!isMobile ? (
-          <ColorHighlightPopover />
-        ) : (
-          <ColorHighlightPopoverButton onClick={onHighlighterClick} />
-        )}
-        {!isMobile ? <LinkPopover /> : <LinkButton onClick={onLinkClick} />}
-      </ToolbarGroup>
-
-      <ToolbarSeparator />
-
-      <ToolbarGroup>
-        <MarkButton type="superscript" />
-        <MarkButton type="subscript" />
-      </ToolbarGroup>
-
-      <ToolbarSeparator />
-
-      <ToolbarGroup>
-        <TextAlignButton align="left" />
-        <TextAlignButton align="center" />
-        <TextAlignButton align="right" />
-        <TextAlignButton align="justify" />
-      </ToolbarGroup>
-
-      <ToolbarSeparator />
-
-      <ToolbarGroup>
-        <ImageUploadButton text="Add" />
-      </ToolbarGroup>
-
-      <Spacer />
-
-      {isMobile && <ToolbarSeparator />}
-
-      <ToolbarGroup>
-        <ThemeToggle />
-      </ToolbarGroup>
-    </>
-  )
-}
-
-const MobileToolbarContent = ({
-  type,
-  onBack,
-}: {
-  type: "highlighter" | "link"
-  onBack: () => void
-}) => (
-  <>
-    <ToolbarGroup>
-      <Button data-style="ghost" onClick={onBack}>
-        <ArrowLeftIcon className="tiptap-button-icon" />
-        {type === "highlighter" ? (
-          <HighlighterIcon className="tiptap-button-icon" />
-        ) : (
-          <LinkIcon className="tiptap-button-icon" />
-        )}
-      </Button>
-    </ToolbarGroup>
-
-    <ToolbarSeparator />
-
-    {type === "highlighter" ? (
-      <ColorHighlightPopoverContent />
-    ) : (
-      <LinkContent />
-    )}
-  </>
-)
+const extensions = [
+  StarterKit.configure({
+    orderedList: {
+      HTMLAttributes: {
+        class: "list-decimal",
+      },
+    },
+    bulletList: {
+      HTMLAttributes: {
+        class: "list-disc",
+      },
+    },
+    heading: {
+      levels: [1, 2, 3, 4],
+    },
+  }),
+  Placeholder.configure({
+    emptyNodeClass: "is-editor-empty",
+    placeholder: ({ node }) => {
+      switch (node.type.name) {
+        case "heading":
+          return `Heading ${node.attrs.level}`;
+        case "detailsSummary":
+          return "Section title";
+        case "codeBlock":
+          return "";
+        default:
+          return "Write something...";
+      }
+    },
+    includeChildren: false,
+  }),
+  TextAlign.configure({
+    types: ["heading", "paragraph"],
+  }),
+  TextStyle,
+  Subscript,
+  Superscript,
+  Underline,
+  Link.configure({
+    openOnClick: false,
+  }),
+  Color,
+  Highlight.configure({
+    multicolor: true,
+  }),
+  ImageExtension,
+  ImagePlaceholder,
+  SearchAndReplace,
+  Typography,
+];
 
 export function RichTextEditor({
   content,
@@ -205,109 +94,23 @@ export function RichTextEditor({
   placeholder = "Write something...",
   userId
 }: RichTextEditorProps) {
-  const isMobile = useIsMobile();
-  const windowSize = useWindowSize();
-  const [mobileView, setMobileView] = React.useState<
-    "main" | "highlighter" | "link"
-  >("main");
   const [editorMode, setEditorMode] = React.useState<'wysiwyg' | 'code'>('wysiwyg');
   const [htmlCode, setHtmlCode] = React.useState(content);
-  const toolbarRef = React.useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-  const supabase = createClient();
 
-  // Update htmlCode when the content prop changes externally (e.g., form reset)
+  // Update htmlCode when the content prop changes externally
   React.useEffect(() => {
     setHtmlCode(content);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content]);
-
-  // When switching back to WYSIWYG, push the code editor's HTML into Tiptap
-  React.useEffect(() => {
-    if (editorMode === 'wysiwyg' && editor) {
-      editor.commands.setContent(htmlCode);
-    }
-    // Only run when editorMode changes, not on every htmlCode change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorMode]);
-
-  // Handle code editor changes — update local state and notify parent only;
-  // do NOT call editor.setContent here because Tiptap would normalize the HTML
-  // and overwrite the textarea mid-typing.
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newHtml = e.target.value;
-    setHtmlCode(newHtml);
-    onChange(newHtml);
-  };
-
-  // Function to handle image upload for the ImageUploadNode extension
-  const handleImageUpload = React.useCallback(async (file: File) => {
-    try {
-      // Create a unique file path
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // Upload the file to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('article_media')
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('article_media')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload image. Please try again.",
-        variant: "destructive",
-      });
-      return null;
-    }
-  }, [userId, toast, supabase.storage]);
 
   const editor = useEditor({
     immediatelyRender: false,
+    extensions: extensions as Extension[],
+    content,
     editorProps: {
       attributes: {
-        autocomplete: "on",
-        autocorrect: "off",
-        autocapitalize: "off",
-        "aria-label": "Main content area, start typing to enter text.",
+        class: "max-w-full focus:outline-none",
       },
     },
-    extensions: [
-      StarterKit,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Underline,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Highlight.configure({ multicolor: true }),
-      Image,
-      Typography,
-      Superscript,
-      Subscript,
-      Placeholder.configure({
-        placeholder,
-      }),
-      Selection,
-      ImageUploadNode.configure({
-        accept: "image/*",
-        maxSize: MAX_FILE_SIZE,
-        limit: 3,
-        upload: handleImageUpload as any, // Cast to any to avoid type issues
-        onError: (error) => console.error("Upload failed:", error),
-      }),
-      TrailingNode,
-      Link.configure({ openOnClick: false }),
-    ],
-    content,
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       const json = editor.getJSON();
@@ -316,24 +119,23 @@ export function RichTextEditor({
     },
   });
 
-  const bodyRect = useCursorVisibility({
-    editor,
-    overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
-  });
-
+  // When switching back to WYSIWYG, push the code editor's HTML into Tiptap
   React.useEffect(() => {
-    if (!isMobile && mobileView !== "main") {
-      setMobileView("main");
+    if (editorMode === 'wysiwyg' && editor && editor.getHTML() !== htmlCode) {
+      editor.commands.setContent(htmlCode);
     }
-  }, [isMobile, mobileView]);
+  }, [editorMode, editor, htmlCode]);
 
-  if (!editor) {
-    return null;
-  }
+  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newHtml = e.target.value;
+    setHtmlCode(newHtml);
+    onChange(newHtml);
+  };
 
-  // In your RichTextEditor component, make sure the container doesn't block scrolling
+  if (!editor) return null;
+
   return (
-    <div className="border rounded-md w-full">
+    <div className="border rounded-md w-full overflow-hidden bg-card">
       <Tabs defaultValue="wysiwyg" onValueChange={(value) => setEditorMode(value as 'wysiwyg' | 'code')}>
         <div className="flex justify-between items-center p-2 border-b bg-muted/50">
           <TabsList>
@@ -342,49 +144,26 @@ export function RichTextEditor({
           </TabsList>
         </div>
 
-        <TabsContent value="wysiwyg" className="outline-none">
-          <EditorContext.Provider value={{ editor }}>
-            <Toolbar
-              ref={toolbarRef}
-              style={
-                isMobile
-                  ? {
-                      bottom: `calc(100% - ${windowSize.height - bodyRect.y}px)`,
-                    }
-                  : {}
-              }
-            >
-              {mobileView === "main" ? (
-                <MainToolbarContent
-                  onHighlighterClick={() => setMobileView("highlighter")}
-                  onLinkClick={() => setMobileView("link")}
-                  isMobile={isMobile}
-                />
-              ) : (
-                <MobileToolbarContent
-                  type={mobileView === "highlighter" ? "highlighter" : "link"}
-                  onBack={() => setMobileView("main")}
-                />
-              )}
-            </Toolbar>
-
-            <div
-                className="content-wrapper min-h-[300px] sm:max-h-[500px] md:max-h-[600px] lg:max-h-[700px] overflow-y-auto">
+        <TabsContent value="wysiwyg" className="outline-none m-0 p-0 relative">
+          <div className="relative w-full overflow-hidden">
+            <EditorToolbar editor={editor} />
+            <FloatingToolbar editor={editor} />
+            <TipTapFloatingMenu editor={editor} />
+            <div className="min-h-[400px] max-h-[700px] overflow-y-auto custom-scrollbar">
               <EditorContent
                 editor={editor}
-                role="presentation"
-                className="simple-editor-content p-4"
+                className="w-full min-w-full cursor-text p-4 sm:p-6"
               />
             </div>
-          </EditorContext.Provider>
+          </div>
         </TabsContent>
 
-        <TabsContent value="code" className="outline-none">
+        <TabsContent value="code" className="outline-none m-0 p-0">
           <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/50">
             <Button
-              className="bg-muted hover:bg-muted/80 text-muted-foreground rounded-md p-1"
+              variant="ghost"
+              size="sm"
               onClick={() => {
-                // Format HTML code for better readability
                 try {
                   const formatted = htmlCode
                     .replace(/></g, '>\n<')
@@ -397,13 +176,14 @@ export function RichTextEditor({
               }}
               title="Format HTML"
             >
-              <CodeIcon className="h-4 w-4" />
+              <CodeIcon className="h-4 w-4 mr-2" />
+              Format HTML
             </Button>
           </div>
           <Textarea
             value={htmlCode}
             onChange={handleCodeChange}
-            className="w-full min-h-[300px] p-4 font-mono text-sm overflow-x-auto"
+            className="w-full min-h-[400px] p-4 font-mono text-sm border-none rounded-none focus-visible:ring-0 resize-none"
             placeholder="Enter HTML code here..."
           />
         </TabsContent>

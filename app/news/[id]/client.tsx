@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Pen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 // Import TipTap styles for proper content rendering
-import '@/components/tiptap-templates/simple/simple-editor.scss';
-import '@/components/tiptap-templates/simple/editor-styles.css';
+import '@/components/tiptap/tiptap.css';
 import {
     AlertDialog,
     AlertDialogAction,

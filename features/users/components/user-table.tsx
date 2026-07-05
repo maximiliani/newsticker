@@ -110,7 +110,7 @@ export function UserTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-2">
-                  <Link href={`/protected/admin/users/edit/${user.id}`} passHref>
+                  <Link href={`/protected/admin/users/edit/${user.id}`}>
                     <Button
                       variant="ghost"
                       size="icon"

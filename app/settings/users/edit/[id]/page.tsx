@@ -45,7 +45,7 @@ export default async function UserEditPage({ params }: PageProps) {
           heading="Edit User Profile"
           text={`Editing user: ${userToEdit.full_name || userToEdit.email}`}
         />
-        <Link href="/settings/users" passHref>
+        <Link href="/settings/users">
           <Button variant="outline">Back to Users</Button>
         </Link>
       </div>

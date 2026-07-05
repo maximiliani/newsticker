@@ -31,7 +31,7 @@ export function AdminCard({ icon: Icon, title, description, content, buttonText,
                 </p>
             </CardContent>
             <CardFooter>
-                <Link href={href} passHref className="w-full">
+                <Link href={href} className="w-full">
                     <Button className="w-full">{buttonText}</Button>
                 </Link>
             </CardFooter>

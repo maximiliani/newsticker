@@ -78,7 +78,7 @@ export function AdminArticleManager({ initialArticles }: AdminArticleManagerProp
                 </ScrollArea>
               </CardContent>
               <CardFooter className="flex justify-end space-x-2">
-                <Link href={`/articles/${article.id}`} passHref>
+                <Link href={`/articles/${article.id}`}>
                   <Button variant="outline" size="sm">
                     <EyeIcon className="h-4 w-4 mr-1" />
                     View

@@ -8,8 +8,7 @@ import {ClickableAuthorAvatar} from '@/components/ClickableAuthorAvatar';
 import {ArticleActions} from '@/app/news/[id]/client';
 
 // Import TipTap styles for proper content rendering
-import '@/components/tiptap-templates/simple/simple-editor.scss';
-import '@/components/tiptap-templates/simple/editor-styles.css';
+import '@/components/tiptap/tiptap.css';
 
 // Type for a single article fetched from the 'articles_with_author_info' view
 type ArticleDetailFromView = {
