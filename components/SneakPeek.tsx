@@ -34,7 +34,7 @@ export async function SneakPeek({ searchParams }: { searchParams: Promise<{ from
     return (
         <div className="p-2 h-full overflow-hidden flex flex-col">
             <h3 className="font-semibold mb-2">Upcoming Events</h3>
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            <div className="flex-1 overflow-auto">
                 {!events || events.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No upcoming events.</p>
                 ) : (

@@ -14,3 +14,7 @@ COMPLETION_SUMMARY.md
 .gitignore
 *.md
 
+/.junie/
+/.air/
+/.vscode/
+/.zed/
