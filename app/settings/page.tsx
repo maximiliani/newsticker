@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 import {useSearchParams} from "next/navigation";
 import Link from "next/link";
 import {User} from "@supabase/supabase-js";
+import { useTranslations } from "next-intl";
 import {PageHeading} from "@/components/ui/page-heading";
 import {Card, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
@@ -21,6 +22,8 @@ export const dynamic = 'force-dynamic';
  * with Instagram accounts and article management
  */
 export default function DashboardPage() {
+    const t = useTranslations("Dashboard");
+    const tc = useTranslations("Common");
     const searchParams = useSearchParams();
 
     // State management
@@ -122,8 +125,8 @@ export default function DashboardPage() {
     return (
         <div>
             <PageHeading
-                heading={`Welcome, ${fullName}!`}
-                text="Manage your account settings, profile, and more"
+                heading={t("welcome", { name: fullName })}
+                text={t("description")}
             />
 
             <div className="mt-8">

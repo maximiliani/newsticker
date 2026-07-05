@@ -1,9 +1,14 @@
 import {createClient} from "@/lib/supabase/server";
 import {format} from "date-fns";
+import {getTranslations, getLocale} from "next-intl/server";
+import {enUS, de} from "date-fns/locale";
 
 export async function SneakPeek({ searchParams }: { searchParams: Promise<{ from?: string, to?: string }> }) {
     const { from } = await searchParams;
     const supabase = await createClient();
+    const t = await getTranslations("Calendar");
+    const localeCode = await getLocale();
+    const dateLocale = localeCode === 'de' ? de : enUS;
     
     // Default to today if no 'from' date is provided
     let startDate = new Date();
@@ -33,10 +38,10 @@ export async function SneakPeek({ searchParams }: { searchParams: Promise<{ from
 
     return (
         <div className="p-2 h-full overflow-hidden flex flex-col">
-            <h3 className="font-semibold mb-2">Upcoming Events</h3>
+            <h3 className="font-semibold mb-2">{t('upcomingEvents')}</h3>
             <div className="flex-1 overflow-auto">
                 {!events || events.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No upcoming events.</p>
+                    <p className="text-sm text-muted-foreground">{t('noEvents')}</p>
                 ) : (
                     events.map((event: any) => {
                         const subscriptionColor = event.calendar_subscriptions?.color || '#3B82F6';
@@ -48,9 +53,9 @@ export async function SneakPeek({ searchParams }: { searchParams: Promise<{ from
                                 style={{ borderLeftColor: subscriptionColor }}
                             >
                                 <div>
-                                    <div className="font-medium truncate">{event.articles?.title || 'Untitled'}</div>
+                                    <div className="font-medium truncate">{event.articles?.title || t('untitled')}</div>
                                     <div className="text-xs text-muted-foreground">
-                                        {format(new Date(event.event_start), 'MMM d, HH:mm')}
+                                        {format(new Date(event.event_start), t('dateFormat'), { locale: dateLocale })}
                                     </div>
                                 </div>
                             </a>

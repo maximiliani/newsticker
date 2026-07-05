@@ -10,7 +10,7 @@ import {createClient} from "@/lib/supabase/client";
  * Client component for the article feed header
  * Shows the latest news title and create button
  */
-export function ArticleFeedClient() {
+export function ArticleFeedClient({feedTitle, createTitle}: Readonly<{ feedTitle: string, createTitle:string }>) {
     const {user} = useAuth();
     const router = useRouter();
 
@@ -52,10 +52,10 @@ export function ArticleFeedClient() {
 
     return (
         <div className="flex justify-between items-center p-4 border-b flex-shrink-0 relative">
-            <h1 className="text-xl font-bold">Latest News</h1>
+            <h1 className="text-xl font-bold">{feedTitle}</h1>
             <CreateArticleButton
                 user={user}
-                onArticleCreated={handleArticleCreated}
+                title={createTitle}
             />
         </div>
     );

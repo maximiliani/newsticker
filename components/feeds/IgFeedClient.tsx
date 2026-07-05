@@ -2,6 +2,7 @@
 
 import { IGPost, IGPostData } from "@/features/instagram/components/instagram-post";
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRouter } from 'next/navigation';
@@ -12,6 +13,7 @@ interface IgFeedClientProps {
 }
 
 export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps) {
+    const t = useTranslations("Instagram");
     const [posts, setPosts] = useState<IGPostData[]>(initialPosts);
     const [users, setUsers] = useState<string[]>(availableUsers);
     const [activeUsers, setActiveUsers] = useState<string[]>(["all"]);
@@ -94,7 +96,7 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
         <div className="flex flex-col h-full w-full min-w-0 overflow-hidden">
             {/* Header with filtering */}
             <div className="items-center p-4 border-b relative">
-                <h1 className="text-xl font-bold">Instagram Feed</h1>
+                <h1 className="text-xl font-bold">{t('feedTitle')}</h1>
                 <div className="items-center">
                     {/* Instagram account picker */}
                     <ToggleGroup
@@ -118,12 +120,12 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
                         <ToggleGroupItem
                             key="all"
                             value="all"
-                            aria-label="All"
+                            aria-label={t("all")}
                             defaultChecked
                             className="hover:bg-primary hover:text-primary-foreground"
                             data-state={areAllUsersSelected ? "on" : "off"}
                         >
-                            All
+                            {t("all")}
                         </ToggleGroupItem>
                         {users.map((username) => (
                             <ToggleGroupItem

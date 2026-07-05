@@ -5,8 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar } from '@/components/ui/calendar';
 import { DateRange } from 'react-day-picker';
 import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { enUS, de } from 'date-fns/locale';
+import { useLocale } from 'next-intl';
 
 export function CalendarFilter() {
+  const locale = useLocale();
+  const dateLocale = locale === 'de' ? de : enUS;
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -59,6 +63,7 @@ export function CalendarFilter() {
             selected={range}
             onSelect={handleSelect}
             showWeekNumber
+            locale={dateLocale}
             className="rounded-md border"
           />
       {/*</div>*/}

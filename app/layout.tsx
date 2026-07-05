@@ -6,6 +6,8 @@ import {GlobalFooter} from "@/components/globalFooter";
 import {cookies} from "next/headers";
 import {SidebarProvider} from "@/components/ui/sidebar";
 import {TooltipProvider} from "@/components/ui/tooltip";
+import {NextIntlClientProvider} from 'next-intl';
+import {getLocale, getMessages} from 'next-intl/server';
 
 const defaultUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
@@ -30,26 +32,31 @@ export default async function RootLayout({children}: Readonly<{ children: React.
     // Default to open if no cookie exists
     const defaultOpen = sidebarStateCookie ? sidebarStateCookie.value === "true" : true
 
+    const locale = await getLocale();
+    const messages = await getMessages();
+
     return (
-        <html lang="en" className={geistSans.className} suppressHydrationWarning>
+        <html lang={locale} className={geistSans.className} suppressHydrationWarning>
         <body className="bg-background text-foreground overflow-y-auto h-full">
-        <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-        >
-            <SidebarProvider defaultOpen={defaultOpen}>
-                <TooltipProvider>
-                    <div className="flex flex-col w-full">
-                        <GlobalHeader/>
-                        <div className="flex flex-col items-center overflow-auto">
-                            {children}
+        <NextIntlClientProvider messages={messages}>
+            <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+            >
+                <SidebarProvider defaultOpen={defaultOpen}>
+                    <TooltipProvider>
+                        <div className="flex flex-col w-full">
+                            <GlobalHeader/>
+                            <div className="flex flex-col items-center overflow-auto">
+                                {children}
+                            </div>
+                            <GlobalFooter/>
                         </div>
-                        <GlobalFooter/>
-                    </div>
-                </TooltipProvider>
-            </SidebarProvider>
-        </ThemeProvider>
+                    </TooltipProvider>
+                </SidebarProvider>
+            </ThemeProvider>
+        </NextIntlClientProvider>
         </body>
         </html>
     );

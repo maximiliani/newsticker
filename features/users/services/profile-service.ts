@@ -9,6 +9,7 @@ export interface UserProfile {
   first_name?: string;
   last_name?: string;
   avatar_url?: string;
+  language?: string;
   created_at: string;
   email_confirmed_at?: string;
 }
@@ -34,6 +35,7 @@ export class ProfileService {
         first_name: user.user_metadata.first_name,
         last_name: user.user_metadata.last_name,
         avatar_url: user.user_metadata.avatar_url,
+        language: user.user_metadata.language,
         created_at: user.created_at,
         email_confirmed_at: user.email_confirmed_at
       };
@@ -52,6 +54,7 @@ export class ProfileService {
     firstName?: string;
     lastName?: string;
     email?: string;
+    language?: string;
   }): Promise<UserProfile> {
     const supabase = createClient();
 
@@ -74,6 +77,11 @@ export class ProfileService {
         updateData.full_name = `${firstName} ${lastName}`.trim();
         updateData.first_name = firstName;
         updateData.last_name = lastName;
+      }
+
+      // Add language to update data if provided
+      if (profileData.language) {
+        updateData.language = profileData.language;
       }
 
       // Update user metadata

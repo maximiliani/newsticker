@@ -2,6 +2,7 @@ import {ReactNode} from 'react';
 import {redirect} from 'next/navigation';
 import {headers} from 'next/headers';
 import {createClient} from '@/lib/supabase/server';
+import {getTranslations} from 'next-intl/server';
 import {
     Sidebar,
     SidebarContent, SidebarFooter,
@@ -12,7 +13,17 @@ import {
     SidebarMenuItem, SidebarRail, SidebarSeparator,
     SidebarTrigger
 } from '@/components/ui/sidebar';
-import {ArrowLeftIcon, Calendar, Cpu, FileTextIcon, Home, Monitor, UserPen, Users} from "lucide-react";
+import {
+    ArrowLeftIcon,
+    Calendar,
+    Cpu,
+    FileTextIcon,
+    Home,
+    Monitor,
+    UserPen,
+    Users,
+    Settings2
+} from "lucide-react";
 import {Instagram} from "@/components/icons/instagram-icon";
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +33,7 @@ interface SettingsLayoutProps {
 }
 
 export default async function SettingsLayout({children}: SettingsLayoutProps) {
+    const t = await getTranslations("Sidebar");
     // Check if the user is authenticated
     const supabase = await createClient();
 
@@ -34,40 +46,48 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
 
     const sidebarItems = [
         {
-            title: "Settings Dashboard",
+            title: t("dashboard"),
             url: "/settings",
             icon: Home,
         },
         {
-            title: "Profile",
+            title: t("profile"),
             url: "/settings/profile",
             icon: UserPen,
         },
         {
-            title: "User Management",
+            title: t("users"),
             url: "/settings/users",
             icon: Users,
         },
         {
-            title: "Instagram Feeds",
+            title: t("instagram"),
             url: "/settings/instagram",
             icon: Instagram,
         },
         {
-            title: "Calendar Subscriptions",
+            title: t("calendar"),
             url: "/settings/calendar",
             icon: Calendar,
         },
         {
-            title: "News Articles",
+            title: t("articles"),
             url: "/settings/articles",
             icon: FileTextIcon,
         },
     ];
 
+    if (isAdmin) {
+        sidebarItems.push({
+            title: t("general"),
+            url: "/settings/general",
+            icon: Settings2,
+        });
+    }
+
     if (isKiosk && isAdmin) {
         sidebarItems.push({
-            title: "Device",
+            title: t("device"),
             url: "/settings/device",
             icon: Cpu,
         });
@@ -80,7 +100,7 @@ export default async function SettingsLayout({children}: SettingsLayoutProps) {
                     <SidebarMenuButton asChild>
                         <a href="/">
                             <ArrowLeftIcon/>
-                            <span>Return to Dashboard</span>
+                            <span>{t("return")}</span>
                         </a>
                     </SidebarMenuButton>
                 </SidebarHeader>

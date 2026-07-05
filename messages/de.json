@@ -1,0 +1,61 @@
+{
+  "Common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "loading": "Laden...",
+    "welcome": "Willkommen",
+    "settings": "Einstellungen",
+    "profile": "Profil",
+    "logout": "Abmelden",
+    "language": "Sprache",
+    "anonymous": "Anonym",
+    "returnToDashboard": "Zurück zum Dashboard"
+  },
+  "Articles": {
+    "noArticlesFound": "Keine Nachrichtenartikel für den ausgewählten Zeitraum gefunden.",
+    "latestNews": "Aktuelle Nachrichten",
+    "createNewsArticle": "Neuen Artikel erstellen"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "welcome": "Willkommen, {name}!",
+    "description": "Verwalten Sie Ihre Kontoeinstellungen, Ihr Profil und mehr"
+  },
+  "Profile": {
+    "title": "Profileinstellungen",
+    "description": "Aktualisieren Sie Ihre persönlichen Informationen und Profildetails.",
+    "personalInfo": "Persönliche Informationen",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "email": "E-Mail",
+    "changePassword": "Passwort ändern",
+    "currentPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "confirmPassword": "Neues Passwort bestätigen"
+  },
+  "Sidebar": {
+    "return": "Zurück zum Dashboard",
+    "dashboard": "Einstellungen Dashboard",
+    "profile": "Profil",
+    "users": "Benutzerverwaltung",
+    "instagram": "Instagram-Feeds",
+    "calendar": "Kalender-Abonnements",
+    "articles": "Nachrichtenartikel",
+    "general": "Allgemeine Einstellungen",
+    "device": "Gerät"
+  },
+  "Instagram": {
+    "feedTitle": "Instagram-Feed",
+    "all": "Alle",
+    "noPosts": "Keine Instagram-Beiträge verfügbar.",
+    "unknown": "Unbekannt"
+  },
+  "Calendar": {
+    "upcomingEvents": "Anstehende Veranstaltungen",
+    "noEvents": "Keine anstehenden Veranstaltungen.",
+    "untitled": "Ohne Titel",
+    "dateFormat": "d. MMM, HH:mm"
+  }
+}

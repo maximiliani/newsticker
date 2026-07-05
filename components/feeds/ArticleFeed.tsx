@@ -2,6 +2,7 @@ import { NewsPreview } from "@/components/news-preview";
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { ArticleFeedClient } from './article-feed-client';
+import { getTranslations } from 'next-intl/server';
 
 // Types aligned with project standards
 interface ArticleWithAuthorInfo {
@@ -34,6 +35,7 @@ interface NewsPreviewData {
 async function getVisibleArticles(from?: string, to?: string): Promise<NewsPreviewData[]> {
     const supabase = await createClient();
     const now = new Date();
+    const tc = await getTranslations('Common');
 
     try {
         let query = supabase
@@ -73,7 +75,7 @@ async function getVisibleArticles(from?: string, to?: string): Promise<NewsPrevi
             visibilityFrom: new Date(article.visibility_from),
             visibilityTo: article.visibility_to ? new Date(article.visibility_to) : null,
             author: {
-                name: article.author_name || 'Anonymous',
+                name: article.author_name || tc('anonymous'),
                 avatar: article.author_avatar || undefined,
             },
         }));
@@ -87,17 +89,19 @@ async function getVisibleArticles(from?: string, to?: string): Promise<NewsPrevi
 export default async function ArticleFeed({ searchParams }: { searchParams?: Promise<{ from?: string, to?: string }> }) {
     const params = await searchParams;
     const initialArticles = await getVisibleArticles(params?.from, params?.to);
+    const t = await getTranslations('Articles');
+    const tc = await getTranslations('Common');
 
     return (
         <div className="h-full flex flex-col overflow-hidden min-w-0">
             {/* Static header with client-side dialog */}
-            <ArticleFeedClient/>
+            <ArticleFeedClient feedTitle={t('latestNews')} createTitle={t('createNewsArticle')}/>
             
             {/* Server-rendered articles list */}
             <div className="flex-1 overflow-y-auto p-4">
                 {initialArticles.length === 0 ? (
                     <div className="text-center py-12">
-                         <p className="text-muted-foreground">No news articles found for the selected range.</p>
+                         <p className="text-muted-foreground">{t('noArticlesFound')}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { User } from "@supabase/supabase-js";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,15 +13,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Settings, Trash2, Shield, Save, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AccountDeletionDialog } from "@/components/user/account_deletion_dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ProfileService } from "@/features/users/services/profile-service";
 import {createClient} from "@/lib/supabase/client";
 
 interface UserDetails {
   full_name: string;
   avatar_url?: string;
+  language?: string;
 }
 
 export function ProfileSettings() {
+  const t = useTranslations("Profile");
+  const tc = useTranslations("Common");
   const [user, setUser] = useState<User | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails>({ full_name: "" });
   const [loading, setLoading] = useState(true);
@@ -47,6 +58,7 @@ export function ProfileSettings() {
           setUserDetails({
             full_name: profile?.full_name || "",
             avatar_url: profile?.avatar_url || undefined,
+            language: profile?.language || "en",
           });
         }
       } catch (error) {
@@ -115,6 +127,7 @@ export function ProfileSettings() {
     const firstName = formData.get("firstName") as string;
     const lastName = formData.get("lastName") as string;
     const email = formData.get("email") as string;
+    const language = formData.get("language") as string;
     const currentPassword = formData.get("currentPassword") as string;
     const newPassword = formData.get("newPassword") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
@@ -123,19 +136,22 @@ export function ProfileSettings() {
     try {
       if (!user) throw new Error("User not found");
 
-      // Update profile information (name and email)
-      if (email !== user.email || firstName || lastName) {
+      // Update profile information (name, email, language)
+      if (email !== user.email || firstName || lastName || language !== userDetails.language) {
         await ProfileService.updateProfile({
           firstName,
           lastName,
-          email: email !== user.email ? email : undefined
+          email: email !== user.email ? email : undefined,
+          language
         });
 
         // Update local state
         const fullName = `${firstName} ${lastName}`;
-        if (fullName !== userDetails.full_name) {
-          setUserDetails(prev => ({ ...prev, full_name: fullName }));
-        }
+        setUserDetails(prev => ({
+          ...prev,
+          full_name: fullName,
+          language
+        }));
       }
 
       // Update password if provided
@@ -213,16 +229,16 @@ export function ProfileSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                Personal Information
+                {t("personalInfo")}
               </CardTitle>
               <CardDescription>
-                Update your personal details and profile information
+                {t("description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid w-full gap-1.5">
-                  <Label htmlFor="firstName">First name</Label>
+                  <Label htmlFor="firstName">{t("firstName")}</Label>
                   <Input
                     id="firstName"
                     name="firstName"
@@ -231,7 +247,7 @@ export function ProfileSettings() {
                   />
                 </div>
                 <div className="grid w-full gap-1.5">
-                  <Label htmlFor="lastName">Last name</Label>
+                  <Label htmlFor="lastName">{t("lastName")}</Label>
                   <Input
                     id="lastName"
                     name="lastName"
@@ -239,10 +255,22 @@ export function ProfileSettings() {
                     required
                   />
                 </div>
+                <div className="grid w-full gap-1.5">
+                  <Label htmlFor="language">{tc("language")}</Label>
+                  <Select name="language" defaultValue={userDetails.language}>
+                    <SelectTrigger id="language">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="de">Deutsch</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <div className="grid w-full gap-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("email")}</Label>
                 <Input
                   id="email"
                   name="email"

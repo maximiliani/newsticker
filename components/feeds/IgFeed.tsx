@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { IgFeedClient } from './IgFeedClient';
+import { getTranslations } from 'next-intl/server';
 
 export type IGPostData = {
     id: string;
@@ -17,6 +18,7 @@ async function getInstagramPosts(): Promise<{
     availableUsers: string[];
 }> {
     const supabase = await createClient();
+    const t = await getTranslations('Instagram');
 
     try {
         const { data, error } = await supabase
@@ -43,7 +45,7 @@ async function getInstagramPosts(): Promise<{
 
         const mappedPosts: IGPostData[] = data.map((post: any) => ({
             id: post.id,
-            username: post.instagram_accounts?.username || "Unknown",
+            username: post.instagram_accounts?.username || t("unknown"),
             userAvatar: post.instagram_accounts?.profile_image_url || "",
             caption: "", // Omitted as caption isn't stored
             location: "", // Omitted as location isn't stored
@@ -66,11 +68,12 @@ async function getInstagramPosts(): Promise<{
 // Server Component
 export default async function IgFeed() {
     const { posts, availableUsers } = await getInstagramPosts();
+    const t = await getTranslations('Instagram');
 
     if (posts.length === 0) {
         return (
             <div className="flex items-center justify-center h-full">
-                <h2 className="text-xl font-bold">No instagram posts available.</h2>
+                <h2 className="text-xl font-bold">{t('noPosts')}</h2>
             </div>
         );
     }

@@ -1,0 +1,61 @@
+{
+  "Common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "error": "Error",
+    "success": "Success",
+    "loading": "Loading...",
+    "welcome": "Welcome",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout",
+    "language": "Language",
+    "anonymous": "Anonymous",
+    "returnToDashboard": "Return to Dashboard"
+  },
+  "Articles": {
+    "noArticlesFound": "No news articles found for the selected range.",
+    "latestNews": "Latest News",
+    "createNewsArticle": "Create news article"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome, {name}!",
+    "description": "Manage your account settings, profile, and more"
+  },
+  "Profile": {
+    "title": "Profile Settings",
+    "description": "Update your personal information and profile details.",
+    "personalInfo": "Personal Information",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "changePassword": "Change Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password"
+  },
+  "Sidebar": {
+    "return": "Return to Dashboard",
+    "dashboard": "Settings Dashboard",
+    "profile": "Profile",
+    "users": "User Management",
+    "instagram": "Instagram Feeds",
+    "calendar": "Calendar Subscriptions",
+    "articles": "News Articles",
+    "general": "General Settings",
+    "device": "Device"
+  },
+  "Instagram": {
+    "feedTitle": "Instagram Feed",
+    "all": "All",
+    "noPosts": "No instagram posts available.",
+    "unknown": "Unknown"
+  },
+  "Calendar": {
+    "upcomingEvents": "Upcoming Events",
+    "noEvents": "No upcoming events.",
+    "untitled": "Untitled",
+    "dateFormat": "MMM d, HH:mm"
+  }
+}
