@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Settings, Trash2, Shield, Save, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AccountDeletionDialog } from "@/components/user/account_deletion_dialog";
-import { ProfileService, UserProfile } from "@/features/users/services/profile-service";
+import { ProfileService } from "@/features/users/services/profile-service";
 import {createClient} from "@/lib/supabase/client";
 
 interface UserDetails {
