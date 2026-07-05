@@ -179,7 +179,10 @@ logs
 .junie
 .air
 .zed
-.vscode### VisualStudioCode template
+.vscode
+opencode.json
+
+### VisualStudioCode template
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
