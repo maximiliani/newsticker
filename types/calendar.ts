@@ -17,6 +17,10 @@ export interface CalendarSubscription {
   etag: string | null;
   active: boolean;
   created_at: string;
+  user?: {
+    full_name: string | null;
+    email: string | null;
+  };
 }
 
 export interface CalendarEvent {

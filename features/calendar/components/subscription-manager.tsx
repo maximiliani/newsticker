@@ -81,7 +81,10 @@ export function SubscriptionManager() {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <SubscriptionDialog onSubscriptionAdded={fetchSubscriptions} />
+        <SubscriptionDialog
+          onSubscriptionAdded={fetchSubscriptions}
+          existingColors={subscriptions.map(s => s.color)}
+        />
       </div>
 
       <div className="grid gap-4">
@@ -109,9 +112,9 @@ export function SubscriptionManager() {
                   <div className="text-sm text-muted-foreground">
                     Last synced: {sub.last_synced_at ? new Date(sub.last_synced_at).toLocaleString() : 'Never'}
                   </div>
-                  {(sub as any).user && (
+                  {sub.user && (
                     <div className="text-[10px] text-muted-foreground mt-1 font-mono">
-                      Owner: {(sub as any).user.full_name || (sub as any).user.email}
+                      Owner: {sub.user.full_name || sub.user.email}
                     </div>
                   )}
                 </div>
@@ -121,6 +124,7 @@ export function SubscriptionManager() {
                 <SubscriptionDialog
                   subscription={sub}
                   onSubscriptionUpdated={fetchSubscriptions}
+                  existingColors={subscriptions.map(s => s.color)}
                   trigger={
                     <Button variant="ghost" size="sm">
                       <Settings className="h-4 w-4 mr-2" />

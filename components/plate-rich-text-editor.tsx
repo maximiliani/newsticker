@@ -35,10 +35,17 @@ export function PlateRichTextEditor({
   // Helper for deserialization
   const deserialize = React.useCallback((html: string) => {
     if (!html) return [{ type: 'p', children: [{ text: '' }] }];
-    const editorNode = getEditorDOMFromHtmlString(html);
-    return editor.api.html.deserialize({
-      element: editorNode,
-    });
+    try {
+      const editorNode = getEditorDOMFromHtmlString(html);
+      if (!editorNode) return [{ type: 'p', children: [{ text: '' }] }];
+      
+      return editor.api.html.deserialize({
+        element: editorNode,
+      });
+    } catch (error) {
+      console.error('Failed to deserialize HTML:', error);
+      return [{ type: 'p', children: [{ text: 'Error loading content.' }] }];
+    }
   }, [editor]);
 
   // Initial deserialization

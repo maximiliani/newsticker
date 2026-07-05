@@ -19,6 +19,21 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (subError) return NextResponse.json({ error: subError.message }, { status: 404 });
     if (!isAdmin && sub.user_id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
+    // Check for color uniqueness for this user if color is being updated
+    if (body.color) {
+      const { data: existingSubWithColor } = await supabase
+        .from('calendar_subscriptions')
+        .select('id')
+        .eq('user_id', sub.user_id)
+        .eq('color', body.color)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (existingSubWithColor) {
+        return NextResponse.json({ error: "A subscription with this color already exists. Please choose a unique color." }, { status: 400 });
+      }
+    }
+
     const admin = createAdminClient();
     const updateData: any = {
       name: body.name,
@@ -77,6 +92,21 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
 
     if (subError) return NextResponse.json({ error: subError.message }, { status: 404 });
     if (!isAdmin && sub.user_id !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+
+    // Check for color uniqueness for this user if color is being updated
+    if (body.color) {
+      const { data: existingSubWithColor } = await supabase
+        .from('calendar_subscriptions')
+        .select('id')
+        .eq('user_id', sub.user_id)
+        .eq('color', body.color)
+        .neq('id', id)
+        .maybeSingle();
+
+      if (existingSubWithColor) {
+        return NextResponse.json({ error: "A subscription with this color already exists. Please choose a unique color." }, { status: 400 });
+      }
+    }
 
     const admin = createAdminClient();
 

@@ -7,7 +7,9 @@ import { fetchPublicICal, parseCalendarMetadata } from "@/features/calendar/serv
 
 export async function GET() {
   try {
-    const { supabase, userId, isAdmin } = await requireAuth();
+    const { supabase: userSupabase, userId, isAdmin } = await requireAuth();
+    const supabase = isAdmin ? createAdminClient() : userSupabase;
+
     let data;
     const { data: subs, error: subError } = await supabase
         .from('calendar_subscriptions')
@@ -54,6 +56,18 @@ export async function POST(req: NextRequest) {
     const { supabase, userId } = await requireAuth();
     const body = await req.json();
     const { name, ical_url, auth_type, caldav_server_url, caldav_calendar_url, username, secret, color, visibility_days_before, visibility_days_after } = body;
+
+    // Check for color uniqueness for this user
+    const { data: existingSubWithColor } = await supabase
+      .from('calendar_subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('color', color || '#3B82F6')
+      .maybeSingle();
+
+    if (existingSubWithColor) {
+      return NextResponse.json({ error: "A subscription with this color already exists. Please choose a unique color." }, { status: 400 });
+    }
 
     let finalName = name;
     let finalColor = color;

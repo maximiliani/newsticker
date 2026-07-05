@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from "react";
-import { Plus, Loader2, Check } from "lucide-react";
+import { useState, useRef } from "react";
+import { Plus, Loader2, Check, Pipette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,14 +22,30 @@ interface Props {
   onSubscriptionAdded?: () => void;
   onSubscriptionUpdated?: () => void;
   trigger?: React.ReactNode;
+  existingColors?: string[];
 }
 
-export function SubscriptionDialog({ subscription, onSubscriptionAdded, onSubscriptionUpdated, trigger }: Props) {
+export function SubscriptionDialog({ subscription, onSubscriptionAdded, onSubscriptionUpdated, trigger, existingColors = [] }: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [type, setType] = useState<'public' | 'caldav'>(subscription?.auth_type === 'public' ? 'public' : 'caldav');
   const [isLoading, setIsLoading] = useState(false);
   
+  const colorInputRef = useRef<HTMLInputElement>(null);
+  
+  const colors = [
+    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#6366F1',
+    '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#06B6D4'
+  ];
+
+  const getInitialColor = () => {
+    if (subscription?.color) return subscription.color;
+    for (const c of colors) {
+      if (!existingColors.includes(c)) return c;
+    }
+    return colors[0];
+  };
+
   const [formData, setFormData] = useState({
     name: subscription?.name || '',
     ical_url: subscription?.ical_url || '',
@@ -37,13 +53,14 @@ export function SubscriptionDialog({ subscription, onSubscriptionAdded, onSubscr
     authType: (subscription?.auth_type === 'public' ? 'basic' : subscription?.auth_type) || 'basic',
     username: '',
     secret: '',
-    color: subscription?.color || '#3B82F6',
+    color: getInitialColor(),
     visibility_days_before: subscription?.visibility_days_before ?? 14,
     visibility_days_after: subscription?.visibility_days_after ?? 14
   });
 
   const [discoveredCalendars, setDiscoveredCalendars] = useState<DiscoveredCalendar[]>([]);
   const [selectedCalendarUrl, setSelectedCalendarUrl] = useState('');
+  const [colorError, setColorError] = useState<string | null>(null);
 
   const reset = () => {
     setStep(1);
@@ -55,7 +72,7 @@ export function SubscriptionDialog({ subscription, onSubscriptionAdded, onSubscr
       authType: (subscription?.auth_type === 'public' ? 'basic' : subscription?.auth_type) || 'basic',
       username: '',
       secret: '',
-      color: subscription?.color || '#3B82F6',
+      color: getInitialColor(),
       visibility_days_before: subscription?.visibility_days_before ?? 14,
       visibility_days_after: subscription?.visibility_days_after ?? 14
     });
@@ -89,6 +106,13 @@ export function SubscriptionDialog({ subscription, onSubscriptionAdded, onSubscr
 
   const handleSubmit = async () => {
     try {
+      // Validate color uniqueness client-side
+      if (existingColors.includes(formData.color) && formData.color !== subscription?.color) {
+        setColorError("This color is already used by another calendar. Please choose a unique color.");
+        return;
+      }
+      setColorError(null);
+
       setIsLoading(true);
       const isEditing = !!subscription;
       const url = isEditing 
@@ -163,6 +187,16 @@ export function SubscriptionDialog({ subscription, onSubscriptionAdded, onSubscr
 
         {step === 1 && (
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Subscription Name</Label>
+              <Input 
+                id="name" 
+                placeholder="Work Calendar" 
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+
             <Tabs defaultValue="public" value={type} onValueChange={(v) => setType(v as 'public' | 'caldav')}>
               <TabsList>
                 <TabsTrigger value="public">Public iCal</TabsTrigger>
@@ -237,6 +271,54 @@ export function SubscriptionDialog({ subscription, onSubscriptionAdded, onSubscr
                   onChange={e => setFormData({ ...formData, visibility_days_after: parseInt(e.target.value) || 0 })}
                 />
               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Subscription Color</Label>
+              <div className="flex flex-wrap gap-2 items-center">
+                {colors.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`w-8 h-8 rounded-full transition-transform ${
+                      formData.color === c 
+                        ? 'border-4 border-white ring-2 ring-primary scale-110 shadow-sm' 
+                        : 'border-2 border-transparent hover:scale-105'
+                    } ${existingColors.includes(c) && c !== subscription?.color ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    style={{ backgroundColor: c }}
+                    onClick={() => setFormData({ ...formData, color: c })}
+                    disabled={existingColors.includes(c) && c !== subscription?.color}
+                    title={existingColors.includes(c) && c !== subscription?.color ? 'Color already in use' : ''}
+                  />
+                ))}
+                <div className="relative">
+                  <button
+                    type="button"
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${
+                      !colors.includes(formData.color)
+                        ? 'border-4 border-white ring-2 ring-primary scale-110 shadow-sm' 
+                        : 'border-2 border-dashed border-muted-foreground/30 hover:scale-105 hover:border-muted-foreground/50'
+                    }`}
+                    style={!colors.includes(formData.color) ? { backgroundColor: formData.color } : {}}
+                    onClick={() => colorInputRef.current?.click()}
+                    title="Custom color"
+                  >
+                    <Pipette className={`h-4 w-4 ${!colors.includes(formData.color) ? 'text-white' : 'text-muted-foreground'}`} />
+                  </button>
+                  <Input 
+                    ref={colorInputRef}
+                    id="custom-color-picker"
+                    type="color" 
+                    className="sr-only"
+                    value={formData.color}
+                    onChange={e => {
+                      setFormData({ ...formData, color: e.target.value });
+                      setColorError(null);
+                    }}
+                  />
+                </div>
+              </div>
+              {colorError && <p className="text-xs text-destructive mt-1">{colorError}</p>}
             </div>
           </div>
         )}
