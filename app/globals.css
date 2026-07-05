@@ -236,6 +236,12 @@
 }
 
 /* Force react-resizable-panels inner content wrappers to inherit full height */
+[data-slot="resizable-panel"],
+[data-panel="true"] {
+  min-width: 0;
+  min-height: 0;
+}
+
 [data-slot="resizable-panel"] > div,
 [data-panel="true"] > div {
   height: 100%;

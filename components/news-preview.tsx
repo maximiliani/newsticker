@@ -27,7 +27,7 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
   };
 
   return (
-    <article className="bg-card rounded-lg p-4 shadow-sm space-y-4 hover:bg-accent transition-colors duration-200 border hover:border-border hover:shadow-md w-full relative">
+    <article className="bg-card rounded-lg p-4 shadow-sm flex flex-col gap-4 hover:bg-accent transition-colors duration-200 border hover:border-border hover:shadow-md w-full relative">
       {/* Title */}
       <h2 className="text-lg font-semibold line-clamp-2">{news.title}</h2>
 
@@ -36,7 +36,7 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
 
       {/* Metadata */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <button 
             onClick={handleAvatarClick}
             className="flex-shrink-0 hover:ring-2 hover:ring-primary rounded-full transition-all duration-200"
@@ -46,10 +46,10 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
               <img
                 src={news.author.avatar}
                 alt={news.author.name}
-                className="w-5 h-5 rounded-full object-cover cursor-pointer"
+                className="size-5 rounded-full object-cover cursor-pointer"
               />
             ) : (
-              <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center cursor-pointer">
+              <div className="size-5 rounded-full bg-secondary flex items-center justify-center cursor-pointer">
                 {news.author.name[0]}
               </div>
             )}

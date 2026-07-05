@@ -117,8 +117,8 @@ export function ArticleActions({ articleId, articleTitle }: ArticleActionsProps)
     return (
         <div className="flex items-center gap-3">
             <Link href={`/news/${articleId}/edit`} className="inline-block">
-                <Button variant="outline" size="sm" className="border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                    <Pen className="h-4 w-4 mr-2 text-gray-600 dark:text-gray-400"/>
+                <Button variant="outline" size="sm">
+                    <Pen data-icon="inline-start" />
                     Edit Article
                 </Button>
             </Link>
@@ -128,14 +128,13 @@ export function ArticleActions({ articleId, articleTitle }: ArticleActionsProps)
                     <Button
                         variant="destructive"
                         size="sm"
-                        className="bg-red-100 hover:bg-red-200 text-red-600 border border-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400 dark:border-red-800/50"
                         onClick={() => confirmDelete(articleId)}
                         disabled={isDeleting}
                     >
                         {isDeleting ? (
-                            <Loader2 className="h-4 w-4 animate-spin"/>
+                            <Loader2 className="animate-spin" />
                         ) : (
-                            <Trash2 className="h-4 w-4"/>
+                            <Trash2 />
                         )}
                     </Button>
                 </AlertDialogTrigger>
@@ -210,8 +209,8 @@ export function ArticlePageClient({ initialArticle, user }: ArticlePageClientPro
                         <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
-                            <ArrowLeft className="h-4 w-4"/>
+                            className="text-muted-foreground hover:text-foreground">
+                            <ArrowLeft data-icon="inline-start" />
                             <span>Back to Dashboard</span>
                         </Button>
                     </Link>
@@ -226,16 +225,16 @@ export function ArticlePageClient({ initialArticle, user }: ArticlePageClientPro
                 </div>
             </div>
 
-            <article className="space-y-6 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                <header className="p-6 border-b dark:border-gray-800">
+            <article className="flex flex-col gap-6 bg-card rounded-xl shadow-sm border overflow-hidden">
+                <header className="p-6 border-b">
                     {!isCurrentlyVisible && (
                         <Badge variant="outline"
-                               className="mb-4 px-3 py-1 text-sm bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-200 dark:border-yellow-500">
+                               className="mb-4 bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-200 dark:border-yellow-500">
                             This article is currently not within its visibility period.
                         </Badge>
                     )}
                     <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight prose dark:prose-invert">{initialArticle.title}</h1>
-                    <div className="flex items-center space-x-3 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <ClickableAuthorAvatar
                             author={{
                                 name: authorNameDisplay,
@@ -243,7 +242,7 @@ export function ArticlePageClient({ initialArticle, user }: ArticlePageClientPro
                             }}
                         />
                         <div>
-                            <p className="font-semibold">{authorNameDisplay}</p>
+                            <p className="font-semibold text-foreground">{authorNameDisplay}</p>
                             <p>Published: {formatDate(initialArticle.created_at)}</p>
                             {initialArticle.modified_at !== initialArticle.created_at && (
                                 <p>Updated: {formatDate(initialArticle.modified_at)}</p>
@@ -251,8 +250,8 @@ export function ArticlePageClient({ initialArticle, user }: ArticlePageClientPro
                         </div>
                     </div>
                     {initialArticle.description && (
-                        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
-                            <p className="text-lg text-gray-700 dark:text-gray-300 prose dark:prose-invert">{initialArticle.description}</p>
+                        <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+                            <p className="text-lg text-muted-foreground prose dark:prose-invert">{initialArticle.description}</p>
                         </div>
                     )}
                 </header>

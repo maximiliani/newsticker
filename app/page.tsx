@@ -8,34 +8,39 @@ import {Separator} from "@/components/ui/separator";
 export default function Home({searchParams}: { searchParams: Promise<{ from?: string, to?: string }> }) {
 
     return (
-        <main className="w-full h-[calc(100vh-10rem)] overflow-hidden">
+        <main className="w-full h-[calc(100vh-8rem)] overflow-hidden">
             <ResizablePanelGroup orientation="horizontal">
                 <ResizablePanel
                     defaultSize={45}
-                    minSize={30}
-                    maxSize={70}
+                    minSize={20}
+                    maxSize={80}
+                    className="min-w-0 overflow-hidden flex flex-col"
                 >
-                    <ResizablePanelGroup orientation="vertical">
-                        <ResizablePanel defaultSize={60}>
+                    <ResizablePanelGroup orientation="vertical" className="flex-1 min-h-0">
+                        <ResizablePanel defaultSize={60} className="min-w-0 overflow-hidden flex flex-col">
                             <ArticleFeed searchParams={searchParams}/>
                         </ResizablePanel>
                         <ResizableHandle withHandle/>
-                        <ResizablePanel defaultSize={30}>
-                            <div className="flex gap-2">
-                                <CalendarFilter/>
+                        <ResizablePanel defaultSize={40} className="min-w-0 overflow-hidden flex flex-col">
+                            <div className="flex h-full gap-2 overflow-hidden p-2 min-w-0">
+                                <div className="flex-none">
+                                    <CalendarFilter/>
+                                </div>
                                 <Separator orientation="vertical"/>
-                                <SneakPeek searchParams={searchParams}/>
+                                <div className="flex-1 min-w-0 overflow-hidden">
+                                    <SneakPeek searchParams={searchParams}/>
+                                </div>
                             </div>
                         </ResizablePanel>
                     </ResizablePanelGroup>
                 </ResizablePanel>
-
                 <ResizableHandle withHandle/>
 
                 <ResizablePanel
                     defaultSize={55}
-                    minSize={30}
+                    minSize={20}
                     maxSize={80}
+                    className="min-w-0 overflow-hidden flex flex-col"
                 >
                     <IgFeed/>
                 </ResizablePanel>

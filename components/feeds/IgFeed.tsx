@@ -76,7 +76,7 @@ export default async function IgFeed() {
     }
 
     return (
-        <div className="h-full flex flex-col overflow-y-auto">
+        <div className="h-full flex flex-col min-w-0 overflow-hidden">
             {/* Interactive header with filtering */}
             <IgFeedClient 
                 initialPosts={posts}

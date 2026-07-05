@@ -89,7 +89,7 @@ export default async function ArticleFeed({ searchParams }: { searchParams?: Pro
     const initialArticles = await getVisibleArticles(params?.from, params?.to);
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="h-full flex flex-col overflow-hidden min-w-0">
             {/* Static header with client-side dialog */}
             <ArticleFeedClient/>
             

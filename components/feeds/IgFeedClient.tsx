@@ -91,7 +91,7 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
     }, [refreshData]);
 
     return (
-        <>
+        <div className="flex flex-col h-full w-full min-w-0 overflow-hidden">
             {/* Header with filtering */}
             <div className="items-center p-4 border-b relative">
                 <h1 className="text-xl font-bold">Instagram Feed</h1>
@@ -141,15 +141,18 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
             </div>
 
             {/* Posts Container */}
-            <div className="flex-1 overflow-y-auto">
-                <div className="grid auto-rows-max grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-2 p-2">
+            <div className="flex-1 overflow-y-auto min-w-0">
+                <div 
+                    className="grid auto-rows-max gap-2 p-2"
+                    style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 16rem), 1fr))" }}
+                >
                     {activePosts.map((post) => (
-                        <div className="max-h-96 h-96 max-w-64 w-64" key={post.id}>
+                        <div className="max-h-96 h-96 w-full" key={post.id}>
                             <IGPost postId={post.id} />
                         </div>
                     ))}
                 </div>
             </div>
-        </>
+        </div>
     );
 }

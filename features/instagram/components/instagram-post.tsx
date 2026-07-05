@@ -119,13 +119,13 @@ export function IGPost({postId}: {postId: string}) {
     }
 
     return (
-        <div className="bg-card rounded-lg overflow-hidden shadow-sm border w-full h-full flex flex-col">
+        <div className="bg-card rounded-lg overflow-hidden shadow-sm border w-full h-full flex flex-col min-w-0">
             {/* Post Header */}
-            <div className="p-2 flex items-center space-x-2 h-10 flex-none border-b">
+            <div className="p-2 flex items-center gap-2 h-10 flex-none border-b">
                 <Image
                     src={post.userAvatar}
                     alt={post.username}
-                    className="w-6 h-6 rounded-full object-cover"
+                    className="size-6 rounded-full object-cover"
                     width={24}
                     height={24}
                 />
@@ -138,7 +138,7 @@ export function IGPost({postId}: {postId: string}) {
             </div>
 
             {/* Post Media Content */}
-            <div className="w-full flex-1 overflow-hidden relative">
+            <div className="w-full flex-1 overflow-hidden relative min-w-0">
                 {post.media.length === 1 ? (
                     <InstagramMediaDisplay
                         media={post.media[0]}

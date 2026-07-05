@@ -5,7 +5,7 @@ import {GlobalHeader} from "@/components/globalHeader";
 import {GlobalFooter} from "@/components/globalFooter";
 import {cookies} from "next/headers";
 import {SidebarProvider} from "@/components/ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import {TooltipProvider} from "@/components/ui/tooltip";
 
 const defaultUrl = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
