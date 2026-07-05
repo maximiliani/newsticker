@@ -3,7 +3,7 @@ export interface Article {
   title: string;
   description: string;
   content: string;
-  json_content?: any; // JSON content from TipTap editor
+  json_content?: any; // JSON content from Plate.js editor
   created_at: string;
   modified_at?: string;
   visibility_from: string;
@@ -19,7 +19,7 @@ export interface CreateArticleData {
   title: string;
   description: string;
   content: string;
-  json_content?: any; // JSON content from TipTap editor
+  json_content?: any; // JSON content from Plate.js editor
   html_content?: string; // HTML content (can be same as content)
   visibility_from: string;
   visibility_to?: string;

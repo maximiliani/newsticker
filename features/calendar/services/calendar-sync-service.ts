@@ -247,36 +247,30 @@ function generateArticleContent(
     html += '</ul>';
   }
 
-  // Build a simple Tiptap-compatible JSON structure
-  const jsonContent: any = {
-    type: 'doc',
-    content: [
-      {
-        type: 'paragraph',
-        content: [
-          { type: 'text', marks: [{ type: 'bold' }], text: 'Event: ' },
-          { type: 'text', text: event.summary }
-        ]
-      },
-      {
-        type: 'paragraph',
-        content: [
-          { type: 'text', marks: [{ type: 'bold' }], text: 'Time: ' },
-          { type: 'text', text: dateStr }
-        ]
-      }
-    ]
-  };
+  // Build a simple Plate-compatible JSON structure
+  const jsonContent: any = [
+    {
+      type: 'p',
+      children: [
+        { bold: true, text: 'Event: ' },
+        { text: event.summary }
+      ]
+    },
+    {
+      type: 'p',
+      children: [
+        { bold: true, text: 'Time: ' },
+        { text: dateStr }
+      ]
+    }
+  ];
 
   if (event.location) {
-    const osmUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(event.location)}`;
-    jsonContent.content.push({
-      type: 'paragraph',
-      content: [
-        { type: 'text', marks: [{ type: 'bold' }], text: 'Location: ' },
-        {
-             content: `<iframe width="425" height="350" src="https://www.openstreetmap.org/export/embed.html?query=${encodeURIComponent(event.location)}&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/>`
-        }
+    jsonContent.push({
+      type: 'p',
+      children: [
+        { bold: true, text: 'Location: ' },
+        { text: event.location }
       ]
     });
   }
@@ -285,22 +279,22 @@ function generateArticleContent(
     const lines = event.description.split('\n');
     lines.forEach(line => {
       if (line.trim()) {
-        jsonContent.content.push({
-          type: 'paragraph',
-          content: [{ type: 'text', text: line }]
+        jsonContent.push({
+          type: 'p',
+          children: [{ text: line }]
         });
       }
     });
   }
 
   if (event.url && (event.url.startsWith('http://') || event.url.startsWith('https://'))) {
-    jsonContent.content.push({
-      type: 'paragraph',
-      content: [
+    jsonContent.push({
+      type: 'p',
+      children: [
         {
-          type: 'text',
-          marks: [{ type: 'link', attrs: { href: event.url, target: '_blank' } }],
-          text: event.url
+          type: 'a',
+          url: event.url,
+          children: [{ text: event.url }]
         }
       ]
     });

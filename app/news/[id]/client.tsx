@@ -6,8 +6,6 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Loader2, Pen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-// Import TipTap styles for proper content rendering
-import '@/components/tiptap/tiptap.css';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -160,7 +158,7 @@ export function ArticleActions({ articleId, articleTitle }: ArticleActionsProps)
     );
 }
 
-    // Component to render article content with proper TipTap styling
+    // Component to render article content with proper Plate.js styling
     function ArticleContent({ article }: { article: ArticleDetailFromView }) {
     // Use content from the article
     const contentToRender = article.content;

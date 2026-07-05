@@ -1,5 +1,8 @@
 import { useState } from 'react';
 
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { cn } from '@/lib/utils';
+
 interface MediaDisplayProps {
   type: "image" | "video";
   src: string;
@@ -20,13 +23,13 @@ export function MediaDisplay({ type, src, alt, className }: MediaDisplayProps) {
 
   if (type === "video") {
     return (
-      <div className={`relative ${className}`}>
+      <AspectRatio ratio={1} className={cn('relative overflow-hidden', className)}>
         <video
           src={src}
           controls
           onError={handleError}
           onLoadedData={handleLoad}
-          className="w-full h-full object-cover"
+          className="h-full w-full object-cover"
           preload="metadata"
         >
           Your browser does not support the video tag.
@@ -36,25 +39,25 @@ export function MediaDisplay({ type, src, alt, className }: MediaDisplayProps) {
             <span className="text-gray-500">Failed to load video</span>
           </div>
         )}
-      </div>
+      </AspectRatio>
     );
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <AspectRatio ratio={1} className={cn('relative overflow-hidden', className)}>
       <img
         src={src}
         alt={alt || 'Media content'}
         onError={handleError}
         onLoad={handleLoad}
-        className="w-full h-full object-cover"
+        className="h-full w-full object-cover"
       />
       {hasError && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
           <span className="text-gray-500">Failed to load image</span>
         </div>
       )}
-    </div>
+    </AspectRatio>
   );
 }
 
@@ -102,7 +105,7 @@ export function InstagramMediaDisplay({ media, type, alt, className }: Instagram
 
   if (type === "video") {
     return (
-      <div className={`relative ${className}`}>
+      <AspectRatio ratio={1} className={cn('relative overflow-hidden', className)}>
         <video
           key={currentUrl} // Force re-render when URL changes
           src={currentUrl}
@@ -111,7 +114,7 @@ export function InstagramMediaDisplay({ media, type, alt, className }: Instagram
           loop
           onError={handleError}
           onLoadedData={handleLoad}
-          className="w-full h-full object-cover"
+          className="h-full w-full object-cover"
           // preload="metadata"
           preload="none"
           poster={media.local_thumbnail_url || media.thumbnail_url || undefined}
@@ -124,19 +127,19 @@ export function InstagramMediaDisplay({ media, type, alt, className }: Instagram
             <span className="text-gray-500">Failed to load video</span>
           </div>
         )}
-      </div>
+      </AspectRatio>
     );
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <AspectRatio ratio={1} className={cn('relative overflow-hidden', className)}>
       <img
         key={currentUrl} // Force re-render when URL changes
         src={currentUrl}
         alt={alt || 'Instagram media'}
         onError={handleError}
         onLoad={handleLoad}
-        className="w-full h-full object-cover"
+        className="h-full w-full object-cover"
       />
       
       {hasError && (
@@ -144,6 +147,6 @@ export function InstagramMediaDisplay({ media, type, alt, className }: Instagram
           <span className="text-gray-500">Failed to load image</span>
         </div>
       )}
-    </div>
+    </AspectRatio>
   );
 }

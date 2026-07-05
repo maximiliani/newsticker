@@ -64,7 +64,7 @@ Admin status is determined via the `check_is_admin()` Postgres RPC.
 
 ### Rich Text Editor
 
-Articles use **Tiptap** as the editor. Editor setup is in `hooks/use-tiptap-editor.ts` and `lib/tiptap-utils.ts`. Articles store both `content` (HTML string), `json_content` (Tiptap JSON), and `html_content`.
+Articles use **Plate.js** as the editor. Editor setup is in `components/plate-rich-text-editor.tsx`. Articles store both `content` (HTML string), `json_content` (Plate JSON), and `html_content`.
 
 ## Environment Variables
 

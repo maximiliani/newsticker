@@ -143,7 +143,6 @@ export function IGPost({postId}: {postId: string}) {
                     <InstagramMediaDisplay
                         media={post.media[0]}
                         type={post.media[0].type}
-                        className="w-full h-full object-cover"
                     />
                 ) : (
                     <Carousel
@@ -156,7 +155,6 @@ export function IGPost({postId}: {postId: string}) {
                                     <InstagramMediaDisplay
                                         media={mediaItem}
                                         type={mediaItem.type}
-                                        className="w-full h-full object-cover"
                                     />
                                 </CarouselItem>
                             ))}
@@ -174,7 +172,7 @@ export function IGPost({postId}: {postId: string}) {
             {/* Caption and Date */}
             <div className="p-2 text-xs flex flex-col h-28 flex-none">
                 <div
-                    className="flex-1 overflow-y-auto hover:overflow-y-scroll line-clamp-3 group-hover:line-clamp-none max-h-12">
+                    className="flex-1 overflow-y-auto hover:overflow-y-scroll line-clamp-5 group-hover:line-clamp-none">
                     <span className="font-semibold">{post.username}</span> {post.caption}
                 </div>
                 <time className="text-muted-foreground text-xs flex-none uppercase mt-2 bottom-0">

@@ -7,9 +7,6 @@ import Link from 'next/link';
 import {ClickableAuthorAvatar} from '@/components/ClickableAuthorAvatar';
 import {ArticleActions} from '@/app/news/[id]/client';
 
-// Import TipTap styles for proper content rendering
-import '@/components/tiptap/tiptap.css';
-
 // Type for a single article fetched from the 'articles_with_author_info' view
 type ArticleDetailFromView = {
     id: string;
@@ -59,7 +56,7 @@ const formatDate = (dateString?: string | null): string => {
     }
 };
 
-// Component to render article content with proper TipTap styling
+// Component to render article content with proper Plate.js styling
 function ArticleContent({ article }: { article: ArticleDetailFromView }) {
     // Prefer html_content, then content as fallback
     const contentToRender = article.html_content || article.content;

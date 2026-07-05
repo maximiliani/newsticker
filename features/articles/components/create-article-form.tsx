@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { RichTextEditor } from "@/components/rich-text-editor";
+import { PlateRichTextEditor } from "@/components/plate-rich-text-editor";
 import { ArticleService } from "../services/article-service";
 import { logError } from "@/lib/utils/error-handling";
 import { User } from "@supabase/supabase-js";
@@ -38,7 +38,7 @@ interface CreateArticleFormProps {
 
 export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArticleFormProps) {
   const [loading, setLoading] = useState(false);
-  // Add state to store the JSON content from TipTap editor
+  // Add state to store the JSON content from Plate.js editor
   const [jsonContent, setJsonContent] = useState<any>(null);
 
   // Set default visibility dates (now to 1 month from now)
@@ -152,7 +152,7 @@ export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArt
             <FormItem>
               <FormLabel>Content</FormLabel>
               <FormControl>
-                <RichTextEditor 
+                <PlateRichTextEditor 
                   content={field.value}
                   onChange={handleEditorChange} // Use custom handler instead of field.onChange
                   placeholder="Write your article content here..."

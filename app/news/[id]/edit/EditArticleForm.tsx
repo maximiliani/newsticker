@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { RichTextEditor } from "@/components/rich-text-editor";
+import { PlateRichTextEditor } from "@/components/plate-rich-text-editor";
 import { Label } from "@/components/ui/label";
 import { Article } from "@/types/article";
 
@@ -132,7 +132,7 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="content">Content *</Label>
-        <RichTextEditor
+        <PlateRichTextEditor
           content={content}
           onChange={(htmlContent, json) => {
             setContent(htmlContent);

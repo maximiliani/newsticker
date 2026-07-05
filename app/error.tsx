@@ -21,8 +21,8 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="text-center space-y-6 max-w-md p-6 bg-white rounded-lg shadow-lg">
+    <div className="flex h-screen items-center justify-center bg-background">
+      <div className="text-center space-y-6 max-w-md p-6 bg-card border rounded-lg shadow-lg">
         <h1 className="text-2xl font-bold text-destructive">Something went wrong</h1>
 
         <p className="text-muted-foreground">
@@ -30,10 +30,10 @@ export default function GlobalError({
         </p>
 
         {process.env.NODE_ENV === 'development' && (
-          <div className="text-left bg-gray-100 p-4 rounded overflow-auto max-h-40 text-xs">
-            <p className="font-bold mb-2">Error details:</p>
-            <p>{error.message}</p>
-            {error.stack && <pre>{error.stack}</pre>}
+          <div className="text-left bg-muted p-4 rounded overflow-auto max-h-40 text-xs">
+            <p className="font-bold mb-2 text-foreground">Error details:</p>
+            <p className="text-foreground">{error.message}</p>
+            {error.stack && <pre className="text-foreground mt-2">{error.stack}</pre>}
           </div>
         )}
 
