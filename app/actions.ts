@@ -1,5 +1,6 @@
 "use server";
 
+import { checkBotId } from 'botid/server';
 import {encodedRedirect} from "@/utils/utils";
 import {createClient} from "@/lib/supabase/server";
 import {headers} from "next/headers";
@@ -9,6 +10,12 @@ const API_CALLBACK_URL = "/api/auth/callback";
 const DEFAULT_REDIRECT_URL = "/settings";
 
 export const signUpAction = async (formData: FormData) => {
+    // Check if the request is from a bot
+    const verification = await checkBotId();
+    if (verification.isBot) {
+        throw new Error('Access denied');
+    }
+
     const email = formData.get("email")?.toString();
     const password = formData.get("password")?.toString();
     const firstName = formData.get("firstName")?.toString();
@@ -53,6 +60,12 @@ export const signUpAction = async (formData: FormData) => {
 };
 
 export const signInAction = async (formData: FormData) => {
+    // Check if the request is from a bot
+    const verification = await checkBotId();
+    if (verification.isBot) {
+        throw new Error('Access denied');
+    }
+
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const supabase = await createClient();
@@ -70,6 +83,12 @@ export const signInAction = async (formData: FormData) => {
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {
+    // Check if the request is from a bot
+    const verification = await checkBotId();
+    if (verification.isBot) {
+        throw new Error('Access denied');
+    }
+
     const email = formData.get("email")?.toString();
     const supabase = await createClient();
     const origin = (await headers()).get("origin");
@@ -104,6 +123,12 @@ export const forgotPasswordAction = async (formData: FormData) => {
 };
 
 export const resetPasswordAction = async (formData: FormData) => {
+    // Check if the request is from a bot
+    const verification = await checkBotId();
+    if (verification.isBot) {
+        throw new Error('Access denied');
+    }
+
     const supabase = await createClient();
 
     const password = formData.get("password") as string;
