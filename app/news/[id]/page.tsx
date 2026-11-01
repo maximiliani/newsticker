@@ -1,4 +1,6 @@
-import {createClient} from '@/lib/supabase/server';
+"use client";
+
+import {createClient} from '@/lib/supabase/client';
 import {notFound} from 'next/navigation';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -183,18 +185,18 @@ export default async function ArticlePage({params}: ArticlePageProps) {
     );
 }
 
-export async function generateMetadata({params}: ArticlePageProps) {
-    const resolvedParams = await params;
-    const article = await getArticleById(resolvedParams.id);
-
-    if (!article) {
-        return {
-            title: 'Article Not Found',
-        };
-    }
-
-    return {
-        title: article.title,
-        description: article.description,
-    };
-}
+// export async function generateMetadata({params}: ArticlePageProps) {
+//     const resolvedParams = await params;
+//     const article = await getArticleById(resolvedParams.id);
+//
+//     if (!article) {
+//         return {
+//             title: 'Article Not Found',
+//         };
+//     }
+//
+//     return {
+//         title: article.title,
+//         description: article.description,
+//     };
+// }
