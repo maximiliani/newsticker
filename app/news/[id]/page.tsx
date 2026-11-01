@@ -1,7 +1,8 @@
 "use client";
 
+import {useEffect, useState} from 'react';
+import {notFound, useParams} from 'next/navigation';
 import {createClient} from '@/lib/supabase/client';
-import {notFound} from 'next/navigation';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {ArrowLeft} from 'lucide-react';
@@ -12,41 +13,32 @@ import { createSlateEditor } from 'platejs';
 import { BaseEditorKit } from '@/components/editor/editor-base-kit';
 import { EditorStatic } from '@/components/ui/editor-static';
 
-// Type for a single article fetched from the 'articles_with_author_info' view
+// Metadata for an article fetched from the 'articles_with_author_info' view
+// (this view intentionally does NOT expose the article body).
 type ArticleDetailFromView = {
     id: string;
     user_id: string | null;
     title: string;
     description: string;
-    content: string;
-    json_content?: any; // Add json_content
-    html_content?: string; // Add html_content
     created_at: string;
     modified_at: string;
     author_name: string | null;
     author_avatar: string | null;
     visibility_from: string;
-    visibility_to: string;
+    visibility_to: string | null;
 };
 
-type ArticlePageProps = {
-    params: Promise<{ id: string; }>;
+// Body returned by the get_public_article_body RPC. The body fields are only
+// populated when the caller is the owner/admin or the article is currently
+// visible; otherwise only { id, visible:false, isOwner:false } is returned.
+type ArticleBodyPayload = {
+    id: string;
+    visible: boolean;
+    isOwner: boolean;
+    content?: string;
+    json_content?: any;
+    html_content?: string;
 };
-
-async function getArticleById(id: string): Promise<ArticleDetailFromView | null> {
-    const supabase = await createClient();
-    const {data, error} = await supabase
-        .from('articles_with_author_info')
-        .select('*') // This will include json_content and html_content
-        .eq('id', id)
-        .single();
-
-    if (error) {
-        console.error('Error fetching article by ID from view:', error.message);
-        return null;
-    }
-    return data as ArticleDetailFromView;
-}
 
 const formatDate = (dateString?: string | null): string => {
     if (!dateString) return "N/A";
@@ -61,12 +53,12 @@ const formatDate = (dateString?: string | null): string => {
     }
 };
 
-// Component to render article content with proper Plate.js styling
-function ArticleContent({ article }: { article: ArticleDetailFromView }) {
-    if (article.json_content) {
+// Component to render article body with proper Plate.js styling
+function ArticleBody({ body }: { body: ArticleBodyPayload }) {
+    if (body.json_content) {
         const editor = createSlateEditor({
             plugins: BaseEditorKit,
-            value: article.json_content,
+            value: body.json_content,
         });
 
         return (
@@ -77,38 +69,80 @@ function ArticleContent({ article }: { article: ArticleDetailFromView }) {
     }
 
     // Prefer html_content, then content as fallback
-    const contentToRender = article.html_content || article.content;
-    
+    const contentToRender = body.html_content || body.content || '';
+
     return (
-        <div 
+        <div
             className="simple-editor-content prose lg:prose-xl dark:prose-invert max-w-none"
             dangerouslySetInnerHTML={{__html: contentToRender}}
         />
     );
 }
 
-export default async function ArticlePage({params}: ArticlePageProps) {
-    const supabase = await createClient();
-    const resolvedParams = await params;
+export default function ArticlePage() {
+    const params = useParams<{ id: string }>();
+    const id = params?.id;
 
-    // Fetch user and article on the server
-    const {data: {user}} = await supabase.auth.getUser();
-    const article = await getArticleById(resolvedParams.id);
+    const [article, setArticle] = useState<ArticleDetailFromView | null>(null);
+    const [body, setBody] = useState<ArticleBodyPayload | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!id) return;
+
+        let cancelled = false;
+        const supabase = createClient();
+
+        (async () => {
+            // Fetch article metadata from the public view (no body exposed here).
+            const {data: meta, error: metaError} = await supabase
+                .from('articles_with_author_info')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+
+            // Fetch the article body through the visibility-enforcing RPC. This
+            // returns the body only when the article is currently visible OR the
+            // caller is the owner/admin.
+            const {data: bodyData} = await supabase
+                .rpc('get_public_article_body', {p_article_id: id});
+
+            if (!cancelled) {
+                if (metaError || !meta) {
+                    setArticle(null);
+                } else {
+                    setArticle(meta as ArticleDetailFromView);
+                }
+                setBody((bodyData as ArticleBodyPayload | null) ?? null);
+                setLoading(false);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [id]);
+
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10 max-w-4xl">
+                <div className="animate-pulse space-y-6">
+                    <div className="h-10 w-40 bg-muted rounded" />
+                    <div className="h-72 bg-muted rounded-xl" />
+                </div>
+            </div>
+        );
+    }
 
     if (!article) {
         notFound();
     }
 
-    const now = new Date();
-    const visibleFrom = new Date(article.visibility_from);
-    const visibleTo = new Date(article.visibility_to);
-    const isCurrentlyVisible = now >= visibleFrom && now <= visibleTo;
+    const isOwner = !!body?.isOwner;
+    const isCurrentlyVisible = body?.visible ?? false;
 
     const authorNameDisplay = article.author_name || 'Anonymous';
     const authorAvatarDisplay = article.author_avatar || undefined;
-
-    // Check if current user owns this article
-    const isOwner = user && article.user_id === user.id;
 
     return (
         <div className="container mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10 max-w-4xl">
@@ -163,9 +197,21 @@ export default async function ArticlePage({params}: ArticlePageProps) {
                     </div>
                 </header>
 
-                {/* Use the new ArticleContent component */}
+                {/* Article body - hidden for non-editors outside the visibility window */}
                 <div className="px-4 py-4">
-                    <ArticleContent article={article} />
+                    {isOwner || isCurrentlyVisible ? (
+                        body ? (
+                            <ArticleBody body={body} />
+                        ) : (
+                            <p className="text-muted-foreground">
+                                This article is not currently available.
+                            </p>
+                        )
+                    ) : (
+                        <p className="text-muted-foreground">
+                            This article is not currently available.
+                        </p>
+                    )}
                 </div>
 
                 <footer className="px-6 py-4 text-xs border-t dark:border-gray-700">
@@ -184,19 +230,3 @@ export default async function ArticlePage({params}: ArticlePageProps) {
         </div>
     );
 }
-
-// export async function generateMetadata({params}: ArticlePageProps) {
-//     const resolvedParams = await params;
-//     const article = await getArticleById(resolvedParams.id);
-//
-//     if (!article) {
-//         return {
-//             title: 'Article Not Found',
-//         };
-//     }
-//
-//     return {
-//         title: article.title,
-//         description: article.description,
-//     };
-// }
