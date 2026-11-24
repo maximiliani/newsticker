@@ -112,7 +112,7 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
       try {
         const content = generateArticleContent(event, subscription, userName, processedAttachments);
 
-        const dateStr = event.dtstart.toLocaleString();
+        const dateStr = formatEventDateTime(event);
         let articleId = existing?.article_id;
         const articleData: any = {
           user_id: subscription.user_id,
@@ -147,6 +147,8 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
           event_uid: event.uid,
           article_id: articleId,
           event_start: event.dtstart.toISOString(),
+          timezone: event.timezone ?? null,
+          is_all_day: event.isAllDay,
           source_hash: sourceHash,
           last_synced_at: new Date().toISOString()
         }, { onConflict: 'subscription_id, event_uid' });
@@ -183,8 +185,26 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
   }
 }
 
+const DEFAULT_TIMEZONE = process.env.CALENDAR_DEFAULT_TIMEZONE || 'Europe/Berlin';
+
+/**
+ * Formats the event start in its own timezone (falling back to the default zone
+ * for floating times). All-day events show the date only.
+ */
+function formatEventDateTime(event: ParsedCalendarEvent): string {
+  if (event.isAllDay) {
+    return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeZone: 'UTC' }).format(event.dtstart);
+  }
+  const timeZone = event.timezone || DEFAULT_TIMEZONE;
+  try {
+    return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(event.dtstart);
+  } catch {
+    return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: DEFAULT_TIMEZONE }).format(event.dtstart);
+  }
+}
+
 function computeSourceHash(event: ParsedCalendarEvent): string {
-  const content = `${event.summary}|${event.description}|${event.dtstart.getTime()}|${event.dtend.getTime()}|${event.location}|${event.url}`;
+  const content = `${event.summary}|${event.description}|${event.dtstart.getTime()}|${event.dtend.getTime()}|${event.timezone ?? ''}|${event.isAllDay}|${event.location}|${event.url}`;
   return createHash('sha256').update(content).digest('hex');
 }
 
@@ -223,7 +243,7 @@ function generateArticleContent(
 ) {
   const author = escapeHtml(`${subscription.name} by ${userName}`);
 
-  const dateStr = event.dtstart.toLocaleString();
+  const dateStr = formatEventDateTime(event);
 
   // Build HTML
   let html = `<p><strong>Event:</strong> ${escapeHtml(event.summary)}</p>`;

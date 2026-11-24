@@ -30,6 +30,8 @@ export interface CalendarEvent {
   event_uid: string;
   article_id: string | null;
   event_start: string;
+  timezone: string | null;
+  is_all_day: boolean;
   locally_modified: boolean;
   source_hash: string | null;
   last_synced_at: string;
@@ -47,6 +49,8 @@ export interface ParsedCalendarEvent {
   description: string;
   dtstart: Date;
   dtend: Date;
+  timezone?: string;
+  isAllDay: boolean;
   location: string;
   url: string;
   attachments: CalendarAttachment[];
