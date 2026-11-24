@@ -6,6 +6,7 @@ import { fetchCalendarICalTexts } from './caldav-client';
 import { readCredentials } from './credential-service';
 import { downloadAndStoreAttachments, deleteAttachments } from './attachment-service';
 import { isSafeUrl, escapeHtml } from '@/lib/security';
+import { DEFAULT_LOCALE, DEFAULT_TIMEZONE, isSupportedLocale, isValidTimezone } from '@/i18n/config';
 
 /**
  * Synchronizes a single calendar subscription.
@@ -74,6 +75,16 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
 
     if (eventsError) throw eventsError;
 
+    const { data: settingRows } = await admin
+      .from('app_settings')
+      .select('key, value')
+      .in('key', ['default_timezone', 'dashboard_language']);
+    const settingMap = new Map((settingRows ?? []).map(r => [r.key, r.value]));
+    const tzValue = settingMap.get('default_timezone');
+    const langValue = settingMap.get('dashboard_language');
+    const defaultTimezone = isValidTimezone(tzValue) ? tzValue : DEFAULT_TIMEZONE;
+    const locale = isSupportedLocale(langValue) ? langValue : DEFAULT_LOCALE;
+
     const existingEventsMap = new Map(existingEvents?.map(e => [e.event_uid, e]));
     const seenUids = new Set<string>();
 
@@ -86,7 +97,7 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
 
     for (const event of allParsedEvents) {
       seenUids.add(event.uid);
-      const sourceHash = computeSourceHash(event);
+      const sourceHash = computeSourceHash(event, defaultTimezone, locale);
       const existing = existingEventsMap.get(event.uid);
 
       // Skip if the user has manually modified the event in our system
@@ -110,9 +121,9 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
       }
 
       try {
-        const content = generateArticleContent(event, subscription, userName, processedAttachments);
+        const content = generateArticleContent(event, subscription, userName, processedAttachments, defaultTimezone, locale);
 
-        const dateStr = formatEventDateTime(event);
+        const dateStr = formatEventDateTime(event, defaultTimezone, locale);
         let articleId = existing?.article_id;
         const articleData: any = {
           user_id: subscription.user_id,
@@ -185,26 +196,24 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
   }
 }
 
-const DEFAULT_TIMEZONE = process.env.CALENDAR_DEFAULT_TIMEZONE || 'Europe/Berlin';
-
 /**
  * Formats the event start in its own timezone (falling back to the default zone
  * for floating times). All-day events show the date only.
  */
-function formatEventDateTime(event: ParsedCalendarEvent): string {
+function formatEventDateTime(event: ParsedCalendarEvent, defaultTimezone: string, locale: string): string {
   if (event.isAllDay) {
-    return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeZone: 'UTC' }).format(event.dtstart);
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(event.dtstart);
   }
-  const timeZone = event.timezone || DEFAULT_TIMEZONE;
+  const timeZone = event.timezone || defaultTimezone;
   try {
-    return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(event.dtstart);
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(event.dtstart);
   } catch {
-    return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short', timeZone: DEFAULT_TIMEZONE }).format(event.dtstart);
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: defaultTimezone }).format(event.dtstart);
   }
 }
 
-function computeSourceHash(event: ParsedCalendarEvent): string {
-  const content = `${event.summary}|${event.description}|${event.dtstart.getTime()}|${event.dtend.getTime()}|${event.timezone ?? ''}|${event.isAllDay}|${event.location}|${event.url}`;
+function computeSourceHash(event: ParsedCalendarEvent, defaultTimezone: string, locale: string): string {
+  const content = `${event.summary}|${event.description}|${event.dtstart.getTime()}|${event.dtend.getTime()}|${event.timezone ?? defaultTimezone}|${locale}|${event.isAllDay}|${event.location}|${event.url}`;
   return createHash('sha256').update(content).digest('hex');
 }
 
@@ -239,11 +248,13 @@ function generateArticleContent(
   event: ParsedCalendarEvent,
   subscription: CalendarSubscription,
   userName: string,
-  attachments: { url: string; filename: string; mimeType?: string }[]
+  attachments: { url: string; filename: string; mimeType?: string }[],
+  defaultTimezone: string,
+  locale: string
 ) {
   const author = escapeHtml(`${subscription.name} by ${userName}`);
 
-  const dateStr = formatEventDateTime(event);
+  const dateStr = formatEventDateTime(event, defaultTimezone, locale);
 
   // Build HTML
   let html = `<p><strong>Event:</strong> ${escapeHtml(event.summary)}</p>`;

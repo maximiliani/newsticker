@@ -8,10 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Settings } from "lucide-react";
+import { DEFAULT_TIMEZONE } from "@/i18n/config";
 import { useRouter } from "next/navigation";
+
+const timezones: string[] = (Intl as any).supportedValuesOf?.('timeZone') ?? [DEFAULT_TIMEZONE];
 
 export function GeneralSettings() {
   const [language, setLanguage] = useState<string>("en");
+  const [timezone, setTimezone] = useState<string>(DEFAULT_TIMEZONE);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const router = useRouter();
@@ -21,6 +25,7 @@ export function GeneralSettings() {
       try {
         const settings = await AppSettingsService.getSettings();
         setLanguage(settings.dashboard_language);
+        setTimezone(settings.default_timezone);
       } catch (error) {
         console.error("Error loading settings:", error);
       } finally {
@@ -34,10 +39,11 @@ export function GeneralSettings() {
     setSaving(true);
     try {
       await AppSettingsService.updateDashboardLanguage(language);
-      toast.success("Dashboard language updated");
+      await AppSettingsService.updateDefaultTimezone(timezone);
+      toast.success("Settings updated");
       router.refresh();
     } catch (error) {
-      toast.error("Failed to update dashboard language");
+      toast.error("Failed to update settings");
     } finally {
       setSaving(false);
     }
@@ -76,6 +82,24 @@ export function GeneralSettings() {
               <SelectContent>
                 <SelectItem value="en">English</SelectItem>
                 <SelectItem value="de">Deutsch</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="default_timezone">Default Time Zone</Label>
+          <p className="text-sm text-muted-foreground">
+            Used for calendar events without a time zone of their own.
+          </p>
+          <div className="flex items-center gap-4">
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger id="default_timezone" className="w-[280px]">
+                <SelectValue placeholder="Select time zone" />
+              </SelectTrigger>
+              <SelectContent>
+                {timezones.map((tz) => (
+                  <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Button onClick={handleSave} disabled={saving}>

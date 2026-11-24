@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client';
 
 export interface AppSettings {
   dashboard_language: string;
+  default_timezone: string;
 }
 
 export class AppSettingsService {
@@ -13,7 +14,7 @@ export class AppSettingsService {
 
     if (error) {
       console.error('Error fetching app settings:', error);
-      return { dashboard_language: 'en' };
+      return { dashboard_language: 'en', default_timezone: 'Europe/Berlin' };
     }
 
     const settings: any = {};
@@ -23,6 +24,7 @@ export class AppSettingsService {
 
     return {
       dashboard_language: settings.dashboard_language || 'en',
+      default_timezone: settings.default_timezone || 'Europe/Berlin',
     };
   }
 
@@ -35,6 +37,18 @@ export class AppSettingsService {
     if (error) {
       console.error('Error updating dashboard language:', error);
       throw new Error('Failed to update dashboard language');
+    }
+  }
+
+  static async updateDefaultTimezone(timezone: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key: 'default_timezone', value: timezone });
+
+    if (error) {
+      console.error('Error updating default timezone:', error);
+      throw new Error('Failed to update default timezone');
     }
   }
 }
