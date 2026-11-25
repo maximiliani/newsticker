@@ -17,9 +17,12 @@ import { ArticleManagerClient } from '@/features/articles/components/article-man
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { Article } from '@/types/article';
 import Link from "next/link";
+import { useDefaultTimezone } from '@/lib/hooks/use-default-timezone';
+import { formatEventDatetime } from '@/lib/utils/event-datetime';
 
 export default function ArticlesPage() {
     const router = useRouter();
+    const timezone = useDefaultTimezone();
     const [user, setUser] = useState<SupabaseUser | null>(null);
     const [userArticles, setUserArticles] = useState<Article[]>([]);
     const [groupedArticles, setGroupedArticles] = useState<ArticlesByUser[]>([]);
@@ -215,6 +218,12 @@ export default function ArticlesPage() {
                                                                                 <Calendar className="h-4 w-4" />
                                                                                 {new Date(article.created_at).toLocaleDateString()}
                                                                             </div>
+                                                                            {article.event_datetime && (
+                                                                                <div className="flex items-center gap-1 font-medium">
+                                                                                    <Calendar className="h-4 w-4" />
+                                                                                    {formatEventDatetime(article.event_datetime, timezone, undefined, article.event_all_day)}
+                                                                                </div>
+                                                                            )}
                                                                             <div className="flex items-center gap-1">
                                                                                 <Eye className="h-4 w-4" />
                                                                                 {new Date(article.visibility_from).toLocaleDateString()}

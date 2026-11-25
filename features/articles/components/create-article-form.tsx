@@ -19,6 +19,8 @@ import { PlateRichTextEditor } from "@/components/plate-rich-text-editor";
 import { ArticleService } from "../services/article-service";
 import { logError } from "@/lib/utils/error-handling";
 import { User } from "@supabase/supabase-js";
+import { useDefaultTimezone } from "@/lib/hooks/use-default-timezone";
+import { zonedLocalToIso } from "@/lib/utils/event-datetime";
 
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters" }).max(100),
@@ -26,6 +28,7 @@ const formSchema = z.object({
   content: z.string().min(10, { message: "Content must be at least 10 characters" }),
   visibility_from: z.string().min(1, { message: "Visibility start date is required" }),
   visibility_to: z.string().optional(),
+  event_datetime: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -38,6 +41,7 @@ interface CreateArticleFormProps {
 
 export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArticleFormProps) {
   const [loading, setLoading] = useState(false);
+  const timezone = useDefaultTimezone();
   // Add state to store the JSON content from Plate.js editor
   const [jsonContent, setJsonContent] = useState<any>(null);
 
@@ -54,6 +58,7 @@ export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArt
       content: "",
       visibility_from: now.toISOString().split('T')[0],
       visibility_to: "", // Optional end date
+      event_datetime: "", // Optional datetime of interest (e.g. event start)
     },
   });
 
@@ -84,6 +89,8 @@ export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArt
         visibility_to: data.visibility_to && data.visibility_to.trim() !== '' 
           ? data.visibility_to 
           : undefined,
+        // Interpret the entered time in the global timezone
+        event_datetime: zonedLocalToIso(data.event_datetime, timezone) ?? undefined,
       };
 
       console.log('Processed data being sent to service:', processedData);
@@ -193,6 +200,23 @@ export function CreateArticleForm({ onClose, onArticleCreated, user }: CreateArt
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="event_datetime"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Event Date &amp; Time (Optional, {timezone})</FormLabel>
+              <FormControl>
+                <Input type="datetime-local" {...field} />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">
+                Used to order the article in the feed. Defaults to the creation time.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-800 mt-4">
           <Button 

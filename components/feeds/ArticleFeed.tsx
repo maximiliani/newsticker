@@ -1,118 +1,21 @@
-import { NewsPreview } from "@/components/news-preview";
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { loadArticlePage } from '@/features/articles/services/feed-actions';
 import { ArticleFeedClient } from './article-feed-client';
 import { getTranslations } from 'next-intl/server';
 
-// Types aligned with project standards
-interface ArticleWithAuthorInfo {
-    id: string;
-    title: string;
-    description: string;
-    created_at: string;
-    modified_at: string;
-    visibility_from: string;
-    visibility_to: string | null;
-    author_name: string | null;
-    author_avatar: string | null;
-};
-
-interface NewsPreviewData {
-    id: string;
-    title: string;
-    description: string;
-    createdAt: Date;
-    modifiedAt?: Date;
-    visibilityFrom: Date;
-    visibilityTo: Date | null;
-    author: {
-        name: string;
-        avatar?: string;
-    };
-};
-
-// Server-side data fetching
-async function getVisibleArticles(from?: string, to?: string): Promise<NewsPreviewData[]> {
-    const supabase = await createClient();
-    const now = new Date();
-    const tc = await getTranslations('Common');
-
-    try {
-        let query = supabase
-            .from('articles_with_author_info')
-            .select('id, title, description, created_at, modified_at, visibility_from, visibility_to, author_name, author_avatar');
-
-        if (from && to) {
-            // When filtering by date, we show articles that overlap with the selected range
-            const rangeStart = new Date(from);
-            const rangeEnd = new Date(to);
-            rangeEnd.setHours(23, 59, 59, 999);
-
-            query = query
-                .lte('visibility_from', rangeEnd.toISOString())
-                .or(`visibility_to.is.null,visibility_to.gte.${rangeStart.toISOString()}`);
-        } else {
-            query = query
-                .lte('visibility_from', now.toISOString()) // Only get articles that should be visible now
-                .or(`visibility_to.is.null,visibility_to.gte.${now.toISOString()}`); // And haven't expired
-        }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Supabase error:', error);
-            return [];
-        }
-
-        if (!data) return [];
-
-        return data.map((article: ArticleWithAuthorInfo) => ({
-            id: article.id,
-            title: article.title,
-            description: article.description,
-            createdAt: new Date(article.created_at),
-            modifiedAt: new Date(article.modified_at),
-            visibilityFrom: new Date(article.visibility_from),
-            visibilityTo: article.visibility_to ? new Date(article.visibility_to) : null,
-            author: {
-                name: article.author_name || tc('anonymous'),
-                avatar: article.author_avatar || undefined,
-            },
-        }));
-    } catch (error) {
-        console.error('Error fetching articles:', error);
-        return [];
-    }
-}
-
-// Server Component
+// Server Component: renders the first page; the client component handles the rest.
 export default async function ArticleFeed({ searchParams }: { searchParams?: Promise<{ from?: string, to?: string }> }) {
     const params = await searchParams;
-    const initialArticles = await getVisibleArticles(params?.from, params?.to);
+    const initialArticles = await loadArticlePage(0, params?.from, params?.to);
     const t = await getTranslations('Articles');
-    const tc = await getTranslations('Common');
 
     return (
-        <div className="h-full flex flex-col overflow-hidden min-w-0">
-            {/* Static header with client-side dialog */}
-            <ArticleFeedClient feedTitle={t('latestNews')} createTitle={t('createNewsArticle')}/>
-            
-            {/* Server-rendered articles list */}
-            <div className="flex-1 overflow-y-auto p-4">
-                {initialArticles.length === 0 ? (
-                    <div className="text-center py-12">
-                         <p className="text-muted-foreground">{t('noArticlesFound')}</p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {initialArticles.map((newsItem) => (
-                            <Link key={newsItem.id} href={`/news/${newsItem.id}`} className="block cursor-pointer">
-                                <NewsPreview news={newsItem} />
-                            </Link>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
+        <ArticleFeedClient
+            feedTitle={t('latestNews')}
+            createTitle={t('createNewsArticle')}
+            emptyText={t('noArticlesFound')}
+            initialArticles={initialArticles}
+            from={params?.from}
+            to={params?.to}
+        />
     );
 }

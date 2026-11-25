@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
       json_content: body.json_content ?? null,
       visibility_from: body.visibility_from,
       visibility_to: body.visibility_to ?? null,
+      event_datetime: body.event_datetime ?? null,
       media_urls: body.media_urls ?? null,
       user_id: userId,
     };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PlateRichTextEditor } from "@/components/plate-rich-text-editor";
 import { Label } from "@/components/ui/label";
 import { Article } from "@/types/article";
+import { useDefaultTimezone } from "@/lib/hooks/use-default-timezone";
+import { isoToZonedLocal, zonedLocalToIso } from "@/lib/utils/event-datetime";
 
 interface EditArticleFormProps {
   article: Article;
@@ -28,7 +30,15 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
       ? new Date(article.visibility_to).toISOString().slice(0, 16)
       : ""
   );
+  const timezone = useDefaultTimezone();
+  const [eventDatetime, setEventDatetime] = useState("");
+  const [eventDirty, setEventDirty] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Show the stored event datetime in the global timezone once it is known
+  useEffect(() => {
+    if (!eventDirty) setEventDatetime(isoToZonedLocal(article.event_datetime, timezone));
+  }, [article.event_datetime, timezone, eventDirty]);
 
   const router = useRouter();
   const { toast } = useToast();
@@ -73,6 +83,11 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
           html_content: content.trim(), // Store the HTML content in html_content field as well
           visibility_from: fromDate.toISOString(),
           visibility_to: toDate ? toDate.toISOString() : null,
+          // Only touch the event datetime when edited, so all-day events stay intact
+          ...(eventDirty && {
+            event_datetime: zonedLocalToIso(eventDatetime, timezone),
+            event_all_day: false,
+          }),
           modified_at: new Date().toISOString(),
         })
         .eq('id', article.id);
@@ -140,6 +155,16 @@ export function EditArticleForm({ article }: EditArticleFormProps) {
           }}
           placeholder="Write your article content here..."
           userId={article.user_id}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="eventDatetime">Event Date &amp; Time (Optional, {timezone})</Label>
+        <Input
+          id="eventDatetime"
+          type="datetime-local"
+          value={eventDatetime}
+          onChange={(e) => { setEventDatetime(e.target.value); setEventDirty(true); }}
         />
       </div>
 

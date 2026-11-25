@@ -8,6 +8,8 @@ export interface Article {
   modified_at?: string;
   visibility_from: string;
   visibility_to: string | null;
+  event_datetime?: string | null; // Datetime of interest used for feed ordering
+  event_all_day?: boolean;
   author_id: string;
   user_id: string; // Add for consistency
   media_urls?: string[]; // Array of media URLs stored in Supabase storage
@@ -23,6 +25,7 @@ export interface CreateArticleData {
   html_content?: string; // HTML content (can be same as content)
   visibility_from: string;
   visibility_to?: string;
+  event_datetime?: string | null;
   media_urls?: string[]; // Array of media URLs stored in Supabase storage
 }
 

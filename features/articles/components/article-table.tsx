@@ -14,6 +14,9 @@ import { PencilIcon, TrashIcon, EyeIcon } from "lucide-react";
 import { Article } from "@/types/article";
 import { User } from "@supabase/supabase-js";
 import { formatDate } from "@/lib/utils/date";
+import { useLocale } from "next-intl";
+import { useDefaultTimezone } from "@/lib/hooks/use-default-timezone";
+import { formatEventDatetime } from "@/lib/utils/event-datetime";
 
 interface ArticleTableProps {
   articles: Article[];
@@ -44,6 +47,8 @@ function getArticleStatus(article: Article): ArticleStatus {
 }
 
 export function ArticleTable({ articles, currentUser, onEdit, onDelete, onView }: ArticleTableProps) {
+  const locale = useLocale();
+  const timezone = useDefaultTimezone();
   if (articles.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -63,6 +68,7 @@ export function ArticleTable({ articles, currentUser, onEdit, onDelete, onView }
         <TableHeader>
           <TableRow>
             <TableHead>Title</TableHead>
+            <TableHead>Event</TableHead>
             <TableHead>Visibility Period</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Last Modified</TableHead>
@@ -83,6 +89,11 @@ export function ArticleTable({ articles, currentUser, onEdit, onDelete, onView }
                   <div className="max-w-[200px] truncate" title={article.title}>
                     {article.title}
                   </div>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {article.event_datetime
+                    ? formatEventDatetime(article.event_datetime, timezone, locale, article.event_all_day)
+                    : '—'}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {visibilityPeriod}

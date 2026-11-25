@@ -11,6 +11,8 @@ import { ClickableAuthorAvatar } from '@/components/ClickableAuthorAvatar';
 import { ArticleActions } from '@/app/news/[id]/client';
 import { createSlateEditor } from 'platejs';
 import { BaseEditorKit } from '@/components/editor/editor-base-kit';
+import { useDefaultTimezone } from '@/lib/hooks/use-default-timezone';
+import { formatEventDatetime } from '@/lib/utils/event-datetime';
 import { EditorStatic } from '@/components/ui/editor-static';
 
 // Metadata for an article fetched from the 'articles_with_author_info' view
@@ -26,6 +28,8 @@ type ArticleDetailFromView = {
     author_avatar: string | null;
     visibility_from: string;
     visibility_to: string | null;
+    event_datetime: string | null;
+    event_all_day: boolean | null;
 };
 
 // Body returned by the get_public_article_body RPC. The body fields are only
@@ -86,6 +90,7 @@ export default function ArticlePage() {
     const [article, setArticle] = useState<ArticleDetailFromView | null>(null);
     const [body, setBody] = useState<ArticleBodyPayload | null>(null);
     const [loading, setLoading] = useState(true);
+    const timezone = useDefaultTimezone();
 
     useEffect(() => {
         if (!id) return;
@@ -173,6 +178,11 @@ export default function ArticlePage() {
                                className="mb-4 px-3 py-1 text-sm bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-200 dark:border-yellow-500">
                             This article is currently not within its visibility period.
                         </Badge>
+                    )}
+                    {article.event_datetime && (
+                        <p className="mb-2 text-base font-semibold text-primary">
+                            {formatEventDatetime(article.event_datetime, timezone, undefined, !!article.event_all_day)}
+                        </p>
                     )}
                     <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight prose dark:prose-invert">{article.title}</h1>
                     {article.description && (

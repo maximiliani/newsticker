@@ -207,6 +207,7 @@ export class ArticleService {
         user_id: data.user_id,
         visibility_from: data.visibility_from,
         visibility_to: data.visibility_to || null,
+        event_datetime: data.event_datetime || null,
         json_content: data.json_content || null,
         html_content: data.html_content || data.content,
         media_urls: mediaUrls.length > 0 ? mediaUrls : null,

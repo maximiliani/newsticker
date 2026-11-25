@@ -1,6 +1,9 @@
 "use client";
 
 import { formatDate } from "@/utils/utils";
+import { useLocale } from "next-intl";
+import { useDefaultTimezone } from "@/lib/hooks/use-default-timezone";
+import { getEventDateParts } from "@/lib/utils/event-datetime";
 import { useState } from "react";
 import { UserProfileDialog } from "./UserProfileDialog";
 
@@ -10,6 +13,8 @@ interface NewsPreviewData {
   description: string;
   createdAt: Date;
   modifiedAt?: Date;
+  eventDatetime?: Date | null;
+  eventAllDay?: boolean;
   author: {
     name: string;
     avatar?: string;
@@ -19,6 +24,11 @@ interface NewsPreviewData {
 
 export function NewsPreview({ news }: { news: NewsPreviewData }) {
   const [showAuthorDialog, setShowAuthorDialog] = useState(false);
+  const locale = useLocale();
+  const timezone = useDefaultTimezone();
+  const dateParts = news.eventDatetime
+    ? getEventDateParts(news.eventDatetime, timezone, locale, news.eventAllDay)
+    : null;
 
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,7 +37,22 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
   };
 
   return (
-    <article className="bg-card rounded-lg p-4 shadow-sm flex flex-col gap-4 hover:bg-accent transition-colors duration-200 border hover:border-border hover:shadow-md w-full relative">
+    <article className="bg-card rounded-lg shadow-sm flex hover:bg-accent transition-colors duration-200 border hover:border-border hover:shadow-md w-full relative overflow-hidden">
+      {/* Date highlight (global timezone) */}
+      {dateParts && news.eventDatetime && (
+        <time
+          dateTime={news.eventDatetime.toISOString()}
+          className="flex flex-col items-center justify-center flex-shrink-0 w-20 px-2 py-4 border-r bg-muted/50 text-center leading-tight"
+        >
+          <span className="text-4xl font-extrabold text-primary">{dateParts.day}</span>
+          <span className="text-base font-medium uppercase">{dateParts.month}</span>
+          {dateParts.time && (
+            <span className="text-sm font-light text-muted-foreground">{dateParts.time}</span>
+          )}
+        </time>
+      )}
+
+      <div className="flex flex-col gap-4 p-4 min-w-0 flex-1">
       {/* Title */}
       <h2 className="text-lg font-semibold line-clamp-2">{news.title}</h2>
 
@@ -77,6 +102,7 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
         user={news.author}
         title="Author Profile"
       />
+      </div>
     </article>
   );
 }

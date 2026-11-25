@@ -12,7 +12,7 @@ import enMessages from '@/messages/en.json';
 import deMessages from '@/messages/de.json';
 
 const calendarMessages = { en: enMessages.CalendarArticle, de: deMessages.CalendarArticle };
-const ARTICLE_FORMAT_VERSION = 2;
+const ARTICLE_FORMAT_VERSION = 3;
 
 /**
  * Synchronizes a single calendar subscription.
@@ -139,13 +139,15 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
         const articleData: any = {
           user_id: subscription.user_id,
           title,
-          description: `${dateStr} - ${event.description.substring(0, 160)}`,
+          description: event.description.substring(0, 160) || dateStr,
           content: content.html,
           html_content: content.html,
           json_content: content.json,
           custom_author_name: content.author,
           visibility_from: content.visibilityFrom.toISOString(),
           visibility_to: content.visibilityTo.toISOString(),
+          event_datetime: event.dtstart.toISOString(),
+          event_all_day: event.isAllDay,
         };
 
         if (articleId) {
