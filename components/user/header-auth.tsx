@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Button } from "../ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileDropdown } from "@/components/user/profile-dropdown";
+import { getTranslations } from "next-intl/server";
 
 export default async function AuthButton() {
+  const t = await getTranslations("Common");
   const supabase = await createClient();
 
   const {
@@ -23,7 +25,7 @@ export default async function AuthButton() {
               disabled
               className="opacity-75 cursor-none pointer-events-none"
             >
-              <Link href="/sign-in">Sign in</Link>
+              <Link href="/sign-in">{t("signIn")}</Link>
             </Button>
           </div>
         </div>
@@ -44,7 +46,7 @@ export default async function AuthButton() {
   ) : (
     <div className="flex gap-2">
       <Button asChild size="sm" variant={"outline"}>
-        <Link href="/sign-in">Sign in</Link>
+        <Link href="/sign-in">{t("signIn")}</Link>
       </Button>
     </div>
   );
