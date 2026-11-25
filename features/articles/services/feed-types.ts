@@ -6,6 +6,7 @@ export interface FeedArticle {
     description: string;
     createdAt: Date;
     modifiedAt?: Date;
+    sortAt: Date;
     eventDatetime: Date | null;
     eventAllDay: boolean;
     author: { name: string; avatar?: string };

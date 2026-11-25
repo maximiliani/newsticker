@@ -1,11 +1,11 @@
 "use client";
 
 import { formatDate } from "@/utils/utils";
-import { useLocale } from "next-intl";
-import { useDefaultTimezone } from "@/lib/hooks/use-default-timezone";
+import { useLocale, useTranslations } from "next-intl";
 import { getEventDateParts } from "@/lib/utils/event-datetime";
 import { useState } from "react";
 import { UserProfileDialog } from "./UserProfileDialog";
+import { cn } from "@/lib/utils";
 
 interface NewsPreviewData {
   id: string;
@@ -22,10 +22,10 @@ interface NewsPreviewData {
   };
 }
 
-export function NewsPreview({ news }: { news: NewsPreviewData }) {
+export function NewsPreview({ news, timezone, isToday = false }: { news: NewsPreviewData; timezone: string; isToday?: boolean }) {
   const [showAuthorDialog, setShowAuthorDialog] = useState(false);
   const locale = useLocale();
-  const timezone = useDefaultTimezone();
+  const t = useTranslations("Articles");
   const dateParts = news.eventDatetime
     ? getEventDateParts(news.eventDatetime, timezone, locale, news.eventAllDay)
     : null;
@@ -37,15 +37,16 @@ export function NewsPreview({ news }: { news: NewsPreviewData }) {
   };
 
   return (
-    <article className="bg-card rounded-lg shadow-sm flex hover:bg-accent transition-colors duration-200 border hover:border-border hover:shadow-md w-full relative overflow-hidden">
+    <article className={cn("bg-card rounded-lg shadow-sm flex hover:bg-accent transition-colors duration-200 border hover:border-border hover:shadow-md w-full relative overflow-hidden", isToday && "border-primary ring-2 ring-primary/40")}>
       {/* Date highlight (global timezone) */}
       {dateParts && news.eventDatetime && (
         <time
           dateTime={news.eventDatetime.toISOString()}
-          className="flex flex-col items-center justify-center flex-shrink-0 w-20 px-2 py-4 border-r bg-muted/50 text-center leading-tight"
+          className={cn("flex flex-col items-center justify-center flex-shrink-0 w-20 px-2 py-4 border-r bg-muted/50 text-center leading-tight", isToday && "bg-primary/15")}
         >
           <span className="text-4xl font-extrabold text-primary">{dateParts.day}</span>
           <span className="text-base font-medium uppercase">{dateParts.month}</span>
+          {isToday && <span className="text-xs font-semibold text-primary">{t("today")}</span>}
           {dateParts.time && (
             <span className="text-sm font-light text-muted-foreground">{dateParts.time}</span>
           )}

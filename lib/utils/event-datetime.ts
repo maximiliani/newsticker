@@ -19,6 +19,11 @@ export function isoToZonedLocal(iso: string | null | undefined, timeZone: string
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
+/** Calendar date of an event as displayed in the configured timezone. */
+export function eventDateKey(date: Date, timeZone: string, allDay = false): string {
+  return allDay ? date.toISOString().slice(0, 10) : isoToZonedLocal(date.toISOString(), timeZone).slice(0, 10);
+}
+
 /** Interprets a `datetime-local` value as wall-clock time in the given timezone and returns an ISO instant. */
 export function zonedLocalToIso(local: string | null | undefined, timeZone: string): string | null {
   if (!local) return null;

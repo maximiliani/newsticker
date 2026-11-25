@@ -17,7 +17,10 @@
   "Articles": {
     "noArticlesFound": "Keine Nachrichtenartikel für den ausgewählten Zeitraum gefunden.",
     "latestNews": "Aktuelle Nachrichten",
-    "createNewsArticle": "Neuen Artikel erstellen"
+    "createNewsArticle": "Neuen Artikel erstellen",
+    "today": "Heute",
+    "loadMoreError": "Weitere Artikel konnten nicht geladen werden.",
+    "retryLoad": "Artikel erneut laden"
   },
   "Dashboard": {
     "title": "Übersicht",

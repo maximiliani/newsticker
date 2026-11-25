@@ -17,7 +17,10 @@
   "Articles": {
     "noArticlesFound": "No news articles found for the selected range.",
     "latestNews": "Latest News",
-    "createNewsArticle": "Create news article"
+    "createNewsArticle": "Create news article",
+    "today": "Today",
+    "loadMoreError": "Failed to load more articles.",
+    "retryLoad": "Try loading articles again"
   },
   "Dashboard": {
     "title": "Dashboard",
