@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "schedules": {
+    "instagram-refresh": {
+      "schedule": "*/30 * * * *",
+      "jitter": 15,
+      "path": "/api/features/instagram/refresh",
+      "requestMethod": "POST"
+    }
+  }
+}

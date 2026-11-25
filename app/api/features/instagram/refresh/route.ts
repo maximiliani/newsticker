@@ -3,7 +3,7 @@ import {createClient as createSupabaseServerClient} from "@supabase/supabase-js"
 import {ALLOWED_CONTENT_TYPES, extFromContentType, MAX_FILE_SIZE, streamDownloadToBuffer} from "@/lib/storage/stream";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {allowInternalOrAdmin} from "@/lib/api/auth";
-import {randomUUID} from "node:crypto";
+import {randomUUID, timingSafeEqual} from "node:crypto";
 
 export const maxDuration = 300;
 
@@ -258,6 +258,13 @@ async function processMediaItem(
  * Returns auth context or throws error
  */
 async function authenticateRequest(req: NextRequest): Promise<void> {
+    const cronSecret = process.env.CRON_SECRET;
+    const authorization = req.headers.get("authorization");
+    if (cronSecret && authorization) {
+        const expected = Buffer.from(`Bearer ${cronSecret}`);
+        const received = Buffer.from(authorization);
+        if (expected.length === received.length && timingSafeEqual(expected, received)) return;
+    }
     const auth = await allowInternalOrAdmin(req);
     if (!auth.isAdmin) throw new Error("Unauthorized");
 }

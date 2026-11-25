@@ -69,6 +69,21 @@ If you wish to just develop locally and not deploy to Vercel, [follow the steps 
 
 A modern web application built with Next.js, TypeScript, Tailwind CSS, and Supabase, organized using a feature-based architecture.
 
+## Instagram refresh schedule
+
+`vercel.json` runs the Instagram refresh every 30 minutes using Vercel
+Schedules. Configure `CRON_SECRET` as a secret in the production Vercel
+environment before deploying; Vercel sends it as a Bearer token to the refresh
+route. Admin sessions and the existing `INTERNAL_ADMIN_SECRET` header remain
+supported for manual refreshes.
+
+The schedule uses a 15-minute jitter window for Hobby compatibility. Check
+Vercel's schedule execution history and function logs for failures; a successful
+Supabase cron invocation does not confirm that an HTTP request succeeded. The
+legacy Supabase post-refresh job is disabled, while the separate token-refresh
+job remains enabled. Do not put credentials in `pg_net` request headers unless
+access to its queue is restricted.
+
 ## Features
 
 - 📝 Article Management System
@@ -324,4 +339,3 @@ Please file feedback and issues over on the [Supabase GitHub org](https://github
 
 - API overview and route map: app/api/README.md
 - Backend architecture report (design, auth, stored procedures): docs/backend-architecture-report.md
-
