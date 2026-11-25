@@ -1,14 +1,23 @@
 import {createClient} from "@/lib/supabase/server";
-import {format} from "date-fns";
 import {getTranslations, getLocale} from "next-intl/server";
-import {enUS, de} from "date-fns/locale";
+import {DEFAULT_TIMEZONE, isValidTimezone} from "@/i18n/config";
+
+function formatEventStart(start: string, timezone: string | null, isAllDay: boolean, locale: string, fallbackZone: string): string {
+    const date = new Date(start);
+    if (isAllDay) {
+        return new Intl.DateTimeFormat(locale, {dateStyle: 'medium', timeZone: 'UTC'}).format(date);
+    }
+    const timeZone = isValidTimezone(timezone) ? timezone : fallbackZone;
+    return new Intl.DateTimeFormat(locale, {dateStyle: 'medium', timeStyle: 'short', timeZone}).format(date);
+}
 
 export async function SneakPeek({ searchParams }: { searchParams: Promise<{ from?: string, to?: string }> }) {
     const { from } = await searchParams;
     const supabase = await createClient();
     const t = await getTranslations("Calendar");
     const localeCode = await getLocale();
-    const dateLocale = localeCode === 'de' ? de : enUS;
+    const {data: tzSetting} = await supabase.from('app_settings').select('value').eq('key', 'default_timezone').maybeSingle();
+    const defaultTimezone = isValidTimezone(tzSetting?.value) ? tzSetting.value : DEFAULT_TIMEZONE;
     
     // Default to today if no 'from' date is provided
     let startDate = new Date();
@@ -27,7 +36,9 @@ export async function SneakPeek({ searchParams }: { searchParams: Promise<{ from
         .from('calendar_events')
         .select(`
             id, 
-            event_start, 
+            event_start,
+            timezone,
+            is_all_day,
             articles(id, title),
             calendar_subscriptions(color)
         `)
@@ -55,7 +66,7 @@ export async function SneakPeek({ searchParams }: { searchParams: Promise<{ from
                                 <div>
                                     <div className="font-medium truncate">{event.articles?.title || t('untitled')}</div>
                                     <div className="text-xs text-muted-foreground">
-                                        {format(new Date(event.event_start), t('dateFormat'), { locale: dateLocale })}
+                                        {formatEventStart(event.event_start, event.timezone, event.is_all_day, localeCode, defaultTimezone)}
                                     </div>
                                 </div>
                             </a>
