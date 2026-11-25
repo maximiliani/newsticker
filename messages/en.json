@@ -9,6 +9,7 @@
     "settings": "Settings",
     "profile": "Profile",
     "logout": "Logout",
+    "signIn": "Sign in",
     "language": "Language",
     "anonymous": "Anonymous",
     "returnToDashboard": "Return to Dashboard"
@@ -108,7 +109,10 @@
     "feedTitle": "Instagram Feed",
     "all": "All",
     "noPosts": "No instagram posts available.",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "refreshAll": "Refresh All Feeds",
+    "refreshSuccess": "Feeds refreshed successfully!",
+    "refreshError": "Failed to refresh feeds. Please try again later."
   },
   "CalendarArticle": {
     "event": "Event",
