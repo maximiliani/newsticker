@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
 import {createClient} from "@/lib/supabase/server";
+import {createClient as createAdminClient} from "@supabase/supabase-js";
 import crypto from "crypto";
 
 const clientId = process.env.INSTAGRAM_CLIENT_ID!;
@@ -253,8 +254,6 @@ export async function GET(request: NextRequest) {
 
 
 export async function POST(request: NextRequest) {
-    const supabase = await createClient();
-
     try {
         const formData = await request.formData();
         const signedRequest = formData.get('signed_request') as string | null;
@@ -284,7 +283,8 @@ export async function POST(request: NextRequest) {
         const instagramSignatureBuffer = Buffer.from(encodedSig.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 
         // Use timingSafeEqual to prevent timing attacks
-        if (!crypto.timingSafeEqual(instagramSignatureBuffer, calculatedSignatureBuffer)) {
+        if (instagramSignatureBuffer.length !== calculatedSignatureBuffer.length ||
+            !crypto.timingSafeEqual(instagramSignatureBuffer, calculatedSignatureBuffer)) {
             console.warn("Data deletion callback: Invalid signature.");
             return NextResponse.json({ error: "Invalid signed_request" }, { status: 400 });
         }
@@ -316,7 +316,16 @@ export async function POST(request: NextRequest) {
         // The `insert_instagram_account` RPC uses `p_id` for the Instagram profile ID (`profileData.id`),
         // so it's recommended to use `p_id` consistently for the Instagram User ID in your delete RPC.
 
-        const { error: deleteError } = await supabase.rpc('delete_instagram_account_data', {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!url || !serviceKey) {
+            console.error("Data deletion callback: service credentials are not configured");
+            return NextResponse.json({error: "Server configuration error"}, {status: 500});
+        }
+        const admin = createAdminClient(url, serviceKey, {
+            auth: {autoRefreshToken: false, persistSession: false}
+        });
+        const { error: deleteError } = await admin.rpc('delete_instagram_account_data', {
             p_id: instagramUserId // Assuming 'p_id' is the parameter for the Instagram user ID in your RPC
         });
 

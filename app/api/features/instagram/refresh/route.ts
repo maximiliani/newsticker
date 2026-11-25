@@ -1,8 +1,11 @@
 import {NextRequest, NextResponse} from "next/server";
-import {createClient as createCookieAwareClient} from "@/lib/supabase/server";
 import {createClient as createSupabaseServerClient} from "@supabase/supabase-js";
 import {ALLOWED_CONTENT_TYPES, extFromContentType, MAX_FILE_SIZE, streamDownloadToBuffer} from "@/lib/storage/stream";
 import type {SupabaseClient} from "@supabase/supabase-js";
+import {allowInternalOrAdmin} from "@/lib/api/auth";
+import {randomUUID} from "node:crypto";
+
+export const maxDuration = 300;
 
 // Configuration constants
 const TIMEOUT_MS = 30_000;
@@ -26,7 +29,7 @@ interface DownloadResult {
 }
 
 interface InstagramAccount {
-    id: number;
+    id: string;
     user_id: string;
 }
 
@@ -38,19 +41,14 @@ interface RefreshMetrics {
     downloadFailed: number;
 }
 
-interface AuthContext {
-    isAdmin: boolean;
-    userId: string | null;
-}
-
 /**
  * Download media from Instagram and upload to Supabase storage
  * Implements retry logic with exponential backoff
  */
 async function downloadAndUploadMedia(
     url: string,
-    accountId: number,
-    postId: number,
+    accountId: string,
+    postId: string,
     mediaIndex: number,
     pathBase: string,
     mediaType: string,
@@ -141,14 +139,16 @@ function parseMediaItems(item: any, postTimestamp: number): MediaItem[] {
         // Carousel post: process all children
         return item.children.data.map((child: any, idx: number) => {
             const childMediaType = String(child.media_type || "IMAGE").toUpperCase() === "VIDEO" ? "video" : "image";
-            const timestamp = child.timestamp || postTimestamp;
+            const timestamp = child.timestamp
+                ? Math.floor(new Date(child.timestamp).getTime() / 1000)
+                : postTimestamp;
 
             return {
                 index: idx,
                 media_type: childMediaType,
                 media_url: child.media_url || child.thumbnail_url,
                 thumbnail_url: child.thumbnail_url || null,
-                timestamp: Math.floor(new Date(timestamp).getTime() / 1000),
+                timestamp,
             };
         });
     } else {
@@ -170,8 +170,8 @@ function parseMediaItems(item: any, postTimestamp: number): MediaItem[] {
  */
 async function processMediaItem(
     mediaItem: MediaItem,
-    postId: number,
-    accountId: number,
+    postId: string,
+    accountId: string,
     admin: SupabaseClient
 ): Promise<{downloaded: number; failed: number}> {
     let localMediaUrl: string | null = null;
@@ -249,7 +249,7 @@ async function processMediaItem(
 
     return {
         downloaded: downloadStatus === "completed" ? 1 : 0,
-        failed: downloadStatus === "failed" ? 1 : 0
+        failed: downloadStatus === "failed" || (mediaItem.thumbnail_url && !localThumbUrl) ? 1 : 0
     };
 }
 
@@ -257,69 +257,26 @@ async function processMediaItem(
  * Authenticate and authorize the request
  * Returns auth context or throws error
  */
-async function authenticateRequest(
-    req: NextRequest,
-    supabase: SupabaseClient
-): Promise<AuthContext> {
-    return {isAdmin: true, userId: null}; // Temporary bypass for testing TODO
-
-    // const secretHeader = req.headers.get("x-internal-secret");
-    // const internalSecret = process.env.INTERNAL_ADMIN_SECRET;
-    //
-    // // Check for internal secret (for cron jobs)
-    // if (internalSecret && secretHeader && internalSecret === secretHeader) {
-    //     return {isAdmin: true, userId: null};
-    // }
-    //
-    // // Session-based authentication
-    // const {data: userRes} = await supabase.auth.getUser();
-    // const userId = userRes.user?.id || null;
-    //
-    // if (!userId) {
-    //     throw new Error("Unauthorized");
-    // }
-    //
-    // const {data: isAdminData, error: isAdminErr} = await supabase.rpc("check_is_admin");
-    // if (isAdminErr) {
-    //     throw new Error(`Admin check failed: ${isAdminErr.message}`);
-    // }
-    //
-    // return {
-    //     isAdmin: !!isAdminData,
-    //     userId
-    // };
+async function authenticateRequest(req: NextRequest): Promise<void> {
+    const auth = await allowInternalOrAdmin(req);
+    if (!auth.isAdmin) throw new Error("Unauthorized");
 }
 
 /**
  * Fetch Instagram accounts based on auth context
  */
 async function fetchTargetAccounts(
-    authContext: AuthContext,
-    supabase: SupabaseClient,
     admin: SupabaseClient
 ): Promise<InstagramAccount[]> {
-    if (authContext.isAdmin) {
         const {data: accounts, error} = await admin
             .from("instagram_accounts")
-            .select("id,user_id");
+            .select("id:id::text,user_id");
 
         if (error) {
             throw new Error(`Failed to fetch accounts: ${error.message}`);
         }
 
         return (accounts || []) as InstagramAccount[];
-    } else {
-        const {data: accounts, error} = await supabase
-            .from("instagram_accounts")
-            .select("id,user_id")
-            .eq("user_id", authContext.userId);
-
-        if (error) {
-            throw new Error(`Failed to fetch accounts: ${error.message}`);
-        }
-
-        return (accounts || []) as InstagramAccount[];
-    }
 }
 
 /**
@@ -342,17 +299,16 @@ async function fetchInstagramPosts(
     });
 
     if (apiErr) {
-        console.warn(`Instagram API error for account ${account.id}:`, apiErr.message);
-        return [];
+        throw new Error(`Instagram API error for account ${account.id}: ${apiErr.message}`);
     }
 
     const status = Number(apiResp?.status || 0);
     if (status < 200 || status >= 300) {
-        console.warn(`Instagram API returned status ${status} for account ${account.id}`);
-        return [];
+        throw new Error(`Instagram API returned status ${status} for account ${account.id}`);
     }
 
-    return Array.isArray(apiResp?.body?.data) ? apiResp.body.data : [];
+    if (!Array.isArray(apiResp?.body?.data)) throw new Error(`Invalid Instagram API response for account ${account.id}`);
+    return apiResp.body.data;
 }
 
 /**
@@ -360,8 +316,8 @@ async function fetchInstagramPosts(
  */
 async function upsertPost(
     postData: {
-        id: number;
-        accountId: number;
+        id: string;
+        accountId: string;
         caption: string | null;
         timestamp: string;
         timestampUnix: number;
@@ -393,65 +349,62 @@ async function upsertPost(
  */
 async function deleteRemovedPosts(
     account: InstagramAccount,
-    remotePostIds: Set<number>,
+    remotePostIds: Set<string>,
     oldestTimestampMs: number,
     admin: SupabaseClient
 ): Promise<number> {
-    try {
         // Fetch existing posts
         const {data: existingRows, error} = await admin
             .from("instagram_posts")
-            .select("id, posted_at")
+            .select("id:id::text, posted_at")
             .eq("user_id", account.id);
 
         if (error || !Array.isArray(existingRows)) {
-            console.warn(`Failed to fetch existing posts for account ${account.id}`);
-            return 0;
+            throw new Error(`Failed to fetch existing posts for account ${account.id}: ${error?.message}`);
         }
 
         // Find posts to delete (not in remote IDs and within fetch window)
         const toDelete = existingRows
             .filter((row: any) => {
-                const postId = Number(row.id);
+                const postId = String(row.id);
                 const postedAt = Date.parse(row.posted_at);
 
                 return !remotePostIds.has(postId) &&
                        (!Number.isFinite(oldestTimestampMs) || postedAt >= oldestTimestampMs);
             })
-            .map((row: any) => Number(row.id));
+            .map((row: any) => String(row.id));
 
         if (toDelete.length === 0) {
             return 0;
         }
 
         // Delete storage files
-        const {data: files} = await admin.storage
-            .from("instagram-media")
-            .list(`${account.id}`);
+        const files: {name: string}[] = [];
+        for (let offset = 0; ; offset += 1000) {
+            const {data, error: listError} = await admin.storage.from("instagram-media")
+                .list(account.id, {limit: 1000, offset});
+            if (listError) throw new Error(`Failed to list Instagram media: ${listError.message}`);
+            files.push(...data);
+            if (data.length < 1000) break;
+        }
 
         for (const postId of toDelete) {
-            try {
                 // Remove storage files for this post
                 const paths = (files || [])
                     .filter((f: any) => f.name && f.name.startsWith(`${postId}-`))
                     .map((f: any) => `${account.id}/${f.name}`);
 
                 if (paths.length > 0) {
-                    await admin.storage.from("instagram-media").remove(paths);
+                    const {error: removeError} = await admin.storage.from("instagram-media").remove(paths);
+                    if (removeError) throw new Error(`Failed to remove Instagram media: ${removeError.message}`);
                 }
 
                 // Delete database record (cascades to media)
-                await admin.from("instagram_posts").delete().eq("id", postId);
-            } catch (error) {
-                console.warn(`Failed to delete post ${postId}:`, error);
-            }
+                const {error: deleteError} = await admin.from("instagram_posts").delete().eq("id", postId);
+                if (deleteError) throw new Error(`Failed to delete Instagram post: ${deleteError.message}`);
         }
 
         return toDelete.length;
-    } catch (error) {
-        console.warn(`Error deleting removed posts for account ${account.id}:`, error);
-        return 0;
-    }
 }
 
 /**
@@ -475,19 +428,33 @@ async function processAccount(
         return metrics;
     }
 
-    const remotePostIds = new Set<number>();
+    const remotePostIds = new Set<string>();
+    const ids = posts.map((item) => String(item.id));
+    if (ids.some((id) => !/^\d+$/.test(id))) {
+        throw new Error(`Invalid Instagram post ID for account ${account.id}`);
+    }
+    const {data: existingPosts, error: existingError} = await admin
+        .from("instagram_posts")
+        .select("id:id::text,caption,posted_at,instagram_post_media(index,media_type,local_media_url,local_thumbnail_url,download_status)")
+        .in("id", ids);
+    if (existingError) throw new Error(`Failed to load existing Instagram posts: ${existingError.message}`);
+    const existing = new Map((existingPosts ?? []).map((post) => [post.id, post]));
 
     // Process each post
     for (const item of posts) {
-        const postId = Number(item.id);
+        const postId = String(item.id);
         remotePostIds.add(postId);
 
         const timestamp = item.timestamp;
         const timestampUnix = Math.floor(new Date(timestamp).getTime() / 1000);
+        if (!Number.isFinite(timestampUnix)) throw new Error(`Invalid timestamp for Instagram post ${postId}`);
         const caption = item.caption || null;
 
         // Upsert post
-        const success = await upsertPost({
+        const previous = existing.get(postId);
+        const needsUpdate = !previous || previous.caption !== caption ||
+            Date.parse(previous.posted_at) !== Date.parse(timestamp);
+        const success = !needsUpdate || await upsertPost({
             id: postId,
             accountId: account.id,
             caption,
@@ -496,20 +463,27 @@ async function processAccount(
         }, admin);
 
         if (!success) {
-            continue;
+            throw new Error(`Failed to update Instagram post ${postId}`);
         }
 
         // Parse and process media
         const mediaItems = parseMediaItems(item, timestampUnix);
 
         for (const mediaItem of mediaItems) {
+            const stored = previous?.instagram_post_media?.find((media: {index: number}) => media.index === mediaItem.index);
+            if (stored?.download_status === "completed" && stored.local_media_url &&
+                stored.media_type === mediaItem.media_type &&
+                (!mediaItem.thumbnail_url || stored.local_thumbnail_url)) continue;
             const result = await processMediaItem(mediaItem, postId, account.id, admin);
             metrics.downloaded += result.downloaded;
             metrics.downloadFailed += result.failed;
         }
 
         // Track insert vs update (simplified heuristic)
-        metrics.updated += 1;
+        if (needsUpdate) {
+            if (previous) metrics.updated += 1;
+            else metrics.inserted += 1;
+        }
     }
 
     // Delete posts no longer on Instagram
@@ -518,94 +492,58 @@ async function processAccount(
         return Number.isFinite(t) ? Math.min(min, t) : min;
     }, Number.POSITIVE_INFINITY);
 
-    metrics.deleted = await deleteRemovedPosts(account, remotePostIds, oldestTimestampMs, admin);
+    if (metrics.downloadFailed === 0) {
+        metrics.deleted = await deleteRemovedPosts(account, remotePostIds, oldestTimestampMs, admin);
+    }
 
     return metrics;
 }
 
 export async function POST(req: NextRequest) {
-    const supabase = await createCookieAwareClient();
-
     try {
-        // Authenticate and authorize
-        const authContext = await authenticateRequest(req, supabase);
-        console.debug("Instagram refresh initiated", authContext);
-
-        // Setup service-role client
+        await authenticateRequest(req);
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-        if (!supabaseUrl || !serviceKey) {
-            return NextResponse.json(
-                {error: "Supabase service credentials not configured"},
-                {status: 500}
-            );
-        }
-
+        if (!supabaseUrl || !serviceKey) throw new Error("Supabase service credentials not configured");
         const admin = createSupabaseServerClient(supabaseUrl, serviceKey, {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false
-            }
+            auth: {autoRefreshToken: false, persistSession: false}
         });
-
-        // Fetch target accounts
-        const accounts = await fetchTargetAccounts(authContext, supabase, admin);
-
-        if (accounts.length === 0) {
+        const leaseOwner = randomUUID();
+        const {data: acquired, error: leaseError} = await admin.rpc("acquire_instagram_refresh_lease", {p_owner: leaseOwner});
+        if (leaseError) throw new Error(`Failed to acquire Instagram refresh lease: ${leaseError.message}`);
+        if (!acquired) return NextResponse.json({error: "Instagram refresh is already running"}, {status: 409});
+        try {
+            const accounts = await fetchTargetAccounts(admin);
+            const totalMetrics: RefreshMetrics = {inserted: 0, updated: 0, deleted: 0, downloaded: 0, downloadFailed: 0};
+            for (const account of accounts) {
+                const metrics = await processAccount(account, admin);
+                totalMetrics.inserted += metrics.inserted;
+                totalMetrics.updated += metrics.updated;
+                totalMetrics.deleted += metrics.deleted;
+                totalMetrics.downloaded += metrics.downloaded;
+                totalMetrics.downloadFailed += metrics.downloadFailed;
+                console.info(`Completed Instagram account ${account.id}:`, metrics);
+            }
             return NextResponse.json({
-                ok: true,
-                scope: authContext.isAdmin ? "all" : "current",
+                ok: totalMetrics.downloadFailed === 0,
+                scope: "all",
                 result: {
-                    inserted: 0,
-                    updated: 0,
-                    deleted: 0,
-                    downloaded: 0,
-                    download_failed: 0
+                    inserted: totalMetrics.inserted,
+                    updated: totalMetrics.updated,
+                    deleted: totalMetrics.deleted,
+                    downloaded: totalMetrics.downloaded,
+                    download_failed: totalMetrics.downloadFailed
                 }
-            });
+            }, {status: totalMetrics.downloadFailed === 0 ? 200 : 502});
+        } finally {
+            const {error} = await admin.rpc("release_instagram_refresh_lease", {p_owner: leaseOwner});
+            if (error) console.error("Failed to release Instagram refresh lease:", error);
         }
-
-        // Process all accounts and aggregate metrics
-        const totalMetrics: RefreshMetrics = {
-            inserted: 0,
-            updated: 0,
-            deleted: 0,
-            downloaded: 0,
-            downloadFailed: 0
-        };
-
-        for (const account of accounts) {
-            console.info(`Processing Instagram account ${account.id}...`);
-            const accountMetrics = await processAccount(account, admin);
-
-            totalMetrics.inserted += accountMetrics.inserted;
-            totalMetrics.updated += accountMetrics.updated;
-            totalMetrics.deleted += accountMetrics.deleted;
-            totalMetrics.downloaded += accountMetrics.downloaded;
-            totalMetrics.downloadFailed += accountMetrics.downloadFailed;
-
-            console.info(`Completed account ${account.id}:`, accountMetrics);
-        }
-
-        return NextResponse.json({
-            ok: true,
-            scope: authContext.isAdmin ? "all" : "current",
-            result: {
-                inserted: totalMetrics.inserted,
-                updated: totalMetrics.updated,
-                deleted: totalMetrics.deleted,
-                downloaded: totalMetrics.downloaded,
-                download_failed: totalMetrics.downloadFailed
-            }
-        });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Instagram refresh error:", error);
-
-        const status = error.message === "Unauthorized" ? 401 : 500;
-        return NextResponse.json(
-            {error: error?.message || "Unexpected error"},
-            {status}
-        );
+        const message = error instanceof Error ? error.message : "Unexpected error";
+        return NextResponse.json({error: message === "Unauthorized" ? message : "Instagram refresh failed"}, {
+            status: message === "Unauthorized" ? 401 : 500
+        });
     }
 }

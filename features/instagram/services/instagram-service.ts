@@ -16,7 +16,7 @@ export class InstagramService {
 
         const {data, error} = await supabase
             .from("instagram_accounts")
-            .select("id, username, profile_image_url, user_id")
+            .select("id:id::text, username, profile_image_url, user_id")
             .eq("user_id", userId);
 
         if (error) {
@@ -42,7 +42,7 @@ export class InstagramService {
         // First, get all Instagram accounts
         const {data: accounts, error: accountsError} = await supabase
             .from("instagram_accounts")
-            .select("id, username, profile_image_url, user_id");
+            .select("id:id::text, username, profile_image_url, user_id");
 
         if (accountsError) {
             logError(accountsError, 'InstagramService.getAllAccountsGroupedByUser');
@@ -145,7 +145,7 @@ export class InstagramService {
      * Delete an Instagram account and all associated data
      * Calls the API endpoint which uses the database function for cleanup
      */
-    static async deleteAccount(accountId: number): Promise<void> {
+    static async deleteAccount(accountId: string): Promise<void> {
         try {
             const response = await fetch(`/api/features/instagram/delete?accountId=${accountId}`, {
                 method: 'DELETE',

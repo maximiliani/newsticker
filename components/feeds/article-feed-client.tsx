@@ -42,17 +42,26 @@ export function ArticleFeedClient({ feedTitle, createTitle, emptyText, initialAr
     const handleArticleCreated = useCallback(() => router.refresh(), [router]);
 
     useEffect(() => {
-        const interval = setInterval(() => router.refresh(), 30 * 1000);
+        const interval = setInterval(() => {
+            if (document.visibilityState === "visible") router.refresh();
+        }, 5 * 60 * 1000);
         return () => clearInterval(interval);
     }, [router]);
 
     useEffect(() => {
         const supabase = createClient();
+        let timer: ReturnType<typeof setTimeout> | undefined;
         const channel = supabase
             .channel('articles_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'articles' }, () => router.refresh())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'articles' }, () => {
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(() => {
+                    if (document.visibilityState === "visible") router.refresh();
+                }, 2000);
+            })
             .subscribe();
         return () => {
+            if (timer) clearTimeout(timer);
             supabase.removeChannel(channel);
         };
     }, [router]);
@@ -97,7 +106,7 @@ export function ArticleFeedClient({ feedTitle, createTitle, emptyText, initialAr
                 ) : (
                     <div className="space-y-4">
                         {articles.map((newsItem) => (
-                            <Link key={newsItem.id} href={`/news/${newsItem.id}`} className="block cursor-pointer">
+                            <Link key={newsItem.id} href={`/news/${newsItem.id}`} prefetch={false} className="block cursor-pointer">
                                 <NewsPreview news={newsItem} />
                             </Link>
                         ))}

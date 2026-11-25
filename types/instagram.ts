@@ -1,5 +1,5 @@
 export interface InstagramAccount {
-  id: number;  // BIGINT from database
+  id: string;  // BIGINT returned as text to preserve precision
   username: string;
   profile_image_url: string | null;
   user_id: string;

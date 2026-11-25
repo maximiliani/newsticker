@@ -71,7 +71,7 @@ export default function InstagramPage() {
         checkAuthAndFetchData();
     }, [router]);
 
-    const handleDeleteAccount = async (accountId: number) => {
+    const handleDeleteAccount = async (accountId: string) => {
         if (!confirm('Are you sure you want to delete this Instagram account? This action cannot be undone.')) {
             return;
         }

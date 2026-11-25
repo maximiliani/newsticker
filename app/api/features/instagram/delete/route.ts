@@ -26,10 +26,10 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({error: "Account ID is required"}, {status: 400});
         }
 
-        const accountId = parseInt(accountIdParam, 10);
-        if (isNaN(accountId)) {
+        if (!/^\d{1,19}$/.test(accountIdParam)) {
             return NextResponse.json({error: "Invalid account ID"}, {status: 400});
         }
+        const accountId = accountIdParam;
 
         // Check admin status
         const {data: isAdminData} = await supabase.rpc("check_is_admin");
@@ -99,4 +99,3 @@ export async function DELETE(req: NextRequest) {
         );
     }
 }
-

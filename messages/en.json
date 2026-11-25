@@ -112,7 +112,9 @@
     "unknown": "Unknown",
     "refreshAll": "Refresh All Feeds",
     "refreshSuccess": "Feeds refreshed successfully!",
-    "refreshError": "Failed to refresh feeds. Please try again later."
+    "refreshError": "Failed to refresh feeds. Please try again later.",
+    "loadError": "Could not load Instagram posts.",
+    "retry": "Retry"
   },
   "CalendarArticle": {
     "event": "Event",

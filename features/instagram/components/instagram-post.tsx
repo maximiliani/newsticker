@@ -1,10 +1,8 @@
-import {MediaDisplay, InstagramMediaDisplay} from "@/components/media-display";
+import {InstagramMediaDisplay} from "@/components/media-display";
 import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,} from "@/components/ui/carousel";
-import {createClient} from "@/lib/supabase/client";
 import {formatDate} from "@/utils/utils";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
-import {useEffect, useState} from "react";
 
 export interface IGPostData {
     id: string;
@@ -25,99 +23,7 @@ export interface IGPostData {
     postedAt: Date;
 }
 
-export function IGPost({postId}: {postId: string}) {
-    const supabase = createClient();
-    const [post, setPost] = useState<IGPostData | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function fetchPost() {
-            setLoading(true);
-            setError(null);
-
-            try {
-                const {data, error} = await supabase
-                    .from("instagram_posts")
-                    .select(`
-                        *,
-                        instagram_post_media (
-                            media_type,
-                            media_url,
-                            local_media_url,
-                            local_thumbnail_url,
-                            download_status
-                        ),
-                        instagram_accounts (
-                            username,
-                            profile_image_url
-                        )
-                    `)
-                    .eq("id", postId)
-                    .single();
-
-                if (error) {
-                    throw new Error(error.message);
-                }
-
-                if (!data) {
-                    throw new Error("Post not found");
-                }
-
-                const postData = mapPostData(data);
-                setPost(postData);
-            } catch (err: any) {
-                console.error("Error fetching Instagram post:", err.message);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchPost();
-    }, [postId]);
-
-    const mapPostData = (data: any): IGPostData => {
-        const media = data.instagram_post_media.map((media: any) => {
-            // Use local URL if available and download completed, otherwise fallback to Meta URL
-            const preferredUrl = (media.local_media_url && media.download_status === 'completed') 
-                ? media.local_media_url 
-                : media.media_url;
-            
-            return {
-                type: media.media_type,
-                url: preferredUrl,
-                // Add the missing properties that InstagramMediaDisplay expects
-                media_url: media.media_url,
-                thumbnail_url: media.thumbnail_url,
-                local_media_url: media.local_media_url,
-                local_thumbnail_url: media.local_thumbnail_url,
-                download_status: media.download_status,
-            };
-        });
-
-        return {
-            id: data.id,
-            username: data.instagram_accounts.username,
-            userAvatar: data.instagram_accounts.profile_image_url,
-            location: data.location || null,
-            media,
-            caption: data.caption || null,
-            postedAt: new Date(data.posted_at || data.timestamp),
-        };
-    };
-    
-    if (loading) {
-        // Ensure loading placeholder also respects sizing if needed, or use simpler fixed size
-        return <div className="animate-pulse bg-gray-200 w-full h-full rounded-lg"></div>;
-    }
-    if (error) {
-        return <div className="text-red-500 p-2 w-full h-full">{error}</div>;
-    }
-    if (!post) {
-        return <div className="text-gray-500 p-2 w-full h-full">No post found</div>;
-    }
-
+export function IGPost({post}: {post: IGPostData}) {
     return (
         <div className="bg-card rounded-lg overflow-hidden shadow-sm border w-full h-full flex flex-col min-w-0">
             {/* Post Header */}

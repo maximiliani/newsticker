@@ -3,6 +3,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import type { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies";
 
 export const updateSession = async (request: NextRequest) => {
+  const hasAuthCookie = request.cookies.getAll().some(({ name }) => /^sb-.+-auth-token(?:\.\d+)?$/.test(name));
+  if (!hasAuthCookie) {
+    if (request.nextUrl.pathname.startsWith("/protected")) {
+      return NextResponse.redirect(new URL("/sign-in", request.url));
+    }
+    return NextResponse.next({ request: { headers: request.headers } });
+  }
   // This `try/catch` block is only here for the interactive tutorial.
   // Feel free to remove once you have Supabase connected.
   try {

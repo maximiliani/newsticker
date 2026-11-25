@@ -29,7 +29,7 @@ interface Props {
 
 export function InstagramAccountsManager({initialAccounts}: Props) {
     const [accounts, setAccounts] = useState<InstagramAccount[]>(initialAccounts);
-    const [isDeleting, setIsDeleting] = useState<number | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [accountToDelete, setAccountToDelete] = useState<InstagramAccount | null>(null);
     const router = useRouter();
 

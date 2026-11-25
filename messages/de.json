@@ -112,7 +112,9 @@
     "unknown": "Unbekannt",
     "refreshAll": "Alle Feeds aktualisieren",
     "refreshSuccess": "Feeds wurden erfolgreich aktualisiert!",
-    "refreshError": "Feeds konnten nicht aktualisiert werden. Bitte versuchen Sie es später erneut."
+    "refreshError": "Feeds konnten nicht aktualisiert werden. Bitte versuchen Sie es später erneut.",
+    "loadError": "Instagram-Beiträge konnten nicht geladen werden.",
+    "retry": "Erneut versuchen"
   },
   "CalendarArticle": {
     "event": "Veranstaltung",

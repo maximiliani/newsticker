@@ -265,7 +265,7 @@ export class UserService {
             // Get all Instagram accounts for the user
             const {data: accounts, error} = await supabase
                 .from('instagram_accounts')
-                .select('id')
+                .select('id:id::text')
                 .eq('user_id', userId);
 
             if (error) throw error;
