@@ -10,6 +10,7 @@ interface Row {
     description: string;
     created_at: string;
     modified_at: string;
+    sort_at: string;
     event_datetime: string | null;
     event_all_day: boolean | null;
     author_name: string | null;
@@ -27,7 +28,7 @@ export async function loadArticlePage(offset: number, from?: string, to?: string
 
     let query = supabase
         .from('articles_with_author_info')
-        .select('id, title, description, created_at, modified_at, visibility_from, visibility_to, event_datetime, event_all_day, author_name, author_avatar');
+        .select('id, title, description, created_at, modified_at, sort_at, visibility_from, visibility_to, event_datetime, event_all_day, author_name, author_avatar');
 
     if (from && to) {
         const rangeStart = new Date(from);
@@ -43,16 +44,21 @@ export async function loadArticlePage(offset: number, from?: string, to?: string
     }
 
     const { data, error } = await query
-        .order('sort_at', { ascending: false })
-        .order('id', { ascending: false })
-        .range(offset, offset + ARTICLE_PAGE_SIZE - 1);
+        .order('id', { ascending: false });
 
     if (error) {
         console.error('Supabase error:', error);
         return [];
     }
 
-    return (data as Row[] | null ?? []).map((a) => ({
+    return (data as Row[] | null ?? [])
+        .sort((a, b) => {
+            const distanceA = Math.abs(new Date(a.sort_at).getTime() - now.getTime());
+            const distanceB = Math.abs(new Date(b.sort_at).getTime() - now.getTime());
+            return distanceA - distanceB || b.id.localeCompare(a.id);
+        })
+        .slice(offset, offset + ARTICLE_PAGE_SIZE)
+        .map((a) => ({
         id: a.id,
         title: a.title,
         description: a.description,
