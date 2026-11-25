@@ -3,70 +3,70 @@
 import {NewspaperIcon, UserPen, UsersIcon, Cpu, CalendarIcon} from "lucide-react";
 import {InstagramIcon} from "@/components/icons/instagram-icon";
 import {AdminCard} from "@/features/admin/components/admin_card_component";
-
-const cardData = [
-    {
-        icon: UserPen,
-        title: "Your Profile",
-        description: "Update your personal information and profile details",
-        content: "Manage your account settings, update your profile picture, and change your password. You can also delete your account if needed.",
-        buttonText: "Modify your profile",
-        href: "/settings/profile"
-    },
-    {
-        icon: UsersIcon,
-        title: "User Management",
-        description: "Manage user accounts and permissions",
-        content: "View, edit, or delete user profiles. Manage admin access and user roles.",
-        buttonText: "Manage Users",
-        href: "/settings/users"
-    },
-    {
-        icon: InstagramIcon,
-        title: "Instagram Feeds",
-        description: "Manage all Instagram content",
-        content: "Review and delete Instagram posts from all users across the platform.",
-        buttonText: "Manage Instagram",
-        href: "/settings/instagram"
-    },
-    {
-        icon: NewspaperIcon,
-        title: "News Articles",
-        description: "Manage all news articles",
-        content: "View, edit, or delete news articles from all users across the platform.",
-        buttonText: "Manage Articles",
-        href: "/settings/articles"
-    },
-    {
-        icon: CalendarIcon,
-        title: "Calendar Subscriptions",
-        description: "Manage all calendar subscriptions",
-        content: "View, edit, or delete calendar subscriptions from all users across the platform.",
-        buttonText: "Manage calendar subscriptions",
-        href: "/settings/calendar"
-    }
-];
+import {useTranslations} from "next-intl";
 
 export function AdminDashboardCards() {
+    const t = useTranslations("Dashboard.cards");
     const isKiosk = process.env.NEXT_PUBLIC_KIOSK_MODE === 'true';
 
-    const displayCards = [...cardData];
+    const displayCards = [
+        {
+            icon: UserPen,
+            title: t("profile.title"),
+            description: t("profile.description"),
+            content: t("profile.content"),
+            buttonText: t("profile.button"),
+            href: "/settings/profile"
+        },
+        {
+            icon: UsersIcon,
+            title: t("users.title"),
+            description: t("users.description"),
+            content: t("users.content"),
+            buttonText: t("users.button"),
+            href: "/settings/users"
+        },
+        {
+            icon: InstagramIcon,
+            title: t("instagram.title"),
+            description: t("instagram.description"),
+            content: t("instagram.content"),
+            buttonText: t("instagram.button"),
+            href: "/settings/instagram"
+        },
+        {
+            icon: NewspaperIcon,
+            title: t("articles.title"),
+            description: t("articles.description"),
+            content: t("articles.content"),
+            buttonText: t("articles.button"),
+            href: "/settings/articles"
+        },
+        {
+            icon: CalendarIcon,
+            title: t("calendar.title"),
+            description: t("calendar.description"),
+            content: t("calendar.content"),
+            buttonText: t("calendar.button"),
+            href: "/settings/calendar"
+        }
+    ];
     if (isKiosk) {
         displayCards.push({
             icon: Cpu,
-            title: "Device Management",
-            description: "Monitor and control this device",
-            content: "Update hostname, monitor system health (CPU, RAM, Disk), and perform power actions like reboot or shutdown.",
-            buttonText: "Manage Device",
+            title: t("device.title"),
+            description: t("device.description"),
+            content: t("device.content"),
+            buttonText: t("device.button"),
             href: "/settings/device"
         });
     }
 
     return (
         <div className="grid gap-8 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 auto-rows-fr max-w-full overflow-hidden">
-            {displayCards.map((card, index) => (
+            {displayCards.map((card) => (
                 <AdminCard
-                    key={index}
+                    key={card.href}
                     icon={card.icon}
                     title={card.title}
                     description={card.description}

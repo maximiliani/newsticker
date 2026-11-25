@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {GitHubLogoIcon} from "@radix-ui/react-icons";
 import {ThemeSwitcher} from "@/components/user/theme-switcher";
+import {LanguageSwitcher} from "@/components/user/language-switcher";
 import { Separator } from "./ui/separator";
 
 export function GlobalFooter() {
@@ -20,5 +21,6 @@ export function GlobalFooter() {
             <GitHubLogoIcon className="w-4 h-4"/>
         </a>
         <ThemeSwitcher/>
+        <LanguageSwitcher/>
     </footer>;
 }

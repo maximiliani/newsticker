@@ -28,11 +28,13 @@ export default function DashboardPage() {
 
     // State management
     const [user, setUser] = useState<User | null>(null);
-    const [fullName, setFullName] = useState<string>("User");
+    const [fullName, setFullName] = useState<string>("");
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [instagramAccounts, setInstagramAccounts] = useState<InstagramAccount[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<
+        { key: "notAuthenticated" | "loadError" | "permissionError" } | { message: string } | null
+    >(null);
 
     useEffect(() => {
         async function fetchDashboardData() {
@@ -44,14 +46,14 @@ export default function DashboardPage() {
                 const {data: {user}} = await supabase.auth.getUser();
 
                 if (!user) {
-                    setError("User not authenticated");
+                    setError({ key: "notAuthenticated" });
                     return;
                 }
 
                 setUser(user);
 
                 // Get user's name from metadata or use a default
-                const userName = user?.user_metadata?.full_name || "User";
+                const userName = user?.user_metadata?.full_name || "";
                 setFullName(userName);
 
                 // Fetch Instagram accounts and admin status in parallel
@@ -78,7 +80,7 @@ export default function DashboardPage() {
 
             } catch (error) {
                 logError(error, 'DashboardPage.fetchDashboardData');
-                setError("Failed to load dashboard data");
+                setError({ key: "loadError" });
             } finally {
                 setIsLoading(false);
             }
@@ -91,8 +93,9 @@ export default function DashboardPage() {
     useEffect(() => {
         if (searchParams?.get('error') === 'permission') {
             const message = searchParams.get('message');
-            const errorMessage = message ? decodeURIComponent(message) : 'You do not have permission to access that page.';
-            setError(errorMessage);
+            setError(!message || message === 'You do not have permission to access this page'
+                ? { key: "permissionError" }
+                : { message });
         }
     }, [searchParams]);
 
@@ -110,12 +113,12 @@ export default function DashboardPage() {
         return (
             <Card className="mx-auto max-w-md">
                 <CardHeader className="text-center">
-                    <CardTitle>Error</CardTitle>
-                    <CardDescription>{error}</CardDescription>
+                    <CardTitle>{tc("error")}</CardTitle>
+                    <CardDescription>{"key" in error ? t(error.key) : error.message}</CardDescription>
                 </CardHeader>
                 <CardFooter className="flex justify-center">
                     <Link href="/settings">
-                        <Button variant="outline">Try Again</Button>
+                        <Button variant="outline">{t("tryAgain")}</Button>
                     </Link>
                 </CardFooter>
             </Card>
@@ -125,7 +128,7 @@ export default function DashboardPage() {
     return (
         <div>
             <PageHeading
-                heading={t("welcome", { name: fullName })}
+                heading={t("welcome", { name: fullName || t("defaultUser") })}
                 text={t("description")}
             />
 

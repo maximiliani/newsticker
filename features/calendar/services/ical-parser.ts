@@ -134,12 +134,25 @@ function mapICALEventToParsedEvent(vevent: ICAL.Component, dtstart: ICAL.Time, d
 
   return {
     uid: isOccurrence ? `${uid}:${dtstart.toJSDate().toISOString()}` : uid,
-    summary: event.summary || 'No Title',
+    summary: event.summary || '',
     description: event.description || '',
     dtstart: dtstart.toJSDate(),
     dtend: dtend.toJSDate(),
+    timezone: resolveTimezone(dtstart),
+    isAllDay: dtstart.isDate,
     location: event.location || '',
     url: (vevent.getFirstPropertyValue('url') as string) || '',
     attachments
   };
+}
+
+/**
+ * Returns the IANA timezone of an ICAL time, or undefined for floating/all-day values.
+ */
+function resolveTimezone(time: ICAL.Time): string | undefined {
+  if (time.isDate) return undefined;
+  const tzid = time.zone?.tzid;
+  if (!tzid || tzid === 'floating') return undefined;
+  if (tzid === 'UTC' || tzid === 'Z') return 'UTC';
+  return tzid;
 }

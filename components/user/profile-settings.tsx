@@ -1,5 +1,6 @@
 "use client";
 
+import { setLocaleCookie } from "@/i18n/actions";
 import { useState, useEffect, useRef } from "react";
 import { User } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
@@ -144,6 +145,7 @@ export function ProfileSettings() {
           email: email !== user.email ? email : undefined,
           language
         });
+        if (language) await setLocaleCookie(language);
 
         // Update local state
         const fullName = `${firstName} ${lastName}`;
