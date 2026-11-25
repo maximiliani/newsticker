@@ -19,9 +19,67 @@
     "createNewsArticle": "Neuen Artikel erstellen"
   },
   "Dashboard": {
-    "title": "Dashboard",
+    "title": "Übersicht",
     "welcome": "Willkommen, {name}!",
-    "description": "Verwalten Sie Ihre Kontoeinstellungen, Ihr Profil und mehr"
+    "description": "Verwalten Sie Ihre Kontoeinstellungen, Ihr Profil und mehr",
+    "defaultUser": "Benutzer",
+    "notAuthenticated": "Benutzer nicht angemeldet",
+    "loadError": "Die Übersicht konnte nicht geladen werden.",
+    "permissionError": "Sie haben keine Berechtigung, auf diese Seite zuzugreifen.",
+    "tryAgain": "Erneut versuchen",
+    "cards": {
+      "profile": {
+        "title": "Ihr Profil",
+        "description": "Aktualisieren Sie Ihre persönlichen Informationen und Profildetails",
+        "content": "Verwalten Sie Ihre Kontoeinstellungen, aktualisieren Sie Ihr Profilbild und ändern Sie Ihr Passwort. Bei Bedarf können Sie auch Ihr Konto löschen.",
+        "button": "Profil bearbeiten"
+      },
+      "users": {
+        "title": "Benutzerverwaltung",
+        "description": "Benutzerkonten und Berechtigungen verwalten",
+        "content": "Benutzerprofile anzeigen, bearbeiten oder löschen. Administratorzugriff und Benutzerrollen verwalten.",
+        "button": "Benutzer verwalten"
+      },
+      "instagram": {
+        "title": "Instagram-Feeds",
+        "description": "Alle Instagram-Inhalte verwalten",
+        "content": "Instagram-Beiträge aller Benutzer auf der Plattform ansehen und löschen.",
+        "button": "Instagram verwalten"
+      },
+      "articles": {
+        "title": "Nachrichtenartikel",
+        "description": "Alle Nachrichtenartikel verwalten",
+        "content": "Nachrichtenartikel aller Benutzer auf der Plattform anzeigen, bearbeiten oder löschen.",
+        "button": "Artikel verwalten"
+      },
+      "calendar": {
+        "title": "Kalender-Abonnements",
+        "description": "Alle Kalender-Abonnements verwalten",
+        "content": "Kalender-Abonnements aller Benutzer auf der Plattform anzeigen, bearbeiten oder löschen.",
+        "button": "Kalender-Abonnements verwalten"
+      },
+      "device": {
+        "title": "Geräteverwaltung",
+        "description": "Dieses Gerät überwachen und steuern",
+        "content": "Hostnamen ändern, Systemzustand (CPU, RAM, Speicher) überwachen und das Gerät neu starten oder herunterfahren.",
+        "button": "Gerät verwalten"
+      }
+    }
+  },
+  "GeneralSettings": {
+    "title": "Allgemeine Einstellungen",
+    "description": "Anwendungsweite Einstellungen und Konfiguration verwalten",
+    "cardTitle": "Allgemeine Anwendungseinstellungen",
+    "cardDescription": "Anwendungsweite Einstellungen für die öffentliche Übersicht konfigurieren.",
+    "languageLabel": "Globale Sprache der Übersicht",
+    "languageDescription": "Diese Einstellung legt die Standardsprache der öffentlichen Übersicht fest.",
+    "selectLanguage": "Sprache auswählen",
+    "timezoneLabel": "Standardzeitzone",
+    "timezoneDescription": "Wird für Kalenderereignisse ohne eigene Zeitzone verwendet.",
+    "selectTimezone": "Zeitzone auswählen",
+    "save": "Änderungen speichern",
+    "saveSuccess": "Einstellungen aktualisiert",
+    "saveError": "Einstellungen konnten nicht aktualisiert werden"
   },
   "Profile": {
     "title": "Profileinstellungen",
@@ -36,8 +94,8 @@
     "confirmPassword": "Neues Passwort bestätigen"
   },
   "Sidebar": {
-    "return": "Zurück zum Dashboard",
-    "dashboard": "Einstellungen Dashboard",
+    "return": "Zurück zur Übersicht",
+    "dashboard": "Übersicht - Einstellungen",
     "profile": "Profil",
     "users": "Benutzerverwaltung",
     "instagram": "Instagram-Feeds",
@@ -47,7 +105,7 @@
     "device": "Gerät"
   },
   "Instagram": {
-    "feedTitle": "Instagram-Feed",
+    "feedTitle": "Instagram Kanäle",
     "all": "Alle",
     "noPosts": "Keine Instagram-Beiträge verfügbar.",
     "unknown": "Unbekannt"

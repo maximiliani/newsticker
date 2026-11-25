@@ -10,10 +10,12 @@ import { toast } from "sonner";
 import { Loader2, Settings } from "lucide-react";
 import { DEFAULT_TIMEZONE } from "@/i18n/config";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const timezones: string[] = (Intl as any).supportedValuesOf?.('timeZone') ?? [DEFAULT_TIMEZONE];
 
 export function GeneralSettings() {
+  const t = useTranslations("GeneralSettings");
   const [language, setLanguage] = useState<string>("en");
   const [timezone, setTimezone] = useState<string>(DEFAULT_TIMEZONE);
   const [loading, setLoading] = useState(true);
@@ -40,10 +42,10 @@ export function GeneralSettings() {
     try {
       await AppSettingsService.updateDashboardLanguage(language);
       await AppSettingsService.updateDefaultTimezone(timezone);
-      toast.success("Settings updated");
+      toast.success(t("saveSuccess"));
       router.refresh();
     } catch (error) {
-      toast.error("Failed to update settings");
+      toast.error(t("saveError"));
     } finally {
       setSaving(false);
     }
@@ -62,22 +64,22 @@ export function GeneralSettings() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Settings className="h-5 w-5" />
-          General App Settings
+          {t("cardTitle")}
         </CardTitle>
         <CardDescription>
-          Configure application-wide settings for the public dashboard.
+          {t("cardDescription")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="dashboard_language">Global Dashboard Language</Label>
+          <Label htmlFor="dashboard_language">{t("languageLabel")}</Label>
           <p className="text-sm text-muted-foreground">
-            This setting controls the language of the public kiosk view.
+            {t("languageDescription")}
           </p>
           <div className="flex items-center gap-4">
             <Select value={language} onValueChange={setLanguage}>
               <SelectTrigger id="dashboard_language" className="w-[180px]">
-                <SelectValue placeholder="Select language" />
+                <SelectValue placeholder={t("selectLanguage")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="en">English</SelectItem>
@@ -87,14 +89,14 @@ export function GeneralSettings() {
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="default_timezone">Default Time Zone</Label>
+          <Label htmlFor="default_timezone">{t("timezoneLabel")}</Label>
           <p className="text-sm text-muted-foreground">
-            Used for calendar events without a time zone of their own.
+            {t("timezoneDescription")}
           </p>
           <div className="flex items-center gap-4">
             <Select value={timezone} onValueChange={setTimezone}>
               <SelectTrigger id="default_timezone" className="w-[280px]">
-                <SelectValue placeholder="Select time zone" />
+                <SelectValue placeholder={t("selectTimezone")} />
               </SelectTrigger>
               <SelectContent>
                 {timezones.map((tz) => (
@@ -104,7 +106,7 @@ export function GeneralSettings() {
             </Select>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Save Changes
+              {t("save")}
             </Button>
           </div>
         </div>

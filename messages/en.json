@@ -21,7 +21,65 @@
   "Dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {name}!",
-    "description": "Manage your account settings, profile, and more"
+    "description": "Manage your account settings, profile, and more",
+    "defaultUser": "User",
+    "notAuthenticated": "User not authenticated",
+    "loadError": "Failed to load dashboard data",
+    "permissionError": "You do not have permission to access that page.",
+    "tryAgain": "Try Again",
+    "cards": {
+      "profile": {
+        "title": "Your Profile",
+        "description": "Update your personal information and profile details",
+        "content": "Manage your account settings, update your profile picture, and change your password. You can also delete your account if needed.",
+        "button": "Modify your profile"
+      },
+      "users": {
+        "title": "User Management",
+        "description": "Manage user accounts and permissions",
+        "content": "View, edit, or delete user profiles. Manage admin access and user roles.",
+        "button": "Manage Users"
+      },
+      "instagram": {
+        "title": "Instagram Feeds",
+        "description": "Manage all Instagram content",
+        "content": "Review and delete Instagram posts from all users across the platform.",
+        "button": "Manage Instagram"
+      },
+      "articles": {
+        "title": "News Articles",
+        "description": "Manage all news articles",
+        "content": "View, edit, or delete news articles from all users across the platform.",
+        "button": "Manage Articles"
+      },
+      "calendar": {
+        "title": "Calendar Subscriptions",
+        "description": "Manage all calendar subscriptions",
+        "content": "View, edit, or delete calendar subscriptions from all users across the platform.",
+        "button": "Manage calendar subscriptions"
+      },
+      "device": {
+        "title": "Device Management",
+        "description": "Monitor and control this device",
+        "content": "Update hostname, monitor system health (CPU, RAM, Disk), and perform power actions like reboot or shutdown.",
+        "button": "Manage Device"
+      }
+    }
+  },
+  "GeneralSettings": {
+    "title": "General Settings",
+    "description": "Manage application-wide settings and configuration",
+    "cardTitle": "General App Settings",
+    "cardDescription": "Configure application-wide settings for the public dashboard.",
+    "languageLabel": "Global Dashboard Language",
+    "languageDescription": "This setting controls the default language of the public dashboard.",
+    "selectLanguage": "Select language",
+    "timezoneLabel": "Default Time Zone",
+    "timezoneDescription": "Used for calendar events without a time zone of their own.",
+    "selectTimezone": "Select time zone",
+    "save": "Save Changes",
+    "saveSuccess": "Settings updated",
+    "saveError": "Failed to update settings"
   },
   "Profile": {
     "title": "Profile Settings",
