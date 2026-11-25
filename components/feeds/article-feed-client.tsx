@@ -45,6 +45,8 @@ export function ArticleFeedClient({ feedTitle, createTitle, emptyText, initialAr
     const scrollRef = useRef<HTMLDivElement>(null);
     const topSentinelRef = useRef<HTMLDivElement>(null);
     const bottomSentinelRef = useRef<HTMLDivElement>(null);
+    const topSpaceRef = useRef<HTMLDivElement>(null);
+    const bottomSpaceRef = useRef<HTMLDivElement>(null);
     const focusPendingRef = useRef(true);
     const userScrolledRef = useRef(false);
     const prependHeightRef = useRef<number | null>(null);
@@ -187,23 +189,48 @@ export function ArticleFeedClient({ feedTitle, createTitle, emptyText, initialAr
             root.scrollTop += root.scrollHeight - prependHeightRef.current;
             prependHeightRef.current = null;
         }
-        if (!focusPendingRef.current || !focusReady || !articles.length) return;
-        const items = Array.from(root.querySelectorAll<HTMLElement>("[data-article-id]"));
-        const todayIndexes = articles.flatMap((article, index) =>
-            article.eventDatetime && eventDateKey(article.eventDatetime, timezone, article.eventAllDay) === today ? [index] : []);
-        const firstFuture = articles.findIndex((article) =>
-            eventDateKey(article.sortAt, timezone, article.eventAllDay && !!article.eventDatetime) >= today);
-        const first = todayIndexes[0] ?? (firstFuture >= 0 ? firstFuture : articles.length - 1);
-        const last = todayIndexes[todayIndexes.length - 1] ?? first;
-        const itemTop = (index: number) => items[index].getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
-        const firstTop = itemTop(first);
-        const lastBottom = itemTop(last) + items[last].offsetHeight;
-        const contextTop = itemTop(Math.max(0, first - 2));
-        root.scrollTop = lastBottom - firstTop <= root.clientHeight
-            ? Math.max(contextTop, lastBottom - root.clientHeight)
-            : firstTop;
-        focusPendingRef.current = false;
-        setFocusComplete(true);
+        const centerToday = () => {
+            const topSpace = topSpaceRef.current;
+            const bottomSpace = bottomSpaceRef.current;
+            if (!focusReady || !articles.length || !root.clientHeight || !topSpace || !bottomSpace) return;
+            const items = Array.from(root.querySelectorAll<HTMLElement>("[data-article-id]"));
+            const todayIndexes = articles.flatMap((article, index) =>
+                article.eventDatetime && eventDateKey(article.eventDatetime, timezone, article.eventAllDay) === today ? [index] : []);
+            const firstFuture = articles.findIndex((article) =>
+                eventDateKey(article.sortAt, timezone, article.eventAllDay && !!article.eventDatetime) >= today);
+            const first = todayIndexes[0] ?? (firstFuture >= 0 ? firstFuture : articles.length - 1);
+            const last = todayIndexes[todayIndexes.length - 1] ?? first;
+
+            topSpace.style.height = "0px";
+            bottomSpace.style.height = "0px";
+            const rootTop = root.getBoundingClientRect().top + root.clientTop;
+            const firstTop = items[first].getBoundingClientRect().top - rootTop + root.scrollTop;
+            const lastBottom = items[last].getBoundingClientRect().bottom - rootTop + root.scrollTop;
+            const target = lastBottom - firstTop <= root.clientHeight
+                ? (firstTop + lastBottom - root.clientHeight) / 2
+                : firstTop - 16;
+            const topSpaceHeight = Math.max(0, -target);
+            const contentBottom = bottomSpace.getBoundingClientRect().top - rootTop + root.scrollTop
+                + parseFloat(getComputedStyle(root).paddingBottom);
+            const bottomSpaceHeight = Math.max(0, target + root.clientHeight - contentBottom);
+            topSpace.style.height = `${topSpaceHeight}px`;
+            bottomSpace.style.height = `${bottomSpaceHeight}px`;
+            root.scrollTop = target + topSpaceHeight;
+            focusPendingRef.current = false;
+            setFocusComplete(true);
+        };
+
+        if (focusPendingRef.current) centerToday();
+        let width = root.clientWidth;
+        let height = root.clientHeight;
+        const observer = new ResizeObserver(() => {
+            if (width === root.clientWidth && height === root.clientHeight) return;
+            width = root.clientWidth;
+            height = root.clientHeight;
+            if (!userScrolledRef.current) centerToday();
+        });
+        observer.observe(root);
+        return () => observer.disconnect();
     }, [articles, focusReady, timezone, today]);
 
     const stopFollowingToday = () => {
@@ -230,25 +257,29 @@ export function ArticleFeedClient({ feedTitle, createTitle, emptyText, initialAr
                         <p className="text-muted-foreground">{emptyText}</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-4">
-                        {offset > 0 && <div ref={topSentinelRef} className="h-1" />}
-                        {loadError === "earlier" && (
-                            <button type="button" className="text-sm text-primary underline" onClick={() => { setLoadError(null); void loadMore("earlier"); }}>
-                                {t("retryLoad")}
-                            </button>
-                        )}
-                        {articles.map((newsItem) => (
-                            <Link key={newsItem.id} data-article-id={newsItem.id} href={`/news/${newsItem.id}`} prefetch={false} className="block cursor-pointer">
-                                <NewsPreview news={newsItem} timezone={timezone} isToday={!!newsItem.eventDatetime && eventDateKey(newsItem.eventDatetime, timezone, newsItem.eventAllDay) === today} />
-                            </Link>
-                        ))}
-                        {hasMore && <div ref={bottomSentinelRef} className="h-8" />}
-                        {loadError === "later" && (
-                            <button type="button" className="text-sm text-primary underline" onClick={() => { setLoadError(null); void loadMore("later"); }}>
-                                {t("retryLoad")}
-                            </button>
-                        )}
-                    </div>
+                    <>
+                        <div ref={topSpaceRef} aria-hidden="true" />
+                        <div className="flex flex-col gap-4">
+                            {offset > 0 && <div ref={topSentinelRef} className="h-1" />}
+                            {loadError === "earlier" && (
+                                <button type="button" className="text-sm text-primary underline" onClick={() => { setLoadError(null); void loadMore("earlier"); }}>
+                                    {t("retryLoad")}
+                                </button>
+                            )}
+                            {articles.map((newsItem) => (
+                                <Link key={newsItem.id} data-article-id={newsItem.id} href={`/news/${newsItem.id}`} prefetch={false} className="block cursor-pointer">
+                                    <NewsPreview news={newsItem} timezone={timezone} isToday={!!newsItem.eventDatetime && eventDateKey(newsItem.eventDatetime, timezone, newsItem.eventAllDay) === today} />
+                                </Link>
+                            ))}
+                            {hasMore && <div ref={bottomSentinelRef} className="h-8" />}
+                            {loadError === "later" && (
+                                <button type="button" className="text-sm text-primary underline" onClick={() => { setLoadError(null); void loadMore("later"); }}>
+                                    {t("retryLoad")}
+                                </button>
+                            )}
+                        </div>
+                        <div ref={bottomSpaceRef} aria-hidden="true" />
+                    </>
                 )}
             </div>
         </div>
