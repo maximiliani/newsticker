@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useRouter } from 'next/navigation';
+import RefreshInstagramFeedsButton from "@/features/instagram/components/refresh-instagram-feeds-button";
 
 interface IgFeedClientProps {
     initialPosts: IGPostData[];
@@ -95,9 +96,8 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
     return (
         <div className="flex flex-col h-full w-full min-w-0 overflow-hidden">
             {/* Header with filtering */}
-            <div className="items-center p-4 border-b relative">
+            <div className="flex justify-between items-center p-4 border-b flex-shrink-0 relative">
                 <h1 className="text-xl font-bold">{t('feedTitle')}</h1>
-                <div className="items-center">
                     {/* Instagram account picker */}
                     <ToggleGroup
                         variant="outline"
@@ -139,7 +139,7 @@ export function IgFeedClient({ initialPosts, availableUsers }: IgFeedClientProps
                             </ToggleGroupItem>
                         ))}
                     </ToggleGroup>
-                </div>
+                <RefreshInstagramFeedsButton/>
             </div>
 
             {/* Posts Container */}

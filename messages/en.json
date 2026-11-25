@@ -110,6 +110,15 @@
     "noPosts": "No instagram posts available.",
     "unknown": "Unknown"
   },
+  "CalendarArticle": {
+    "event": "Event",
+    "time": "Time",
+    "location": "Location",
+    "attachments": "Attachments",
+    "untitled": "No Title",
+    "defaultUser": "User",
+    "author": "{calendar} by {user}"
+  },
   "Calendar": {
     "upcomingEvents": "Upcoming Events",
     "noEvents": "No upcoming events.",

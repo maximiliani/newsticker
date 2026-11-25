@@ -134,7 +134,7 @@ function mapICALEventToParsedEvent(vevent: ICAL.Component, dtstart: ICAL.Time, d
 
   return {
     uid: isOccurrence ? `${uid}:${dtstart.toJSDate().toISOString()}` : uid,
-    summary: event.summary || 'No Title',
+    summary: event.summary || '',
     description: event.description || '',
     dtstart: dtstart.toJSDate(),
     dtend: dtend.toJSDate(),

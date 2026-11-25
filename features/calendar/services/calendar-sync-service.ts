@@ -7,6 +7,12 @@ import { readCredentials } from './credential-service';
 import { downloadAndStoreAttachments, deleteAttachments } from './attachment-service';
 import { isSafeUrl, escapeHtml } from '@/lib/security';
 import { DEFAULT_LOCALE, DEFAULT_TIMEZONE, isSupportedLocale, isValidTimezone } from '@/i18n/config';
+import { createTranslator } from 'next-intl';
+import enMessages from '@/messages/en.json';
+import deMessages from '@/messages/de.json';
+
+const calendarMessages = { en: enMessages.CalendarArticle, de: deMessages.CalendarArticle };
+const ARTICLE_FORMAT_VERSION = 2;
 
 /**
  * Synchronizes a single calendar subscription.
@@ -33,9 +39,11 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
 
   try {
     if (subscription.auth_type === 'public' && subscription.ical_url) {
-      const { icalText, newEtag: etag, notModified } = await fetchPublicICal(subscription.ical_url, subscription.etag || undefined);
-      if (notModified) return { subscriptionId, status: 'not_modified', added: 0, updated: 0, deleted: 0 };
-      if (icalText) icalTexts = [icalText];
+      // Fetch the feed even when its ETag is unchanged: generated articles also
+      // depend on application settings and the moving synchronization window.
+      const { icalText, newEtag: etag } = await fetchPublicICal(subscription.ical_url);
+      if (!icalText) throw new Error('Calendar feed returned no data');
+      icalTexts = [icalText];
       newEtag = etag;
     } else if (subscription.caldav_calendar_url && subscription.vault_secret_id) {
       const credentials = await readCredentials(admin, subscription.vault_secret_id);
@@ -45,7 +53,6 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
         subscription.auth_type,
         credentials
       );
-      if (ctag && ctag === subscription.ctag) return { subscriptionId, status: 'not_modified', added: 0, updated: 0, deleted: 0 };
       icalTexts = texts;
       newCtag = ctag;
     } else {
@@ -75,15 +82,17 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
 
     if (eventsError) throw eventsError;
 
-    const { data: settingRows } = await admin
+    const { data: settingRows, error: settingsError } = await admin
       .from('app_settings')
       .select('key, value')
       .in('key', ['default_timezone', 'dashboard_language']);
+    if (settingsError) throw settingsError;
     const settingMap = new Map((settingRows ?? []).map(r => [r.key, r.value]));
     const tzValue = settingMap.get('default_timezone');
     const langValue = settingMap.get('dashboard_language');
     const defaultTimezone = isValidTimezone(tzValue) ? tzValue : DEFAULT_TIMEZONE;
     const locale = isSupportedLocale(langValue) ? langValue : DEFAULT_LOCALE;
+    const t = createTranslator({ locale, messages: calendarMessages[locale] });
 
     const existingEventsMap = new Map(existingEvents?.map(e => [e.event_uid, e]));
     const seenUids = new Set<string>();
@@ -93,7 +102,7 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
 
     // Get user's name for author string
     const { data: userData } = await admin.auth.admin.getUserById(subscription.user_id);
-    const userName = (userData?.user?.user_metadata?.full_name as string) || 'User';
+    const userName = (userData?.user?.user_metadata?.full_name as string) || t('defaultUser');
 
     for (const event of allParsedEvents) {
       seenUids.add(event.uid);
@@ -106,6 +115,7 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
       if (existing && existing.source_hash === sourceHash) continue;
 
       let processedAttachments: { url: string; filename: string; path: string; mimeType?: string }[] = [];
+      let articleWritten = false;
 
       try {
         // Download attachments
@@ -121,13 +131,14 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
       }
 
       try {
-        const content = generateArticleContent(event, subscription, userName, processedAttachments, defaultTimezone, locale);
+        const title = event.summary || t('untitled');
+        const content = generateArticleContent(event, subscription, userName, processedAttachments, defaultTimezone, locale, title, t);
 
         const dateStr = formatEventDateTime(event, defaultTimezone, locale);
         let articleId = existing?.article_id;
         const articleData: any = {
           user_id: subscription.user_id,
-          title: event.summary,
+          title,
           description: `${dateStr} - ${event.description.substring(0, 160)}`,
           content: content.html,
           html_content: content.html,
@@ -151,8 +162,9 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
           articleId = newArticle.id;
           added++;
         }
+        articleWritten = true;
 
-        await admin.from('calendar_events').upsert({
+        const { error: eventUpsertError } = await admin.from('calendar_events').upsert({
           subscription_id: subscriptionId,
           user_id: subscription.user_id,
           event_uid: event.uid,
@@ -163,10 +175,12 @@ export async function syncSubscription(subscriptionId: string, admin: SupabaseCl
           source_hash: sourceHash,
           last_synced_at: new Date().toISOString()
         }, { onConflict: 'subscription_id, event_uid' });
+        if (eventUpsertError) throw eventUpsertError;
       } catch (err) {
-        // Cleanup orphaned attachments if the article write fails
-        console.error(`Failed to write article for event ${event.uid}, cleaning up attachments:`, err);
-        await deleteAttachments(processedAttachments.map(a => a.path), admin);
+        console.error(`Failed to sync article for event ${event.uid}:`, err);
+        if (!articleWritten) {
+          await deleteAttachments(processedAttachments.map(a => a.path), admin);
+        }
         throw err;
       }
     }
@@ -213,7 +227,7 @@ function formatEventDateTime(event: ParsedCalendarEvent, defaultTimezone: string
 }
 
 function computeSourceHash(event: ParsedCalendarEvent, defaultTimezone: string, locale: string): string {
-  const content = `${event.summary}|${event.description}|${event.dtstart.getTime()}|${event.dtend.getTime()}|${event.timezone ?? defaultTimezone}|${locale}|${event.isAllDay}|${event.location}|${event.url}`;
+  const content = `${ARTICLE_FORMAT_VERSION}|${event.summary}|${event.description}|${event.dtstart.getTime()}|${event.dtend.getTime()}|${event.timezone ?? defaultTimezone}|${locale}|${event.isAllDay}|${event.location}|${event.url}`;
   return createHash('sha256').update(content).digest('hex');
 }
 
@@ -250,18 +264,20 @@ function generateArticleContent(
   userName: string,
   attachments: { url: string; filename: string; mimeType?: string }[],
   defaultTimezone: string,
-  locale: string
+  locale: string,
+  title: string,
+  t: ReturnType<typeof createTranslator>
 ) {
-  const author = escapeHtml(`${subscription.name} by ${userName}`);
+  const author = escapeHtml(t('author', { calendar: subscription.name, user: userName }));
 
   const dateStr = formatEventDateTime(event, defaultTimezone, locale);
 
   // Build HTML
-  let html = `<p><strong>Event:</strong> ${escapeHtml(event.summary)}</p>`;
-  html += `<p><strong>Time:</strong> ${dateStr}</p>`;
+  let html = `<p><strong>${escapeHtml(t('event'))}:</strong> ${escapeHtml(title)}</p>`;
+  html += `<p><strong>${escapeHtml(t('time'))}:</strong> ${escapeHtml(dateStr)}</p>`;
   if (event.location) {
     const osmUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(event.location)}`;
-    html += `<p><strong>Location:</strong> <a href="${osmUrl}" target="_blank"><strong>${escapeHtml(event.location)}</strong></a></p>`;
+    html += `<p><strong>${escapeHtml(t('location'))}:</strong> <a href="${osmUrl}" target="_blank"><strong>${escapeHtml(event.location)}</strong></a></p>`;
     html += `<iframe width="425" height="350" src="https://www.openstreetmap.org/export/embed.html?query=${encodeURIComponent(event.location)}&amp;layer=mapnik" style="border: 1px solid black"></iframe><br/>`
   }
   if (event.description) html += `<p>${escapeHtml(event.description).replace(/\n/g, '<br>')}</p>`;
@@ -271,7 +287,7 @@ function generateArticleContent(
   }
 
   if (attachments.length > 0) {
-    html += '<p><strong>Attachments:</strong></p><ul>';
+    html += `<p><strong>${escapeHtml(t('attachments'))}:</strong></p><ul>`;
     attachments.forEach((att) => {
       html += `<li><a href="${att.url}" target="_blank">${escapeHtml(att.filename)}</a></li>`;
     });
@@ -283,14 +299,14 @@ function generateArticleContent(
     {
       type: 'p',
       children: [
-        { bold: true, text: 'Event: ' },
-        { text: event.summary }
+        { bold: true, text: `${t('event')}: ` },
+        { text: title }
       ]
     },
     {
       type: 'p',
       children: [
-        { bold: true, text: 'Time: ' },
+        { bold: true, text: `${t('time')}: ` },
         { text: dateStr }
       ]
     }
@@ -300,7 +316,7 @@ function generateArticleContent(
     jsonContent.push({
       type: 'p',
       children: [
-        { bold: true, text: 'Location: ' },
+        { bold: true, text: `${t('location')}: ` },
         { text: event.location }
       ]
     });
@@ -332,7 +348,6 @@ function generateArticleContent(
   }
 
   if (attachments.length > 0) {
-    html += '<p><strong>Attachments:</strong></p>';
     attachments.forEach((att) => {
       const type = getAttachmentType(att.filename, att.mimeType);
       const escapedFilename = escapeHtml(att.filename);

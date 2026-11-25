@@ -110,6 +110,15 @@
     "noPosts": "Keine Instagram-Beiträge verfügbar.",
     "unknown": "Unbekannt"
   },
+  "CalendarArticle": {
+    "event": "Veranstaltung",
+    "time": "Zeit",
+    "location": "Ort",
+    "attachments": "Anhänge",
+    "untitled": "Ohne Titel",
+    "defaultUser": "Benutzer",
+    "author": "{calendar} von {user}"
+  },
   "Calendar": {
     "upcomingEvents": "Anstehende Veranstaltungen",
     "noEvents": "Keine anstehenden Veranstaltungen.",
